@@ -81,6 +81,23 @@
     }
     installing = null
   }
+
+  async function uninstallBundle(b) {
+    if (installing) return
+    // Paket-ID finden
+    const pkg = ($packages || []).find(p => p.name === b.name)
+    if (!pkg) { showToast('Paket nicht gefunden', 'error'); return }
+    installing = b.id
+    try {
+      await apiDelete(`/api/packages/${pkg.id}`)
+      showToast(`${b.name} deinstalliert`, 'success')
+      await loadGlobal()
+      await loadBundles()
+    } catch(e) {
+      showToast(e.message, 'error')
+    }
+    installing = null
+  }
   let form = $state({ name:'', description:'', color:'#5b8aff', icon:'fa-graduation-cap' })
 
   const ICONS = [
@@ -155,7 +172,7 @@
   <div class="page-hd">
     <div>
       <h1 class="page-title">
-        <i class="fa-solid fa-box-archive"></i> Pakete
+        <i class="fa-solid fa-box-archive"></i> Lernpakete
       </h1>
       <p class="page-sub">
         Jedes Paket ist eine abgeschlossene Themenwelt mit eigenen Dokumenten und Karten
@@ -248,7 +265,7 @@
       <div class="gs-item">
         <i class="fa-solid fa-box-archive"></i>
         <strong>{$globalStats.total_packages}</strong>
-        <span>Pakete</span>
+        <span>Lernpakete</span>
       </div>
       <div class="gs-sep"></div>
       <div class="gs-item">
@@ -361,19 +378,31 @@
                 <span class="bc-cat" style="background:{CAT_COLORS[code] || '#6b7280'}20;color:{CAT_COLORS[code] || '#6b7280'}" title="{CAT_NAMES[code] || code}: {count} Karten">{code} <span class="bc-cat-n">{count}</span></span>
               {/each}
             </div>
-            <button
-              class="btn btn-primary bc-btn"
-              onclick={() => installBundle(b)}
-              disabled={b.installed || installing === b.id}
-            >
-              {#if installing === b.id}
-                <i class="fa-solid fa-spinner fa-spin"></i> Installiere...
-              {:else if b.installed}
-                <i class="fa-solid fa-circle-check"></i> Bereits installiert
-              {:else}
-                <i class="fa-solid fa-download"></i> Installieren
-              {/if}
-            </button>
+            {#if b.installed}
+              <button
+                class="btn btn-ghost bc-btn"
+                onclick={() => uninstallBundle(b)}
+                disabled={installing === b.id}
+              >
+                {#if installing === b.id}
+                  <i class="fa-solid fa-spinner fa-spin"></i> Entferne...
+                {:else}
+                  <i class="fa-solid fa-trash-can"></i> Deinstallieren
+                {/if}
+              </button>
+            {:else}
+              <button
+                class="btn btn-primary bc-btn"
+                onclick={() => installBundle(b)}
+                disabled={installing === b.id}
+              >
+                {#if installing === b.id}
+                  <i class="fa-solid fa-spinner fa-spin"></i> Installiere...
+                {:else}
+                  <i class="fa-solid fa-download"></i> Installieren
+                {/if}
+              </button>
+            {/if}
           </div>
         {/each}
       </div>

@@ -349,7 +349,7 @@
   <div class="pd-header">
     <div class="pd-hd-left">
       <button class="back-btn" onclick={() => { currentView.set('packages'); activePackageId.set(null) }}>
-        <i class="fa-solid fa-arrow-left"></i> Alle Pakete
+        <i class="fa-solid fa-arrow-left"></i> Lernpakete
       </button>
       <div class="pd-title-row">
         <div class="pd-icon" style="background:{pkg.color}">

@@ -91,7 +91,7 @@
       {#if userBadges.length > 0}
         <div class="badge-bar" role="button" tabindex="0" onclick={() => navigate('/progress')}>
           {#each userBadges as b}
-            <span title="{b.name} - {b.color?.name} (Stufe {b.level})">
+            <span title="{b.name}: {b.desc} ({b.value}) -- {b.level > 0 ? b.color?.name + ', Stufe ' + b.level + '/30' : 'Noch nicht begonnen'}{b.next_at ? ', nächste bei ' + b.next_at : ''}">
               <ShieldBadge level={b.level} icon={b.icon} size={28} showNum={true} />
             </span>
           {/each}
@@ -102,7 +102,7 @@
         <button class="nav-item" class:active={$currentView==='packages'}
           onclick={() => navigate('/packages')}>
           <i class="fa-solid fa-box-archive"></i>
-          <span>Alle Pakete</span>
+          <span>Lernpakete</span>
           {#if ($globalStats?.total_packages ?? 0) > 0}
             <span class="nc">{$globalStats.total_packages}</span>
           {/if}
@@ -113,7 +113,7 @@
           <i class="fa-solid fa-play"></i>
           <span>Lernen</span>
           {#if $activeSession}
-            <span class="nbadge live"><i class="fa-solid fa-circle"></i></span>
+            <span class="session-dot" title="Session aktiv"></span>
           {/if}
           {#if ($globalStats?.due_today ?? 0) > 0}
             <span class="nbadge due">{$globalStats.due_today}</span>
@@ -141,7 +141,7 @@
 
       {#if ($packages || []).length > 0}
         <div class="pkg-section">
-          <div class="pkg-section-label">Pakete</div>
+          <div class="pkg-section-label">Lernpakete</div>
           {#each ($packages || []) as pkg (pkg.id)}
             <button
               class="pkg-item"
@@ -242,7 +242,7 @@
   .app { display:flex; height:100vh; overflow:hidden; }
 
   .sidebar {
-    width:200px; flex-shrink:0; background:var(--bg1);
+    width:220px; flex-shrink:0; background:var(--bg1);
     border-right:1px solid var(--border); display:flex;
     flex-direction:column; overflow-y:auto;
   }
@@ -274,7 +274,11 @@
 
   .nc    { margin-left:auto;font-size:9px;color:var(--text3);font-family:'JetBrains Mono',monospace; }
   .nbadge { margin-left:auto;font-size:9px;font-weight:700;padding:1px 5px;border-radius: 2px; }
-  .nbadge.live { background:var(--err);color:#fff; }
+  .session-dot {
+    width:7px;height:7px;border-radius:50%;background:var(--err);margin-left:auto;flex-shrink:0;
+    animation:dot-pulse 1.5s ease-in-out infinite;
+  }
+  @keyframes dot-pulse { 0%,100%{opacity:1;} 50%{opacity:.3;} }
   .nbadge.due  { background:var(--accent);color:#fff; }
 
   .sf { padding:8px 14px;border-top:1px solid var(--border);display:flex;flex-direction:column;gap:6px;margin-top:auto; }
