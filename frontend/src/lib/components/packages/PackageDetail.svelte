@@ -53,6 +53,36 @@
   let showPathForm  = $state(false)
   let pathForm      = $state({ name:'', description:'', category_codes:[] })
 
+  // Freigabe
+  let showShare     = $state(false)
+  let shareUsers    = $state([])
+  let shareEmail    = $state('')
+  let shareRole     = $state('learner')
+
+  async function loadShareUsers() {
+    try { shareUsers = await apiGet(`/api/packages/${pkg.id}/users`) } catch(e) { shareUsers = [] }
+  }
+  async function doShare() {
+    if (!shareEmail.trim()) return
+    try {
+      await apiPost(`/api/packages/${pkg.id}/share`, { email: shareEmail, role: shareRole })
+      showToast(`Paket für ${shareEmail} freigegeben`, 'success')
+      shareEmail = ''
+      await loadShareUsers()
+    } catch(e) {
+      showToast(e.message || 'Freigabe fehlgeschlagen', 'error')
+    }
+  }
+  async function removeShare(userId) {
+    try {
+      await apiDelete(`/api/packages/${pkg.id}/share/${userId}`)
+      showToast('Freigabe entfernt', 'success')
+      await loadShareUsers()
+    } catch(e) {
+      showToast('Fehler beim Entfernen', 'error')
+    }
+  }
+
   let confirmDeleteCard = $state(null)
   let confirmDeleteDoc  = $state(null)
 
@@ -319,11 +349,42 @@
         <div class="pd-icon" style="background:{pkg.color}">
           <i class="fa-solid {pkg.icon}"></i>
         </div>
-        <div>
+        <div style="flex:1">
           <h1 class="pd-name">{pkg.name}</h1>
           {#if pkg.description}<p class="pd-desc">{pkg.description}</p>{/if}
         </div>
+        <button class="btn btn-ghost btn-sm" onclick={() => { showShare = !showShare; if (showShare) loadShareUsers() }}>
+          <i class="fa-solid fa-user-group"></i> Teilen
+        </button>
       </div>
+
+      {#if showShare}
+        <div class="share-panel">
+          <div class="share-hd">Paket freigeben</div>
+          <div class="share-form">
+            <input type="email" class="input" placeholder="E-Mail-Adresse" bind:value={shareEmail} style="flex:1" />
+            <select class="input" bind:value={shareRole} style="width:120px">
+              <option value="learner">Lerner</option>
+              <option value="owner">Besitzer</option>
+            </select>
+            <button class="btn btn-primary btn-sm" onclick={doShare}>Freigeben</button>
+          </div>
+          {#if shareUsers.length > 0}
+            <div class="share-list">
+              {#each shareUsers as su (su.id)}
+                <div class="share-user">
+                  <i class="fa-solid fa-user" style="color:var(--text3)"></i>
+                  <span class="share-email">{su.display_name || su.email}</span>
+                  <span class="share-role mono">{su.role}</span>
+                  <button class="btn-icon" title="Freigabe entziehen" onclick={() => removeShare(su.id)}>
+                    <i class="fa-solid fa-xmark"></i>
+                  </button>
+                </div>
+              {/each}
+            </div>
+          {/if}
+        </div>
+      {/if}
     </div>
 
     {#if stats}
@@ -1016,6 +1077,14 @@
 }
 .pd-name { font-size: 18px; font-weight: 700; color: var(--text0); }
 .pd-desc { font-size: 12px; color: var(--text2); margin-top: 2px; }
+
+.share-panel { background:var(--bg1);border:1px solid var(--border);border-radius:4px;padding:14px;margin-top:12px; }
+.share-hd { font-size:12px;font-weight:700;color:var(--text2);margin-bottom:10px;text-transform:uppercase;letter-spacing:.04em; }
+.share-form { display:flex;gap:8px;align-items:center;flex-wrap:wrap; }
+.share-list { margin-top:12px;display:flex;flex-direction:column;gap:4px; }
+.share-user { display:flex;align-items:center;gap:8px;font-size:12px;padding:6px 0; }
+.share-email { flex:1;color:var(--text1); }
+.share-role { font-size:10px;color:var(--text3);background:var(--bg2);padding:2px 6px;border-radius:2px; }
 
 .pd-stats {
   display: flex;
