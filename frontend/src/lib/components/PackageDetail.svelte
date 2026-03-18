@@ -702,7 +702,7 @@
                   </div>
                   <div class="cli-q">{c.question.slice(0,85)}{c.question.length>85?'...':''}</div>
                   <div class="cli-cat" style="color:{$categories.find(x=>x.code===c.category_code)?.color||'var(--accent)'}">
-                    {c.category_code}
+                    {$categories.find(x=>x.code===c.category_code)?.name || c.category_code}
                   </div>
                 </button>
               {/each}
@@ -1277,7 +1277,10 @@
 .cli-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 3px; }
 .cli-id  { font-size: 9px; color: var(--text3); font-family: 'JetBrains Mono', monospace; letter-spacing: .06em; }
 .cli-q   { font-size: 11px; color: var(--text1); line-height: 1.4; margin-bottom: 3px; }
-.cli-cat { font-size: 9px; font-weight: 700; letter-spacing: .08em; }
+.cli-cat { font-size: 9px; font-weight: 600; }
+.d1 { color: var(--ok); }
+.d2 { color: var(--warn); }
+.d3 { color: var(--err); }
 
 .cards-detail-col { overflow-y: auto; background: var(--bg0); }
 .card-form-wrap, .card-detail-wrap { padding: 22px; }
