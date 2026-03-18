@@ -31,7 +31,7 @@
     importing = false
   }
 
-  let unlocked = $derived(achievements.filter(a => a.unlocked).length)
+  let totalLevels = $derived(achievements.reduce((s, a) => s + a.level, 0))
 
   function fmtDate(iso) {
     if (!iso) return '-'
@@ -59,21 +59,43 @@
     {/each}
   </div>
 
-  <!-- Achievements -->
+  <!-- Achievements mit Levelsystem -->
   {#if tab === 'achievements'}
     <div class="ach-summary">
-      <span class="ach-n">{unlocked}/{achievements.length}</span>
-      <span style="font-size:12px;color:var(--text2)">Abzeichen freigeschaltet</span>
-      <div class="ach-bar"><div class="ach-fill" style="width:{achievements.length>0?unlocked/achievements.length*100:0}%"></div></div>
+      <span class="ach-n">{totalLevels}</span>
+      <span style="font-size:12px;color:var(--text2)">Gesamtlevel</span>
     </div>
-    <div class="ach-grid">
+    <div class="ach-list">
       {#each achievements as a (a.id)}
-        <div class="ach-card" class:unlocked={a.unlocked}>
-          <div class="ach-icon"><i class="fa-solid {a.icon}"></i></div>
-          <div class="ach-name">{a.name}</div>
-          <div class="ach-desc">{a.desc}</div>
-          <div class="ach-prog mono">{a.metric==='session_pct' ? Math.round(a.current)+'%' : a.metric==='all_seen' ? (a.unlocked?'Ja':'--') : a.current+'/'+a.threshold}</div>
-          {#if a.unlocked}<div class="ach-check"><i class="fa-solid fa-check"></i></div>{:else}<div class="ach-lock"><i class="fa-solid fa-lock"></i></div>{/if}
+        <div class="ach-row">
+          <div class="ach-icon-wrap" style="color:{a.color?.hex || '#666'}">
+            <i class="fa-solid {a.icon}"></i>
+          </div>
+          <div class="ach-info">
+            <div class="ach-name">{a.name}</div>
+            <div class="ach-desc">{a.desc}: <strong class="mono">{a.value}</strong></div>
+            <div class="ach-level-row">
+              {#if a.level > 0}
+                <span class="ach-belt" style="background:{a.color?.hex || '#666'}">
+                  {a.color?.name}
+                  {#each Array(a.stars) as _, s}
+                    <i class="fa-solid fa-star" style="font-size:8px"></i>
+                  {/each}
+                </span>
+                <span class="ach-lvl mono">Stufe {a.level}/30</span>
+              {:else}
+                <span style="font-size:10px;color:var(--text3)">Noch nicht begonnen</span>
+              {/if}
+              {#if a.next_at}
+                <span class="ach-next mono">Nächste: {a.next_at}</span>
+              {/if}
+            </div>
+          </div>
+          <div class="ach-prog-wrap">
+            <div class="ach-prog-bar">
+              <div class="ach-prog-fill" style="width:{Math.min(a.level / 30 * 100, 100)}%;background:{a.color?.hex || 'var(--accent)'}"></div>
+            </div>
+          </div>
         </div>
       {/each}
     </div>
@@ -145,18 +167,19 @@
 
   .ach-summary { display:flex;align-items:center;gap:14px;margin-bottom:24px;padding:18px;background:var(--bg1);border:1px solid var(--border);border-radius: 4px; }
   .ach-n    { font-size:30px;font-weight:800;color:var(--accent);font-family:'JetBrains Mono',monospace; }
-  .ach-bar  { width:160px;height:3px;background:var(--bg3);border-radius: 2px;margin-left:auto; }
-  .ach-fill { height:100%;background:var(--accent);border-radius: 2px;transition:width .5s; }
-  .ach-grid { display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:10px; }
-  .ach-card { background:var(--bg1);border:1px solid var(--border);border-radius: 4px;padding:18px;text-align:center;position:relative;transition:all .2s; }
-  .ach-card.unlocked { border-color:var(--ac3);box-shadow:0 0 18px rgba(0,212,170,.1); }
-  .ach-card:not(.unlocked) { opacity:.5;filter:grayscale(.4); }
-  .ach-icon { font-size:28px;margin-bottom:8px; }
-  .ach-name { font-size:12px;font-weight:700;margin-bottom:4px; }
-  .ach-desc { font-size:10px;color:var(--text2);margin-bottom:6px;line-height:1.4; }
-  .ach-prog { font-size:9px;color:var(--text3); }
-  .ach-check { position:absolute;top:8px;right:10px;color:var(--ac3);font-size:11px;font-weight:700; }
-  .ach-lock  { position:absolute;top:8px;right:10px;color:var(--text3);font-size:12px; }
+  .ach-list { display:flex;flex-direction:column;gap:10px;max-width:700px; }
+  .ach-row  { display:flex;align-items:center;gap:14px;background:var(--bg1);border:1px solid var(--border);border-radius: 4px;padding:14px 18px; }
+  .ach-icon-wrap { font-size:22px;width:40px;text-align:center;flex-shrink:0; }
+  .ach-info { flex:1;min-width:0; }
+  .ach-name { font-size:13px;font-weight:700;color:var(--text0); }
+  .ach-desc { font-size:11px;color:var(--text2);margin-top:2px; }
+  .ach-level-row { display:flex;align-items:center;gap:8px;margin-top:6px;flex-wrap:wrap; }
+  .ach-belt { display:inline-flex;align-items:center;gap:3px;padding:2px 8px;border-radius:3px;font-size:10px;font-weight:700;color:#fff; }
+  .ach-lvl  { font-size:10px;color:var(--text3); }
+  .ach-next { font-size:10px;color:var(--text3); }
+  .ach-prog-wrap { width:80px;flex-shrink:0; }
+  .ach-prog-bar { height:4px;background:var(--bg3);border-radius:2px; }
+  .ach-prog-fill { height:100%;border-radius:2px;transition:width .3s; }
 
   .hist-item { background:var(--bg1);border:1px solid var(--border);border-radius: 4px;padding:13px 18px;display:flex;align-items:center;gap:18px; }
 </style>

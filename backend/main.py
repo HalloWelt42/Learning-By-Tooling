@@ -1133,42 +1133,96 @@ async def ai_explain(body: dict, user: dict = Depends(get_current_user)):
     )
     return {"explanation": result or ""}
 
-# -- Abzeichen ----------------------------------------------------------------
+# -- Abzeichen mit Levelsystem -------------------------------------------------
+
+# Farben: Weiß(0) Gelb(1) Grün(2) Blau(3) Rot(4) Schwarz(5) Bronze(6) Silber(7) Gold(8) Platin(9)
+# Pro Farbe 3 Sterne -> 30 Stufen total
+_BELT_COLORS = [
+    {"name":"Weiß",    "hex":"#aaaaaa"},
+    {"name":"Gelb",    "hex":"#f0c040"},
+    {"name":"Grün",    "hex":"#40b060"},
+    {"name":"Blau",    "hex":"#4080e0"},
+    {"name":"Rot",     "hex":"#e04040"},
+    {"name":"Schwarz", "hex":"#404040"},
+    {"name":"Bronze",  "hex":"#cd7f32"},
+    {"name":"Silber",  "hex":"#c0c0c0"},
+    {"name":"Gold",    "hex":"#ffd700"},
+    {"name":"Platin",  "hex":"#b0b8d0"},
+]
 
 _ACHIEVEMENTS = [
-    {"id":"first_session",   "name":"Erste Schritte",    "desc":"Erste Session abgeschlossen",          "icon":"fa-rocket",         "threshold":1,   "metric":"sessions"},
-    {"id":"ten_sessions",    "name":"Ausdauer",           "desc":"10 Sessions absolviert",               "icon":"fa-dumbbell",       "threshold":10,  "metric":"sessions"},
-    {"id":"fifty_correct",   "name":"Wissenssammler",     "desc":"50 richtige Antworten",                "icon":"fa-brain",          "threshold":50,  "metric":"correct"},
-    {"id":"all_categories",  "name":"Allrounder",         "desc":"Alle 11 Kategorien gelernt",           "icon":"fa-star",           "threshold":11,  "metric":"categories"},
-    {"id":"streak_10",       "name":"Serientaeter",       "desc":"Eine Karte 10x hintereinander richtig","icon":"fa-fire",           "threshold":10,  "metric":"max_streak"},
-    {"id":"perfect_session", "name":"Makellos",           "desc":"Session mit 100 Prozent Trefferquote", "icon":"fa-trophy",         "threshold":100, "metric":"session_pct"},
-    {"id":"all_cards_seen",  "name":"Vollstaendig",       "desc":"Alle Karten mindestens 1x gesehen",    "icon":"fa-check-double",   "threshold":1,   "metric":"all_seen"},
-    {"id":"first_document",  "name":"Dokumentarist",      "desc":"Erstes Dokument hochgeladen",          "icon":"fa-file-circle-check","threshold":1, "metric":"documents"},
-    {"id":"first_package",   "name":"Paketschneider",     "desc":"Erstes Paket angelegt",                "icon":"fa-box-open",       "threshold":1,   "metric":"packages"},
+    {"id":"sessions",  "name":"Ausdauer",       "desc":"Sessions absolviert",            "icon":"fa-dumbbell",
+     "thresholds":[1,3,5,10,15,25,40,60,100,150,200,300,400,500,750,1000,1500,2000,2500,3000,4000,5000,6000,8000,10000,12000,15000,18000,22000,25000]},
+    {"id":"correct",   "name":"Wissenssammler",  "desc":"Richtige Antworten",             "icon":"fa-brain",
+     "thresholds":[5,15,30,50,100,200,350,500,750,1000,1500,2000,3000,4500,6000,8000,10000,13000,16000,20000,25000,30000,40000,50000,65000,80000,100000,125000,150000,200000]},
+    {"id":"streak",    "name":"Serie",           "desc":"Längste Korrekt-Serie",          "icon":"fa-fire",
+     "thresholds":[3,5,7,10,15,20,25,30,40,50,60,75,90,100,120,150,175,200,250,300,350,400,500,600,700,800,900,1000,1200,1500]},
+    {"id":"cards",     "name":"Entdecker",       "desc":"Verschiedene Karten gesehen",    "icon":"fa-compass",
+     "thresholds":[5,10,20,30,50,75,100,150,200,300,400,500,650,800,1000,1250,1500,2000,2500,3000,4000,5000,6500,8000,10000,12500,15000,18000,22000,25000]},
+    {"id":"perfect",   "name":"Makellos",        "desc":"Perfekte Sessions (100%)",       "icon":"fa-trophy",
+     "thresholds":[1,2,3,5,8,12,18,25,35,50,65,80,100,130,170,220,280,350,450,550,700,850,1000,1200,1500,1800,2200,2700,3300,4000]},
+    {"id":"days",      "name":"Beständig",       "desc":"Tage mit Lernaktivität",         "icon":"fa-calendar-check",
+     "thresholds":[1,3,5,7,14,21,30,45,60,90,120,150,180,220,270,330,400,500,600,730,900,1100,1300,1500,1800,2200,2600,3000,3500,4000]},
 ]
+
+def _calc_level(value: int, thresholds: list[int]) -> dict:
+    level = 0
+    for t in thresholds:
+        if value >= t:
+            level += 1
+        else:
+            break
+    if level == 0:
+        return {"level":0, "stars":0, "color_idx":0, "color":_BELT_COLORS[0], "next_at":thresholds[0] if thresholds else 0}
+    color_idx = min((level - 1) // 3, 9)
+    stars = ((level - 1) % 3) + 1
+    next_at = thresholds[level] if level < len(thresholds) else None
+    return {"level":level, "stars":stars, "color_idx":color_idx, "color":_BELT_COLORS[color_idx], "next_at":next_at}
 
 @app.get("/api/achievements")
 def get_achievements(user: dict = Depends(get_current_user)):
     uid = user["id"]
     conn = get_db()
-    s        = conn.execute("SELECT COUNT(*) FROM sessions WHERE ended_at IS NOT NULL AND user_id=?", (uid,)).fetchone()[0]
+    sessions = conn.execute("SELECT COUNT(*) FROM sessions WHERE ended_at IS NOT NULL AND user_id=?", (uid,)).fetchone()[0]
     correct  = conn.execute("SELECT COUNT(*) FROM reviews WHERE result='correct' AND user_id=?", (uid,)).fetchone()[0]
-    cats     = conn.execute("SELECT COUNT(DISTINCT c.category_code) FROM reviews r JOIN cards c ON c.card_id=r.card_id WHERE r.user_id=?", (uid,)).fetchone()[0]
     max_str  = conn.execute("SELECT COALESCE(MAX(streak),0) FROM card_stats WHERE user_id=?", (uid,)).fetchone()[0]
-    total_c  = conn.execute("SELECT COUNT(*) FROM cards WHERE active=1").fetchone()[0]
     seen     = conn.execute("SELECT COUNT(*) FROM card_stats WHERE times_shown>0 AND user_id=?", (uid,)).fetchone()[0]
-    docs     = conn.execute("SELECT COUNT(*) FROM documents").fetchone()[0]
-    pkgs     = conn.execute("SELECT COUNT(*) FROM packages").fetchone()[0]
-    best_pct = conn.execute("""
-        SELECT MAX(CASE WHEN total_cards>0 THEN CAST(correct AS FLOAT)/total_cards*100 ELSE 0 END)
-        FROM sessions WHERE ended_at IS NOT NULL AND total_cards>0 AND user_id=?
-    """, (uid,)).fetchone()[0] or 0
+    perfect  = conn.execute("""
+        SELECT COUNT(*) FROM sessions
+        WHERE ended_at IS NOT NULL AND user_id=? AND total_cards>0 AND correct=total_cards
+    """, (uid,)).fetchone()[0]
+    days     = conn.execute("""
+        SELECT COUNT(DISTINCT date(reviewed_at)) FROM reviews WHERE user_id=?
+    """, (uid,)).fetchone()[0]
     conn.close()
-    metrics = {"sessions":s, "correct":correct, "categories":cats, "max_streak":max_str,
-               "session_pct":best_pct, "all_seen":1 if total_c>0 and seen>=total_c else 0,
-               "documents":docs, "packages":pkgs}
-    return [{**a, "unlocked": metrics.get(a["metric"],0) >= a["threshold"],
-                  "current":  metrics.get(a["metric"],0)} for a in _ACHIEVEMENTS]
+
+    values = {"sessions":sessions, "correct":correct, "streak":max_str, "cards":seen, "perfect":perfect, "days":days}
+    result = []
+    for a in _ACHIEVEMENTS:
+        val = values.get(a["id"], 0)
+        lvl = _calc_level(val, a["thresholds"])
+        result.append({
+            "id":     a["id"],
+            "name":   a["name"],
+            "desc":   a["desc"],
+            "icon":   a["icon"],
+            "value":  val,
+            **lvl,
+        })
+    return result
+
+@app.get("/api/achievements/levels")
+def get_achievement_levels():
+    """Gibt die komplette Stufentabelle zurück (für Admin-Ansicht)."""
+    result = []
+    for a in _ACHIEVEMENTS:
+        levels = []
+        for i, t in enumerate(a["thresholds"]):
+            color_idx = min(i // 3, 9)
+            stars = (i % 3) + 1
+            levels.append({"level":i+1, "threshold":t, "stars":stars, "color":_BELT_COLORS[color_idx]["name"], "hex":_BELT_COLORS[color_idx]["hex"]})
+        result.append({"id":a["id"], "name":a["name"], "desc":a["desc"], "icon":a["icon"], "levels":levels})
+    return result
 
 @app.get("/api/history")
 def get_history(limit: int = 30, user: dict = Depends(get_current_user)):
