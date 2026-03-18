@@ -383,6 +383,9 @@
       </p>
     </div>
     <div style="display:flex;gap:10px;align-items:center;flex-shrink:0">
+      <button class="btn btn-ghost" onclick={() => view='read'}>
+        <i class="fa-solid fa-book-open"></i> Lesen
+      </button>
       {#if pending.length > 0}
         <button class="btn btn-ghost" onclick={() => view='review'}>
           <i class="fa-solid fa-list-check"></i> Prüfen ({pending.length})
@@ -632,6 +635,25 @@
     </div>
   {/if}
 </div>
+
+<!-- ─── READ VIEW (Volltext als Markdown) ─────────────────── -->
+{:else if view === 'read' && selectedDoc}
+<div class="page">
+  <div class="page-hd">
+    <div>
+      <button class="back-btn" onclick={() => view='detail'}>
+        <i class="fa-solid fa-arrow-left"></i> Abschnitte
+      </button>
+      <h1 class="page-title" style="font-size:19px;margin-top:8px">
+        <i class="fa-solid fa-book-open"></i> {selectedDoc.title}
+      </h1>
+      <p class="page-sub">Lernmaterial -- Volltext</p>
+    </div>
+  </div>
+  <div class="read-doc card-box markdown">
+    {@html marked(chunks.map(c => c.text).join('\n\n'))}
+  </div>
+</div>
 {/if}
 
 <style>
@@ -741,4 +763,6 @@
 /* ── Misc ──────────────────────────────────────────── */
 .back-btn    { font-size:12px;color:var(--text2);display:inline-flex;align-items:center;gap:6px;transition:color .15s;padding:0; }
 .back-btn:hover { color:var(--accent); }
+/* ── Read View ─────────────────────────────────────── */
+.read-doc { max-width:800px; font-size:14px; color:var(--text1); line-height:1.8; padding:24px 28px; }
 </style>

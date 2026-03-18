@@ -238,7 +238,8 @@ async def analyze_mistakes(wrong_cards: list[dict], documents: list[dict]) -> li
 
 def chunk_text(text: str, size: int = 800, overlap: int = 100) -> list[str]:
     text       = re.sub(r'\n{3,}', '\n\n', text.strip())
-    text       = re.sub(r'[ \t]+', ' ', text)
+    # Nur horizontale Whitespace-Duplikate entfernen, Zeilenumbrüche erhalten
+    text       = re.sub(r'[^\S\n]+', ' ', text)
     paragraphs = [p.strip() for p in re.split(r'\n\n+', text) if p.strip()]
     chunks, current = [], ""
     for para in paragraphs:
