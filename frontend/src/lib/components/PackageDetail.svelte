@@ -2,6 +2,8 @@
   import { categories, currentView, activePackageId, showToast, loadGlobal, aiOnline } from '../stores/index.js'
   import { apiGet, apiPost, apiPut, apiDelete, apiUpload, BASE } from '../utils/api.js'
   import { onMount } from 'svelte'
+  import { marked } from 'marked'
+  marked.setOptions({ breaks: true, gfm: true })
 
   let { pkg } = $props()
 
@@ -788,7 +790,7 @@
               {/if}
               <div class="detail-section">
                 <div class="section-label">Antwort</div>
-                <div class="detail-ans">{selectedCard.answer}</div>
+                <div class="detail-ans markdown">{@html marked(selectedCard.answer)}</div>
               </div>
               {#if aiState==='idle' && $aiOnline}
                 <button class="btn btn-ghost btn-sm" onclick={()=>getAI(selectedCard)}>
@@ -805,7 +807,7 @@
               {:else if aiText}
                 <div class="detail-section">
                   <div class="section-label text-ac2">KI-Erklärung</div>
-                  <div class="detail-ai">{aiText}</div>
+                  <div class="detail-ai markdown">{@html marked(aiText)}</div>
                 </div>
               {/if}
             </div>

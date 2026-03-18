@@ -7,6 +7,8 @@
   import { categories, aiOnline, activeSession, showToast, loadGlobal, packages, activePackageId } from '../stores/index.js'
   import { apiGet, apiPost } from '../utils/api.js'
   import AiProcess from './AiProcess.svelte'
+  import { marked } from 'marked'
+  marked.setOptions({ breaks: true, gfm: true })
 
   // ── State ──────────────────────────────────────────────────
   let phase   = $state('setup')   // setup | learning | result
@@ -352,7 +354,7 @@
         <div class="fc-ans-lbl">
           <i class="fa-solid fa-square-check" style="color:var(--accent)"></i> Antwort
         </div>
-        <div class="fc-ans">{card.answer}</div>
+        <div class="fc-ans markdown">{@html marked(card.answer)}</div>
 
         <!-- KI-Prozess Bereich -->
         {#if mode === 'write' && useAI && $aiOnline}
