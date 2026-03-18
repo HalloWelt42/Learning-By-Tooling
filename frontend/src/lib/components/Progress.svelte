@@ -2,6 +2,7 @@
   import { onMount } from 'svelte'
   import { showToast, loadGlobal, activePackageId } from '../stores/index.js'
   import { apiGet, apiPost } from '../utils/api.js'
+  import ShieldBadge from './ShieldBadge.svelte'
 
   let tab          = $state('achievements')
   let achievements = $state([])
@@ -68,21 +69,13 @@
     <div class="ach-list">
       {#each achievements as a (a.id)}
         <div class="ach-row">
-          <div class="ach-icon-wrap" style="color:{a.color?.hex || '#666'}">
-            <i class="fa-solid {a.icon}"></i>
-          </div>
+          <ShieldBadge level={a.level} icon={a.icon} size={48} />
           <div class="ach-info">
             <div class="ach-name">{a.name}</div>
             <div class="ach-desc">{a.desc}: <strong class="mono">{a.value}</strong></div>
             <div class="ach-level-row">
               {#if a.level > 0}
-                <span class="ach-belt" style="background:{a.color?.hex || '#666'}">
-                  {a.color?.name}
-                  {#each a.star_colors || [] as sc, s}
-                    <i class="fa-solid fa-star" style="font-size:9px;color:{sc}"></i>
-                  {/each}
-                </span>
-                <span class="ach-lvl mono">Stufe {a.level}/30</span>
+                <span class="ach-lvl mono" style="color:{a.color?.hex}">{a.color?.name} -- Stufe {a.level}/30</span>
               {:else}
                 <span style="font-size:10px;color:var(--text3)">Noch nicht begonnen</span>
               {/if}
@@ -169,13 +162,11 @@
   .ach-n    { font-size:30px;font-weight:800;color:var(--accent);font-family:'JetBrains Mono',monospace; }
   .ach-list { display:flex;flex-direction:column;gap:10px;max-width:700px; }
   .ach-row  { display:flex;align-items:center;gap:14px;background:var(--bg1);border:1px solid var(--border);border-radius: 4px;padding:14px 18px; }
-  .ach-icon-wrap { font-size:22px;width:40px;text-align:center;flex-shrink:0; }
   .ach-info { flex:1;min-width:0; }
   .ach-name { font-size:13px;font-weight:700;color:var(--text0); }
   .ach-desc { font-size:11px;color:var(--text2);margin-top:2px; }
   .ach-level-row { display:flex;align-items:center;gap:8px;margin-top:6px;flex-wrap:wrap; }
-  .ach-belt { display:inline-flex;align-items:center;gap:3px;padding:2px 8px;border-radius:3px;font-size:10px;font-weight:700;color:#fff; }
-  .ach-lvl  { font-size:10px;color:var(--text3); }
+  .ach-lvl  { font-size:10px; }
   .ach-next { font-size:10px;color:var(--text3); }
   .ach-prog-wrap { width:80px;flex-shrink:0; }
   .ach-prog-bar { height:4px;background:var(--bg3);border-radius:2px; }

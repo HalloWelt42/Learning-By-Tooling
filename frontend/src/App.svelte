@@ -15,6 +15,7 @@
   import Progress      from './lib/components/Progress.svelte'
   import Guide         from './lib/components/Guide.svelte'
   import Search        from './lib/components/Search.svelte'
+  import ShieldBadge from './lib/components/ShieldBadge.svelte'
   import { route, initRouter, navigate } from './lib/utils/router.js'
   import { apiGet } from './lib/utils/api.js'
 
@@ -193,11 +194,8 @@
           {#if userBadges.length > 0}
             <span class="user-badges">
               {#each userBadges as b}
-                <span class="user-badge" title="{b.name} - {b.color?.name} ({b.stars}{b.stars===1?' Stern':' Sterne'})" style="color:{b.color?.hex}">
-                  <i class="fa-solid {b.icon}" style="font-size:10px"></i>
-                  {#each b.star_colors || [] as sc}
-                    <i class="fa-solid fa-star" style="font-size:6px;color:{sc}"></i>
-                  {/each}
+                <span title="{b.name} - {b.color?.name} (Stufe {b.level})">
+                  <ShieldBadge level={b.level} icon={b.icon} size={22} showNum={false} />
                 </span>
               {/each}
             </span>
@@ -286,8 +284,7 @@
   .sf { padding:10px 14px;border-top:1px solid var(--border);display:flex;flex-direction:column;gap:8px;margin-top:auto; }
   .user-row { display:flex;align-items:center;gap:7px;font-size:11px;color:var(--text2);flex-wrap:wrap; }
   .user-row > span:first-of-type { flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap; }
-  .user-badges { display:flex;gap:6px;flex:none !important; }
-  .user-badge { display:inline-flex;align-items:center;gap:2px; }
+  .user-badges { display:flex;gap:4px;flex:none !important;align-items:center; }
   .logout-btn {
     background:none;border:none;color:var(--text3);cursor:pointer;padding:2px 4px;
     font-size:11px;transition:color .12s;
