@@ -280,6 +280,51 @@
     </div>
   {/if}
 
+  <!-- ── ZIP-Paket hochladen ──────────────────────────────────────────────── -->
+  <div class="zip-section">
+    <div class="section-label">
+      <i class="fa-solid fa-file-zipper" style="color:var(--accent);margin-right:6px"></i>
+      Paket aus ZIP installieren
+    </div>
+    <label class="zip-drop" class:has-file={!!zipFile} class:loading={zipInstalling}>
+      <input type="file" accept=".zip"
+        onchange={e => { zipFile = e.currentTarget.files[0]||null; zipResult = null }}>
+      {#if zipInstalling}
+        <i class="fa-solid fa-spinner fa-spin" style="font-size:28px;color:var(--accent)"></i>
+        <span class="zip-hint">Importiere Karten...</span>
+      {:else if zipFile}
+        <i class="fa-solid fa-file-zipper" style="font-size:28px;color:var(--accent)"></i>
+        <span class="zip-fname">{zipFile.name}</span>
+        <span class="zip-fsize">{zipFile.size > 1048576 ? (zipFile.size/1048576).toFixed(1)+'MB' : Math.round(zipFile.size/1024)+'KB'}</span>
+      {:else}
+        <i class="fa-solid fa-cloud-arrow-up" style="font-size:32px;color:var(--text3)"></i>
+        <span class="zip-hint">Lernpaket-ZIP hier ablegen</span>
+        <span class="zip-hint2">oder klicken zum Auswählen</span>
+      {/if}
+    </label>
+
+    {#if zipResult}
+      <div class="zip-result">
+        <i class="fa-solid fa-circle-check" style="color:var(--ok)"></i>
+        <span><strong>{zipResult.created}</strong> Karten importiert</span>
+        {#if zipResult.skipped > 0}
+          <span style="color:var(--text2)">{zipResult.skipped} übersprungen</span>
+        {/if}
+        {#if zipResult.package_id}
+          <button class="btn btn-ghost btn-sm" onclick={() => { activePackageId.set(zipResult.package_id); currentView.set('package') }}>
+            <i class="fa-solid fa-arrow-right"></i> Paket öffnen
+          </button>
+        {/if}
+      </div>
+    {/if}
+
+    {#if zipFile && !zipInstalling}
+      <button class="btn btn-primary" onclick={installZip}>
+        <i class="fa-solid fa-download"></i> Installieren
+      </button>
+    {/if}
+  </div>
+
   <!-- ── Verfügbare Lernpakete ────────────────────────────────────────────── -->
   {#if bundles.length > 0}
     <div class="bundles-section">
@@ -334,51 +379,6 @@
     </div>
   {/if}
 
-
-  <!-- ── ZIP-Paket hochladen ──────────────────────────────────────────────── -->
-  <div class="zip-section">
-    <div class="section-label">
-      <i class="fa-solid fa-file-zipper" style="color:var(--accent);margin-right:6px"></i>
-      Paket aus ZIP installieren
-    </div>
-    <label class="zip-drop" class:has-file={!!zipFile} class:loading={zipInstalling}>
-      <input type="file" accept=".zip"
-        onchange={e => { zipFile = e.currentTarget.files[0]||null; zipResult = null }}>
-      {#if zipInstalling}
-        <i class="fa-solid fa-spinner fa-spin" style="font-size:28px;color:var(--accent)"></i>
-        <span class="zip-hint">Importiere Karten...</span>
-      {:else if zipFile}
-        <i class="fa-solid fa-file-zipper" style="font-size:28px;color:var(--accent)"></i>
-        <span class="zip-fname">{zipFile.name}</span>
-        <span class="zip-fsize">{zipFile.size > 1048576 ? (zipFile.size/1048576).toFixed(1)+'MB' : Math.round(zipFile.size/1024)+'KB'}</span>
-      {:else}
-        <i class="fa-solid fa-cloud-arrow-up" style="font-size:32px;color:var(--text3)"></i>
-        <span class="zip-hint">Lernpaket-ZIP hier ablegen</span>
-        <span class="zip-hint2">oder klicken zum Auswählen</span>
-      {/if}
-    </label>
-
-    {#if zipResult}
-      <div class="zip-result">
-        <i class="fa-solid fa-circle-check" style="color:var(--ok)"></i>
-        <span><strong>{zipResult.created}</strong> Karten importiert</span>
-        {#if zipResult.skipped > 0}
-          <span style="color:var(--text2)">{zipResult.skipped} übersprungen</span>
-        {/if}
-        {#if zipResult.package_id}
-          <button class="btn btn-ghost btn-sm" onclick={() => { activePackageId.set(zipResult.package_id); currentView.set('package') }}>
-            <i class="fa-solid fa-arrow-right"></i> Paket öffnen
-          </button>
-        {/if}
-      </div>
-    {/if}
-
-    {#if zipFile && !zipInstalling}
-      <button class="btn btn-primary" onclick={installZip}>
-        <i class="fa-solid fa-download"></i> Installieren
-      </button>
-    {/if}
-  </div>
 
   <!-- Pakete Grid -->
   {#if ($packages || []).length === 0}
