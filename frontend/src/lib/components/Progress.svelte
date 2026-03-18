@@ -44,7 +44,7 @@
   <div class="page-hd">
     <div>
       <h1 class="page-title"><i class="fa-solid fa-chart-line"></i> Fortschritt</h1>
-      <p class="page-sub">Abzeichen, Verlauf, Import</p>
+      <p class="page-sub">Abzeichen und Lernverlauf</p>
     </div>
   </div>
 
@@ -52,7 +52,6 @@
     {#each [
       ['achievements', 'fa-trophy',           'Abzeichen'],
       ['history',      'fa-clock-rotate-left', 'Verlauf'],
-      ['import',       'fa-file-import',       'Import'],
     ] as [id, fa, lbl]}
       <button class="tab" class:active={tab===id} onclick={() => tab=id}>
         <i class="fa-solid {fa}"></i> {lbl}
