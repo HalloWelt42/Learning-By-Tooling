@@ -173,7 +173,7 @@
         <span style="font-size:14px;font-weight:700;color:var(--text0)">
           Neues Paket anlegen
         </span>
-        <button class="ib" onclick={() => showCreate=false}>
+        <button class="ib" title="Schließen" onclick={() => showCreate=false}>
           <i class="fa-solid fa-xmark"></i>
         </button>
       </div>
@@ -199,6 +199,7 @@
                 class="icon-opt"
                 class:active={form.icon === ic}
                 style="--c:{form.color}"
+                title={ic}
                 onclick={() => form.icon = ic}
               >
                 <i class="fa-solid {ic}"></i>
@@ -444,7 +445,9 @@
 
   <!-- Bestätigungsdialog Uninstall -->
   {#if confirmPkg}
+    <!-- svelte-ignore a11y_click_events_have_key_events a11y_no_static_element_interactions -->
     <div class="confirm-overlay" onclick={() => confirmPkg = null}>
+      <!-- svelte-ignore a11y_click_events_have_key_events a11y_no_static_element_interactions -->
       <div class="confirm-box" onclick={e => e.stopPropagation()}>
         <div class="confirm-icon"><i class="fa-solid fa-triangle-exclamation" style="color:var(--warn)"></i></div>
         <div class="confirm-title">Paket zurückziehen?</div>
@@ -481,11 +484,11 @@
   flex-wrap:wrap;gap:0;
 }
 .gs-item{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--text2);padding:4px 16px}
-.gs-item strong{font-size:18px;font-weight:700;color:var(--text0);font-family:'JetBrains Mono',monospace}
-.gs-item i{font-size:14px;color:var(--text3)}
-.gs-item.ok strong,.gs-item.ok i{color:var(--ok)}
-.gs-item.warn strong,.gs-item.warn i{color:var(--warn)}
-.gs-item.accent strong,.gs-item.accent i{color:var(--accent)}
+.gs-item :global(strong){font-size:18px;font-weight:700;color:var(--text0);font-family:'JetBrains Mono',monospace}
+.gs-item :global(i){font-size:14px;color:var(--text3)}
+.gs-item.ok :global(strong),.gs-item.ok :global(i){color:var(--ok)}
+.gs-item.warn :global(strong),.gs-item.warn :global(i){color:var(--warn)}
+.gs-item.accent :global(strong),.gs-item.accent :global(i){color:var(--accent)}
 .gs-sep{width:1px;height:32px;background:var(--border);flex-shrink:0}
 
 .create-form{max-width:720px;margin-bottom:28px}
