@@ -37,10 +37,10 @@
   $effect(() => {
     if ($authUser) {
       loadGlobal()
-      apiGet('/api/achievements').then(a => { userBadges = (a||[]).filter(b => b.level > 0).sort((x,y) => y.level - x.level).slice(0,3) }).catch(() => {})
+      apiGet('/api/achievements').then(a => { userBadges = (a||[]).sort((x,y) => y.level - x.level) }).catch(() => {})
       interval = setInterval(() => {
         loadGlobal()
-        apiGet('/api/achievements').then(a => { userBadges = (a||[]).filter(b => b.level > 0).sort((x,y) => y.level - x.level).slice(0,3) }).catch(() => {})
+        apiGet('/api/achievements').then(a => { userBadges = (a||[]).sort((x,y) => y.level - x.level) }).catch(() => {})
       }, 30_000)
 
       const cleanupRouter = initRouter()
@@ -177,9 +177,9 @@
           {#each [
             {id:'dark',     icon:'fa-moon'},
             {id:'light',    icon:'fa-sun'},
-            {id:'soft',     icon:'fa-leaf'},
-            {id:'contrast', icon:'fa-circle-half-stroke'},
-            {id:'warm',     icon:'fa-fire'},
+            {id:'soft',     icon:'fa-book-open'},
+            {id:'contrast', icon:'fa-water'},
+            {id:'warm',     icon:'fa-tree'},
           ] as t}
             <button
               class="theme-dot"

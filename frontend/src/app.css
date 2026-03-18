@@ -52,75 +52,76 @@
 }
 
 /* Leselampe -- gedämpftes Papier, wie ein Buch bei Kerzenlicht */
+/* Leselampe -- warmes Sepia, wie ein Buch bei Kerzenlicht */
 [data-theme="soft"] {
-  --bg0:    #24201a;
-  --bg1:    #2a261e;
-  --bg2:    #322c24;
-  --bg3:    #3a342a;
-  --bg4:    #444034;
-  --border: #403a2e;
-  --bdr2:   #383228;
-  --text0:  #f0e8d8;
-  --text1:  #d4c4a4;
-  --text2:  #a09478;
-  --text3:  #685c48;
-  --accent: #d4a040;
-  --ac2:    #4070d0;
-  --ac3:    #58a878;
-  --ok:     #78a850;
-  --err:    #c86040;
-  --warn:   #c8a838;
-  --shadow: rgba(24,20,14,.5);
-  --glow:   rgba(212,160,64,.08);
-  --glowok: rgba(120,168,80,.06);
+  --bg0:    #1a1410;
+  --bg1:    #231c16;
+  --bg2:    #2c231b;
+  --bg3:    #382d22;
+  --bg4:    #44382a;
+  --border: #3d2e1e;
+  --bdr2:   #352818;
+  --text0:  #f2e6d0;
+  --text1:  #d8c4a0;
+  --text2:  #a08860;
+  --text3:  #6e5a3a;
+  --accent: #d4a050;
+  --ac2:    #7090cc;
+  --ac3:    #c87850;
+  --ok:     #8aa050;
+  --err:    #c06040;
+  --warn:   #c8a038;
+  --shadow: rgba(20,14,8,.6);
+  --glow:   rgba(212,160,80,.1);
+  --glowok: rgba(138,160,80,.08);
 }
 
-/* Ozean -- gedämpftes Teal, kühl und ruhig */
+/* Ozean -- tiefes Navy, kühl und fokussiert, Koralle als Komplementär */
 [data-theme="contrast"] {
-  --bg0:    #131718;
-  --bg1:    #181e20;
-  --bg2:    #1e2628;
-  --bg3:    #242e30;
-  --bg4:    #2c3638;
-  --border: #283234;
-  --bdr2:   #202c2e;
-  --text0:  #dce6e4;
-  --text1:  #a0b4b0;
-  --text2:  #688480;
-  --text3:  #445854;
-  --accent: #4a9e96;
-  --ac2:    #a85060;
-  --ac3:    #70b0a8;
-  --ok:     #5ca860;
-  --err:    #b85050;
-  --warn:   #b89840;
-  --shadow: rgba(12,20,22,.6);
-  --glow:   rgba(74,158,150,.07);
-  --glowok: rgba(92,168,96,.05);
+  --bg0:    #0c1628;
+  --bg1:    #121e34;
+  --bg2:    #1a2840;
+  --bg3:    #22324c;
+  --bg4:    #2c3c58;
+  --border: #1e3050;
+  --bdr2:   #182844;
+  --text0:  #d8e4f4;
+  --text1:  #a0b8d8;
+  --text2:  #6888b0;
+  --text3:  #3e5878;
+  --accent: #5094e0;
+  --ac2:    #e07850;
+  --ac3:    #e08870;
+  --ok:     #50a880;
+  --err:    #d06060;
+  --warn:   #d0a040;
+  --shadow: rgba(8,12,24,.7);
+  --glow:   rgba(80,148,224,.08);
+  --glowok: rgba(80,168,128,.06);
 }
 
-/* Nachtwald -- tiefes Grün, ruhig und natürlich */
+/* Wald -- tiefes Grün, Bernstein als Komplementär, natürlich und ruhig */
 [data-theme="warm"] {
-  --bg0:    #131a16;
-  --bg1:    #18201c;
-  --bg2:    #1e2822;
-  --bg3:    #263028;
-  --bg4:    #2e3830;
-  --border: #2c362e;
-  --bdr2:   #243028;
-  --text0:  #d8e4dc;
-  --text1:  #a8b8ac;
-  --text2:  #708878;
-  --text3:  #485850;
-  --accent: #5aac78;
-  --ac2:    #ac5a78;
-  --ac3:    #c8a860;
-  --ok:     #60b868;
-  --err:    #c86050;
-  --warn:   #c8a040;
-  --shadow: rgba(12,18,14,.6);
-  --glow:   rgba(90,172,120,.08);
-  --glowok: rgba(96,184,104,.06);
+  --bg0:    #0e1810;
+  --bg1:    #142018;
+  --bg2:    #1c2a20;
+  --bg3:    #243428;
+  --bg4:    #2e3e32;
+  --border: #284030;
+  --bdr2:   #203826;
+  --text0:  #d4e4d8;
+  --text1:  #a0b8a8;
+  --text2:  #688878;
+  --text3:  #405848;
+  --accent: #50a868;
+  --ac2:    #d0904a;
+  --ac3:    #c8a050;
+  --ok:     #58b060;
+  --err:    #c05848;
+  --warn:   #c89840;
+  --shadow: rgba(8,16,10,.7);
+  --glow:   rgba(80,168,104,.08);
+  --glowok: rgba(88,176,96,.06);
 }
 
 /* ── Reset ────────────────────────────────────────────────────────────────── */
