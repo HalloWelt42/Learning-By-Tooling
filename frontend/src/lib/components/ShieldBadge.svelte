@@ -72,7 +72,7 @@
       <path d={outerPath} fill={color.hex} opacity="0.5"/>
       <path d={innerT1} fill="#0d0d0f"/>
       {#if canShowNum}
-        <text x={size/2} y={h*0.82} text-anchor="middle" font-family="'DM Mono',monospace" font-weight="900" letter-spacing="-0.5" font-size={numSize} fill={color.hex} opacity="0.85">{level}</text>
+        <text x={size/2} y={h*0.82} text-anchor="middle" font-family="'DM Sans',system-ui,sans-serif" font-weight="900" letter-spacing="-0.5" font-size={numSize} fill={color.hex} opacity="0.85">{level}</text>
       {/if}
     </svg>
     <i class="fa-solid {icon} icon-center" style="color:{color.hex};font-size:{iconSize}px;opacity:0.7"></i>
@@ -89,7 +89,7 @@
       <path d={outerPath} fill="url(#g2_{uid})"/>
       <path d={innerT1} fill="#0d0d0f"/>
       {#if canShowNum}
-        <text x={size/2} y={h*0.82} text-anchor="middle" font-family="'DM Mono',monospace" font-weight="900" letter-spacing="-0.5" font-size={numSize} fill={color.hex}>{level}</text>
+        <text x={size/2} y={h*0.82} text-anchor="middle" font-family="'DM Sans',system-ui,sans-serif" font-weight="900" letter-spacing="-0.5" font-size={numSize} fill={color.hex}>{level}</text>
       {/if}
     </svg>
     <i class="fa-solid {icon} icon-center" style="color:{color.hex};font-size:{iconSize}px"></i>
@@ -108,7 +108,7 @@
       <path d={midPath} fill="#131316"/>
       <path d={innerPath} fill="#0a0a0c"/>
       {#if canShowNum}
-        <text x={size/2} y={h*0.82} text-anchor="middle" font-family="'DM Mono',monospace" font-weight="900" letter-spacing="-0.5" font-size={numSize} fill={light30}>{level}</text>
+        <text x={size/2} y={h*0.82} text-anchor="middle" font-family="'DM Sans',system-ui,sans-serif" font-weight="900" letter-spacing="-0.5" font-size={numSize} fill={light30}>{level}</text>
       {/if}
     </svg>
     <i class="fa-solid {icon} icon-center" style="color:{color.hex};font-size:{iconSize}px"></i>
@@ -137,7 +137,7 @@
       <path d={midPath} fill="#131316"/>
       <path d={innerPath} fill="url(#inner4_{uid})"/>
       {#if canShowNum}
-        <text x={size/2} y={h*0.82} text-anchor="middle" font-family="'DM Mono',monospace" font-weight="900" letter-spacing="-0.5" font-size={numSize} fill={light40}>{level}</text>
+        <text x={size/2} y={h*0.82} text-anchor="middle" font-family="'DM Sans',system-ui,sans-serif" font-weight="900" letter-spacing="-0.5" font-size={numSize} fill={light40}>{level}</text>
       {/if}
     </svg>
     <i class="fa-solid {icon} icon-center" style="color:{light30};font-size:{iconSize}px"></i>
