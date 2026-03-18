@@ -6,6 +6,7 @@
    */
   import { categories, aiOnline, activeSession, showToast, loadGlobal, packages, activePackageId } from '../stores/index.js'
   import { apiGet, apiPost, apiDelete } from '../utils/api.js'
+  import { navigate } from '../utils/router.js'
   import AiProcess from './AiProcess.svelte'
   import { onMount } from 'svelte'
   import { marked } from 'marked'
@@ -262,6 +263,29 @@
     </div>
   {/if}
 
+  <!-- Paketauswahl -->
+  {#if $packages && $packages.length > 1}
+    <div class="card-box" style="margin-bottom:16px;display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+      <div class="section-label" style="margin:0">Paket</div>
+      <div class="pkg-select">
+        <button class="pkg-chip" class:active={!$activePackageId} onclick={() => activePackageId.set(null)}>
+          <i class="fa-solid fa-layer-group"></i> Alle
+        </button>
+        {#each $packages as p (p.id)}
+          <button class="pkg-chip" class:active={$activePackageId === p.id} onclick={() => activePackageId.set(p.id)}
+                  style="--pkg-c:{p.color || 'var(--accent)'}">
+            <i class="fa-solid {p.icon || 'fa-box'}"></i> {p.name}
+          </button>
+        {/each}
+      </div>
+    </div>
+  {:else if $packages?.length === 1}
+    <div class="card-box" style="margin-bottom:16px;display:flex;align-items:center;gap:10px">
+      <i class="fa-solid {$packages[0].icon || 'fa-box'}" style="color:{$packages[0].color || 'var(--accent)'}"></i>
+      <span style="font-size:13px;font-weight:700">{$packages[0].name}</span>
+    </div>
+  {/if}
+
   <div class="setup-grid">
     <!-- Modus -->
     <div class="card-box">
@@ -511,6 +535,14 @@
             </div>
           {/if}
         {/if}
+
+        <!-- Nachlesen-Link zum Lernmaterial -->
+        {#if $activePackageId}
+          <button class="btn btn-ghost btn-sm" style="margin-top:10px;font-size:11px"
+            onclick={() => navigate(`/packages/${$activePackageId}?tab=documents`)}>
+            <i class="fa-solid fa-book-open"></i> Im Material nachlesen
+          </button>
+        {/if}
       {/if}
     </div>
   </div>
@@ -579,6 +611,16 @@
 </div>
 
 <style>
+/* ── Paketauswahl ──────────────────────────────────── */
+.pkg-select { display:flex;gap:6px;flex-wrap:wrap; }
+.pkg-chip {
+  display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border-radius:4px;
+  border:1px solid var(--border);background:transparent;font-size:12px;font-weight:600;
+  color:var(--text2);cursor:pointer;transition:all .15s;font-family:inherit;
+}
+.pkg-chip:hover { border-color:var(--pkg-c, var(--accent));color:var(--text0); }
+.pkg-chip.active { border-color:var(--pkg-c, var(--accent));background:var(--glow);color:var(--pkg-c, var(--accent)); }
+.pkg-chip i { font-size:11px; }
 /* ── Setup ─────────────────────────────────────────── */
 .setup-grid { display:grid;grid-template-columns:1fr 1fr;gap:16px; }
 .modes { display:flex;flex-direction:column;gap:6px; }
