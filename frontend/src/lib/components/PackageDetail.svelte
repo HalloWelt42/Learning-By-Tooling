@@ -392,14 +392,16 @@
                 </button>
               {:else}
                 {#each documents.slice(0,6) as doc}
-                  <button class="doc-row" onclick={()=>{tab='documents';openDoc(doc)}}>
+                  <div class="doc-row">
                     <i class="fa-solid {FT[doc.filetype]||'fa-file'} doc-row-icon"></i>
                     <div class="doc-row-body">
                       <div class="doc-row-title">{doc.title}</div>
-                      <div class="doc-row-meta">{doc.chunk_count} Abschnitte · {doc.card_count} Entwürfe</div>
+                      <div class="doc-row-meta">{doc.chunk_count} Abschnitte</div>
                     </div>
-                    <i class="fa-solid fa-chevron-right doc-row-arr"></i>
-                  </button>
+                    <button class="btn btn-ghost btn-sm" onclick={()=>{tab='documents';openDoc(doc);setTimeout(()=>{const el=document.querySelector('[class*="read"]');if(el)el.click()},200)}}>
+                      <i class="fa-solid fa-book-open"></i> Lesen
+                    </button>
+                  </div>
                 {/each}
               {/if}
             </div>
@@ -1111,7 +1113,7 @@
 .tab-hd {
   display: flex;
   justify-content: space-between;
-  align-items: flex-start;
+  align-items: center;
   margin-bottom: 20px;
 }
 .tab-hd-title { font-size: 15px; font-weight: 700; color: var(--text0); }
