@@ -22,6 +22,7 @@ from services import (
     chunk_text, extract_text_from_file,
     generate_cards_from_chunk, evaluate_answer,
     explain_card, analyze_mistakes, ai_online as _ai_online, sm2_update,
+    generate_hint, summarize_topic, suggest_related,
 )
 from auth import (
     get_current_user, authenticate, create_user, create_token, seed_admin,
@@ -1310,6 +1311,44 @@ def get_achievement_levels():
             levels.append({"level":i+1, "threshold":t, "stars":stars, "color":_BELT_COLORS[color_idx]["name"], "hex":_BELT_COLORS[color_idx]["hex"]})
         result.append({"id":a["id"], "name":a["name"], "desc":a["desc"], "icon":a["icon"], "levels":levels})
     return result
+
+# -- KI-Assistenz (optional, nur wenn LM Studio online) ---------------------
+
+@app.post("/api/ai/hint")
+async def ai_hint(data: dict, user: dict = Depends(get_current_user)):
+    """Erstellt eine Merkhilfe für eine Karte. Braucht LM Studio."""
+    if not await _ai_online():
+        raise HTTPException(503, "LM Studio nicht erreichbar")
+    result = await generate_hint(data.get("question",""), data.get("answer",""))
+    if not result:
+        raise HTTPException(500, "Merkhilfe konnte nicht generiert werden")
+    return {"hint": result}
+
+@app.post("/api/ai/summarize")
+async def ai_summarize(data: dict, user: dict = Depends(get_current_user)):
+    """Fasst Karten zu einer Zusammenfassung zusammen. Braucht LM Studio."""
+    if not await _ai_online():
+        raise HTTPException(503, "LM Studio nicht erreichbar")
+    cards = data.get("cards", [])
+    topic = data.get("topic", "")
+    if not cards:
+        raise HTTPException(400, "Keine Karten übergeben")
+    result = await summarize_topic(cards, topic)
+    return {"summary": result}
+
+@app.post("/api/ai/related")
+async def ai_related(data: dict, user: dict = Depends(get_current_user)):
+    """Schlägt verwandte Karten vor (funktioniert auch ohne LM Studio)."""
+    conn = get_db()
+    pkg_id = data.get("package_id")
+    q = "SELECT card_id, question, answer FROM cards WHERE active=1"
+    p = []
+    if pkg_id:
+        q += " AND package_id=?"; p.append(pkg_id)
+    all_cards = [row_to_dict(r) for r in conn.execute(q, p).fetchall()]
+    conn.close()
+    related = await suggest_related(data.get("question",""), data.get("answer",""), all_cards, limit=data.get("limit",3))
+    return {"related": related}
 
 @app.get("/api/history")
 def get_history(limit: int = 30, user: dict = Depends(get_current_user)):

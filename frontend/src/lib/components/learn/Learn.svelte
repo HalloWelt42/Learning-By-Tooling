@@ -37,6 +37,12 @@
   let wrongCards     = $state([])
   let aiStep        = $state(0)     // which step is active in AiProcess
 
+  // KI-Assistenz
+  let hintText      = $state('')
+  let hintLoading   = $state(false)
+  let relatedIds    = $state([])
+  let relatedLoading = $state(false)
+
   // Steps for KI evaluation (write mode)
   const EVAL_STEPS = [
     { label: 'Antwort empfangen', sublabel: 'Eingabe wird vorbereitet' },
@@ -125,6 +131,8 @@
     aiExplanation = ''
     aiFeedback    = null
     aiState       = 'idle'
+    hintText      = ''
+    relatedIds    = []
   }
 
   function flip() { flipped = true }
@@ -212,6 +220,31 @@
       aiExplanation = 'LM Studio nicht erreichbar.'
       aiState = 'error'
     }
+  }
+
+  async function getHint() {
+    hintLoading = true
+    try {
+      const data = await apiPost('/api/ai/hint', { question: card.question, answer: card.answer })
+      hintText = data.hint
+    } catch(e) {
+      hintText = 'Merkhilfe nicht verfügbar.'
+    }
+    hintLoading = false
+  }
+
+  async function getRelated() {
+    relatedLoading = true
+    try {
+      const data = await apiPost('/api/ai/related', {
+        question: card.question, answer: card.answer,
+        package_id: $activePackageId || null, limit: 3
+      })
+      relatedIds = data.related || []
+    } catch(e) {
+      relatedIds = []
+    }
+    relatedLoading = false
   }
 
   async function endSession() {
@@ -508,6 +541,32 @@
           </div>
         {/if}
 
+        <!-- KI-Assistenz (optional) -->
+        <div class="ai-assist-row">
+          {#if $aiOnline}
+            <button class="btn btn-ghost btn-sm" onclick={getHint} disabled={hintLoading}>
+              <i class="fa-solid fa-lightbulb"></i> {hintLoading ? 'Lädt…' : 'Merkhilfe'}
+            </button>
+          {/if}
+          <button class="btn btn-ghost btn-sm" onclick={getRelated} disabled={relatedLoading}>
+            <i class="fa-solid fa-link"></i> {relatedLoading ? 'Suche…' : 'Verwandte Karten'}
+          </button>
+        </div>
+        {#if hintText}
+          <div class="ai-hint-box">
+            <i class="fa-solid fa-lightbulb" style="color:var(--warn)"></i>
+            <span>{hintText}</span>
+          </div>
+        {/if}
+        {#if relatedIds.length > 0}
+          <div class="ai-related-box">
+            <span style="font-size:10px;color:var(--text3)">Verwandte Karten:</span>
+            {#each relatedIds as rid}
+              <span class="related-tag mono">{rid}</span>
+            {/each}
+          </div>
+        {/if}
+
         <!-- Bewertungs-Buttons -->
         {#if mode === 'srs'}
           <div class="srs-q-lbl">Wie gut wusstest du es?</div>
@@ -692,6 +751,12 @@
 .ai-explain { background:var(--bg2);border:1px solid color-mix(in srgb,var(--ac2) 40%,transparent);border-radius: 4px;padding:12px 16px;margin-bottom:14px; }
 .ae-header  { font-size:11px;font-weight:700;color:var(--ac2);letter-spacing:.07em;display:flex;align-items:center;gap:6px;margin-bottom:8px;text-transform:uppercase; }
 .ai-explain p { font-size:12px;color:var(--text1);line-height:1.65; }
+
+/* ── KI-Assistenz ─────────────────────────────────── */
+.ai-assist-row { display:flex;gap:6px;margin:10px 0 6px;flex-wrap:wrap; }
+.ai-hint-box { display:flex;align-items:flex-start;gap:8px;font-size:12px;color:var(--text1);background:var(--bg2);border:1px solid color-mix(in srgb,var(--warn) 30%,transparent);border-radius:4px;padding:10px 14px;margin-bottom:8px;line-height:1.5; }
+.ai-related-box { display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:8px; }
+.related-tag { font-size:10px;background:var(--bg2);border:1px solid var(--border);border-radius:3px;padding:2px 8px;color:var(--accent); }
 
 /* ── Rate Buttons ──────────────────────────────────── */
 .rate-row  { display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-top:4px; }

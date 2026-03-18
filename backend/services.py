@@ -236,6 +236,51 @@ async def analyze_mistakes(wrong_cards: list[dict], documents: list[dict]) -> li
         return []
 
 
+async def generate_hint(question: str, answer: str) -> str:
+    """Erstellt eine Merkhilfe/Eselsbrücke für eine schwierige Karte."""
+    system = (
+        RULES + " "
+        "Erstelle eine kurze Merkhilfe oder Eselsbrücke. "
+        "Maximal 2 Sätze. Einprägsam und bildhaft."
+    )
+    user_msg = f"Frage: {question}\nAntwort: {answer}\n\nMerkhilfe:"
+    try:
+        return await _chat(user_msg, system=system, max_tokens=150)
+    except Exception:
+        return ""
+
+
+async def summarize_topic(cards: list[dict], topic: str = "") -> str:
+    """Fasst eine Gruppe von Karten zu einer kompakten Zusammenfassung zusammen."""
+    card_texts = "\n".join(f"- {c['question']} -> {c['answer']}" for c in cards[:20])
+    system = (
+        RULES + " "
+        "Fasse die folgenden Lernkarten zu einer kompakten Zusammenfassung zusammen. "
+        "Strukturiere nach Themenblöcken. Maximal 300 Wörter."
+    )
+    user_msg = f"Thema: {topic}\n\nKarten:\n{card_texts}\n\nZusammenfassung:"
+    try:
+        return await _chat(user_msg, system=system, max_tokens=600)
+    except Exception:
+        return ""
+
+
+async def suggest_related(question: str, answer: str, all_cards: list[dict], limit: int = 3) -> list[str]:
+    """Schlägt thematisch verwandte Karten-IDs vor (basierend auf Schlüsselwörtern)."""
+    # Einfache Keyword-Matching-Strategie ohne KI (funktioniert auch offline)
+    keywords = set(re.findall(r'\b[A-Za-zÄÖÜäöüß]{4,}\b', f"{question} {answer}".lower()))
+    scored = []
+    for c in all_cards:
+        if c.get("card_id") == "":
+            continue
+        text = f"{c.get('question','')} {c.get('answer','')}".lower()
+        score = sum(1 for kw in keywords if kw in text)
+        if score > 0:
+            scored.append((score, c.get("card_id", "")))
+    scored.sort(key=lambda x: -x[0])
+    return [cid for _, cid in scored[:limit]]
+
+
 def chunk_text(text: str, size: int = 800, overlap: int = 100) -> list[str]:
     text       = re.sub(r'\n{3,}', '\n\n', text.strip())
     # Nur horizontale Whitespace-Duplikate entfernen, Zeilenumbrüche erhalten
