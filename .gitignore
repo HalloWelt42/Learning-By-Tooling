@@ -1,0 +1,28 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+venv/
+.env
+
+# Node.js
+node_modules/
+dist/
+
+# Build-Cache
+.vite/
+
+# Datenbank und Nutzerdaten
+data/
+uploads/
+*.db
+
+# Lernpakete (lokaler Inhalt, nicht im Repo)
+lernpakete/
+
+# IDE
+.idea/
+
+# System
+.DS_Store
+Thumbs.db

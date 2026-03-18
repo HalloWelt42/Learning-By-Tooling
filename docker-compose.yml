@@ -1,0 +1,42 @@
+services:
+
+  lbt-backend:
+    image: python:3.11-slim
+    container_name: lbt-backend
+    working_dir: /app
+    volumes:
+      - ./backend:/app
+      - ./data:/data
+      - ./uploads:/uploads
+      - ./lernpakete:/lernpakete:ro
+    environment:
+      - PYTHONUNBUFFERED=1
+      - DB_PATH=/data/lbt.db
+      - UPLOAD_DIR=/uploads
+      - BUNDLES_PATH=/lernpakete
+    command: >
+      sh -c "pip install -r requirements.txt -q &&
+             uvicorn main:app --host 0.0.0.0 --port 8030 --reload"
+    ports:
+      - "8030:8030"
+    restart: unless-stopped
+
+  lbt-frontend:
+    image: node:20-alpine
+    container_name: lbt-frontend
+    working_dir: /app
+    volumes:
+      - ./frontend:/app
+      - lbt-nm:/app/node_modules
+    environment:
+      - CHOKIDAR_USEPOLLING=true
+    command: >
+      sh -c "npm install --silent && npm run dev"
+    ports:
+      - "8031:8031"
+    restart: unless-stopped
+    depends_on:
+      - lbt-backend
+
+volumes:
+  lbt-nm:
