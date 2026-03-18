@@ -20,6 +20,7 @@
     error    = false,
     progress = null,
     compact  = false,
+    estimate = null,  // Geschätzte Sekunden
   } = $props()
 
   // Elapsed timer
@@ -74,7 +75,7 @@
     <div class="aip-title-wrap">
       <span class="aip-title">{title}</span>
       {#if !done && !error}
-        <span class="aip-timer">{elapsed}s</span>
+        <span class="aip-timer">{elapsed}s{#if estimate} / ca. {estimate}s{/if}</span>
       {:else if done}
         <span class="aip-fin ok">Fertig in {elapsed}s</span>
       {:else}
@@ -83,12 +84,20 @@
     </div>
   </div>
 
-  <!-- Optional progress bar -->
+  <!-- Progress bar -->
   {#if progress !== null}
     <div class="aip-bar">
       <div class="aip-bar-fill" style="width:{progress}%"></div>
     </div>
     <div class="aip-pct">{Math.round(progress)}%</div>
+  {:else if done}
+    <div class="aip-bar">
+      <div class="aip-bar-fill" style="width:100%;background:var(--ok)"></div>
+    </div>
+  {:else if !error && steps.length > 0}
+    <div class="aip-bar">
+      <div class="aip-bar-fill" style="width:{Math.round((active + 0.5) / steps.length * 100)}%"></div>
+    </div>
   {:else if !done && !error}
     <div class="aip-bar">
       <div class="aip-bar-scan"></div>
