@@ -977,12 +977,28 @@ def global_search(
         "items":  [dict(r) for r in rows],
     }
 
-# -- Lernpfade ----------------------------------------------------------------
+# -- Lernpfade (Kapitel-basiert) -----------------------------------------------
+
+class ChapterCreate(BaseModel):
+    title:          str
+    description:    Optional[str]  = None
+    document_ids:   Optional[list] = []
+    card_ids:       Optional[list] = []
+    pass_threshold: Optional[float] = 0.7
+    sort_order:     Optional[int]  = 0
+
+class ChapterUpdate(BaseModel):
+    title:          Optional[str]   = None
+    description:    Optional[str]   = None
+    document_ids:   Optional[list]  = None
+    card_ids:       Optional[list]  = None
+    pass_threshold: Optional[float] = None
+    sort_order:     Optional[int]   = None
 
 @app.get("/api/packages/{pkg_id}/paths")
 def get_paths(pkg_id: int, user: dict = Depends(get_current_user)):
     conn = get_db()
-    rows = conn.execute("SELECT * FROM learning_paths WHERE package_id=? ORDER BY id", (pkg_id,)).fetchall()
+    rows = conn.execute("SELECT * FROM learning_paths WHERE package_id=? ORDER BY sort_order, id", (pkg_id,)).fetchall()
     conn.close()
     return [row_to_dict(r) for r in rows]
 
@@ -990,14 +1006,100 @@ def get_paths(pkg_id: int, user: dict = Depends(get_current_user)):
 def create_path(data: PathCreate, user: dict = Depends(get_current_user)):
     conn = get_db()
     conn.execute(
-        "INSERT INTO learning_paths (package_id,name,description,category_codes,card_ids) VALUES (?,?,?,?,?)",
-        (data.package_id, data.name, data.description,
-         json.dumps(data.category_codes or []), json.dumps(data.card_ids or []))
+        "INSERT INTO learning_paths (package_id,name,description,sort_order) VALUES (?,?,?,?)",
+        (data.package_id, data.name, data.description, 0)
     )
     conn.commit()
     row = conn.execute("SELECT * FROM learning_paths ORDER BY id DESC LIMIT 1").fetchone()
     conn.close()
     return row_to_dict(row)
+
+@app.get("/api/paths/{path_id}")
+def get_path_detail(path_id: int, user: dict = Depends(get_current_user)):
+    uid = user["id"]
+    conn = get_db()
+    path = conn.execute("SELECT * FROM learning_paths WHERE id=?", (path_id,)).fetchone()
+    if not path:
+        conn.close()
+        raise HTTPException(404)
+    chapters = conn.execute(
+        "SELECT * FROM path_chapters WHERE path_id=? ORDER BY sort_order, id", (path_id,)
+    ).fetchall()
+    result = row_to_dict(path)
+    result["chapters"] = []
+    for ch in chapters:
+        ch_dict = row_to_dict(ch)
+        # Fortschritt berechnen aus card_stats
+        cids = ch_dict.get("card_ids", [])
+        if cids:
+            pl = ",".join("?" * len(cids))
+            mastered = conn.execute(
+                f"SELECT COUNT(*) FROM card_stats WHERE user_id=? AND card_id IN ({pl}) AND times_correct > 0",
+                [uid] + cids
+            ).fetchone()[0]
+            ch_dict["progress"] = mastered / len(cids) if cids else 0
+            ch_dict["mastered"] = mastered
+            ch_dict["total_cards"] = len(cids)
+        else:
+            ch_dict["progress"] = 0
+            ch_dict["mastered"] = 0
+            ch_dict["total_cards"] = 0
+        ch_dict["passed"] = ch_dict["progress"] >= (ch_dict.get("pass_threshold") or 0.7)
+        result["chapters"].append(ch_dict)
+    conn.close()
+    return result
+
+@app.post("/api/paths/{path_id}/chapters")
+def add_chapter(path_id: int, data: ChapterCreate, user: dict = Depends(get_current_user)):
+    conn = get_db()
+    conn.execute(
+        "INSERT INTO path_chapters (path_id,sort_order,title,description,document_ids,card_ids,pass_threshold) VALUES (?,?,?,?,?,?,?)",
+        (path_id, data.sort_order, data.title, data.description,
+         json.dumps(data.document_ids or []), json.dumps(data.card_ids or []), data.pass_threshold)
+    )
+    conn.commit()
+    row = conn.execute("SELECT * FROM path_chapters ORDER BY id DESC LIMIT 1").fetchone()
+    conn.close()
+    return row_to_dict(row)
+
+@app.put("/api/chapters/{chapter_id}")
+def update_chapter(chapter_id: int, data: ChapterUpdate, user: dict = Depends(get_current_user)):
+    conn = get_db()
+    ch = conn.execute("SELECT * FROM path_chapters WHERE id=?", (chapter_id,)).fetchone()
+    if not ch:
+        conn.close()
+        raise HTTPException(404)
+    updates = {}
+    if data.title is not None:          updates["title"] = data.title
+    if data.description is not None:    updates["description"] = data.description
+    if data.document_ids is not None:   updates["document_ids"] = json.dumps(data.document_ids)
+    if data.card_ids is not None:       updates["card_ids"] = json.dumps(data.card_ids)
+    if data.pass_threshold is not None: updates["pass_threshold"] = data.pass_threshold
+    if data.sort_order is not None:     updates["sort_order"] = data.sort_order
+    if updates:
+        sets = ", ".join(f"{k}=?" for k in updates)
+        conn.execute(f"UPDATE path_chapters SET {sets} WHERE id=?", list(updates.values()) + [chapter_id])
+        conn.commit()
+    row = conn.execute("SELECT * FROM path_chapters WHERE id=?", (chapter_id,)).fetchone()
+    conn.close()
+    return row_to_dict(row)
+
+@app.delete("/api/chapters/{chapter_id}")
+def delete_chapter(chapter_id: int, user: dict = Depends(get_current_user)):
+    conn = get_db()
+    conn.execute("DELETE FROM path_chapters WHERE id=?", (chapter_id,))
+    conn.commit()
+    conn.close()
+    return {"ok": True}
+
+@app.delete("/api/paths/{path_id}")
+def delete_path(path_id: int, user: dict = Depends(get_current_user)):
+    conn = get_db()
+    conn.execute("DELETE FROM path_chapters WHERE path_id=?", (path_id,))
+    conn.execute("DELETE FROM learning_paths WHERE id=?", (path_id,))
+    conn.commit()
+    conn.close()
+    return {"ok": True}
 
 # -- Erklaerungen -------------------------------------------------------------
 

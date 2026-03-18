@@ -175,14 +175,26 @@ def init_db():
 
     -- Lernpfade
     CREATE TABLE IF NOT EXISTS learning_paths (
-        id             INTEGER PRIMARY KEY AUTOINCREMENT,
-        package_id     INTEGER,
-        name           TEXT    NOT NULL,
-        description    TEXT,
-        category_codes TEXT    DEFAULT '[]',
-        card_ids       TEXT    DEFAULT '[]',
-        created_at     TEXT    DEFAULT (datetime('now')),
+        id          INTEGER PRIMARY KEY AUTOINCREMENT,
+        package_id  INTEGER NOT NULL,
+        name        TEXT    NOT NULL,
+        description TEXT,
+        sort_order  INTEGER DEFAULT 0,
+        created_at  TEXT    DEFAULT (datetime('now')),
         FOREIGN KEY (package_id) REFERENCES packages(id)
+    );
+
+    -- Kapitel innerhalb eines Lernpfads
+    CREATE TABLE IF NOT EXISTS path_chapters (
+        id             INTEGER PRIMARY KEY AUTOINCREMENT,
+        path_id        INTEGER NOT NULL,
+        sort_order     INTEGER DEFAULT 0,
+        title          TEXT    NOT NULL,
+        description    TEXT,
+        document_ids   TEXT    DEFAULT '[]',
+        card_ids       TEXT    DEFAULT '[]',
+        pass_threshold REAL    DEFAULT 0.7,
+        FOREIGN KEY (path_id) REFERENCES learning_paths(id)
     );
 
     -- Lexikon

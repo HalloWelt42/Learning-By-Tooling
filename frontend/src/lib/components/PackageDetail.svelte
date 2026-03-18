@@ -3,6 +3,7 @@
   import { apiGet, apiPost, apiPut, apiDelete, apiUpload, BASE } from '../utils/api.js'
   import { onMount } from 'svelte'
   import { marked } from 'marked'
+  import Paths from './Paths.svelte'
   marked.setOptions({ breaks: true, gfm: true })
 
   let { pkg } = $props()
@@ -915,65 +916,7 @@
     <!-- LERNPFADE -->
     {:else if tab==='paths'}
       <div class="tab-page">
-        <div class="tab-hd">
-          <div>
-            <div class="tab-hd-title">Lernpfade</div>
-            <div class="tab-hd-sub">Strukturierte Lernreihenfolgen</div>
-          </div>
-          <button class="btn btn-primary" onclick={()=>showPathForm=!showPathForm}>
-            <i class="fa-solid fa-plus"></i> Lernpfad
-          </button>
-        </div>
-        {#if showPathForm}
-          <div class="card-box" style="max-width:560px;margin-bottom:16px">
-            <div class="form-fields">
-              <label class="field-label">Name<input type="text" bind:value={pathForm.name} placeholder="z.B. Grundlagen"></label>
-              <label class="field-label">Beschreibung<textarea bind:value={pathForm.description} rows="2"></textarea></label>
-              <div>
-                <div class="section-label">Kategorien</div>
-                <div class="cat-check-grid">
-                  {#each $categories as cat}
-                    <label class="cat-check-item">
-                      <input type="checkbox" bind:group={pathForm.category_codes} value={cat.code}>
-                      <span>{cat.name}</span>
-                    </label>
-                  {/each}
-                </div>
-              </div>
-            </div>
-            <div class="form-footer">
-              <button class="btn btn-ghost btn-sm" onclick={()=>showPathForm=false}>Abbrechen</button>
-              <button class="btn btn-primary btn-sm" onclick={savePath}>
-                <i class="fa-solid fa-plus"></i> Erstellen
-              </button>
-            </div>
-          </div>
-        {/if}
-        {#if paths.length===0}
-          <div class="empty-state"><i class="fa-solid fa-route"></i><p>Noch keine Lernpfade</p></div>
-        {:else}
-          <div class="paths-grid">
-            {#each paths as path}
-              <div class="card-box path-card">
-                <div class="path-name">{path.name}</div>
-                {#if path.description}<div class="path-desc">{path.description}</div>{/if}
-                <div class="path-cats">
-                  {#each (path.category_codes||[]) as code}
-                    {@const cat=$categories.find(c=>c.code===code)}
-                    {#if cat}
-                      <span class="path-cat-tag" style="color:{cat.color};border-color:color-mix(in srgb,{cat.color} 40%,transparent);background:color-mix(in srgb,{cat.color} 10%,transparent)">
-                        {cat.name}
-                      </span>
-                    {/if}
-                  {/each}
-                </div>
-                <button class="btn btn-primary btn-sm" onclick={()=>currentView.set('learn')}>
-                  <i class="fa-solid fa-play"></i> Starten
-                </button>
-              </div>
-            {/each}
-          </div>
-        {/if}
+        <Paths packageId={pkg.id} {documents} {cards} />
       </div>
 
     <!-- IMPORT -->
