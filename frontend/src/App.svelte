@@ -88,6 +88,16 @@
         </div>
       </div>
 
+      {#if userBadges.length > 0}
+        <div class="badge-bar" role="button" tabindex="0" onclick={() => navigate('/progress')}>
+          {#each userBadges as b}
+            <span title="{b.name} - {b.color?.name} (Stufe {b.level})">
+              <ShieldBadge level={b.level} icon={b.icon} size={28} showNum={true} />
+            </span>
+          {/each}
+        </div>
+      {/if}
+
       <nav class="nav">
         <button class="nav-item" class:active={$currentView==='packages'}
           onclick={() => navigate('/packages')}>
@@ -191,15 +201,6 @@
         <div class="user-row">
           <i class="fa-solid fa-user"></i>
           <span>{$authUser.display_name || $authUser.email}</span>
-          {#if userBadges.length > 0}
-            <span class="user-badges">
-              {#each userBadges as b}
-                <span title="{b.name} - {b.color?.name} (Stufe {b.level})">
-                  <ShieldBadge level={b.level} icon={b.icon} size={22} showNum={false} />
-                </span>
-              {/each}
-            </span>
-          {/if}
           <button class="logout-btn" title="Abmelden" onclick={() => authUser.logout()}>
             <i class="fa-solid fa-right-from-bracket"></i>
           </button>
@@ -282,9 +283,13 @@
   .nbadge.due  { background:var(--accent);color:#fff; }
 
   .sf { padding:10px 14px;border-top:1px solid var(--border);display:flex;flex-direction:column;gap:8px;margin-top:auto; }
-  .user-row { display:flex;align-items:center;gap:7px;font-size:11px;color:var(--text2);flex-wrap:wrap; }
+  .user-row { display:flex;align-items:center;gap:7px;font-size:11px;color:var(--text2); }
   .user-row > span:first-of-type { flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap; }
-  .user-badges { display:flex;gap:4px;flex:none !important;align-items:center; }
+  .badge-bar {
+    display:flex;gap:6px;justify-content:center;padding:8px 0 4px;
+    cursor:pointer;border-radius:4px;transition:background .15s;
+  }
+  .badge-bar:hover { background:var(--bg2); }
   .logout-btn {
     background:none;border:none;color:var(--text3);cursor:pointer;padding:2px 4px;
     font-size:11px;transition:color .12s;
