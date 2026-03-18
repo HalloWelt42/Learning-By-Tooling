@@ -343,27 +343,17 @@
         <textarea class="fc-input" placeholder="Deine Antwort…" bind:value={userAnswer} rows="4"></textarea>
       {/if}
 
-      <!-- Aufdecken -->
+      <!-- Aufdecken / Bewerten -->
       {#if !flipped}
-        <button class="btn btn-primary flip-btn" onclick={flip}>
-          <i class="fa-solid fa-eye"></i> Antwort zeigen
-        </button>
-
-      {:else}
-        <!-- Antwort -->
-        <div class="fc-ans-lbl">
-          <i class="fa-solid fa-square-check" style="color:var(--accent)"></i> Antwort
-        </div>
-        <div class="fc-ans markdown">{@html marked(card.answer)}</div>
-
-        <!-- KI-Prozess Bereich -->
-        {#if mode === 'write' && useAI && $aiOnline}
-
+        {#if mode === 'write' && useAI && $aiOnline && userAnswer.trim()}
+          <!-- Freitext: KI bewerten vor Aufdecken -->
           {#if aiState === 'idle' && !aiFeedback}
-            <button class="btn btn-primary" onclick={rate.bind(null, 'unknown')}>
-              <i class="fa-solid fa-wand-magic-sparkles"></i> KI bewertet meine Antwort
+            <button class="btn btn-primary flip-btn" onclick={rate.bind(null, 'unknown')}>
+              <i class="fa-solid fa-wand-magic-sparkles"></i> Antwort bewerten
             </button>
-
+            <button class="btn btn-ghost" style="margin-top:6px" onclick={flip}>
+              <i class="fa-solid fa-eye"></i> Ohne Bewertung aufdecken
+            </button>
           {:else if aiState === 'loading'}
             <AiProcess
               title="KI bewertet deine Antwort"
@@ -381,13 +371,38 @@
               {#if aiFeedback.feedback}
                 <p class="fb-text">{aiFeedback.feedback}</p>
               {/if}
-              <button class="btn btn-ghost btn-sm" onclick={afterAIFeedback} style="margin-top:10px">
-                <i class="fa-solid fa-forward"></i> Weiter
+              <button class="btn btn-primary" onclick={flip} style="margin-top:10px">
+                <i class="fa-solid fa-eye"></i> Richtige Antwort zeigen
               </button>
             </div>
           {/if}
+        {:else}
+          <button class="btn btn-primary flip-btn" onclick={flip}>
+            <i class="fa-solid fa-eye"></i> Antwort zeigen
+          </button>
+        {/if}
 
-        {:else if aiState === 'idle' && !aiExplanation && $aiOnline}
+      {:else}
+        <!-- Antwort aufgedeckt -->
+        <div class="fc-ans-lbl">
+          <i class="fa-solid fa-square-check" style="color:var(--accent)"></i> Antwort
+        </div>
+        <div class="fc-ans markdown">{@html marked(card.answer)}</div>
+
+        {#if mode === 'write' && aiFeedback}
+          <div class="ai-feedback" class:fb-ok={aiFeedback.score >= 0.6} class:fb-err={aiFeedback.score < 0.6} style="margin-top:10px">
+            <div class="fb-header">
+              <i class="fa-solid {aiFeedback.score>=0.6?'fa-circle-check':'fa-circle-xmark'}"></i>
+              <span class="fb-score">{Math.round(aiFeedback.score*100)}%</span>
+              <span class="fb-verdict">{aiFeedback.score>=0.6?'Richtig!':'Noch nicht ganz'}</span>
+            </div>
+            {#if aiFeedback.feedback}
+              <p class="fb-text">{aiFeedback.feedback}</p>
+            {/if}
+          </div>
+        {/if}
+
+        {#if aiState === 'idle' && !aiExplanation && $aiOnline}
           <button class="btn btn-ghost btn-sm ai-explain-btn" onclick={getExplanation}>
             <i class="fa-solid fa-wand-magic-sparkles"></i> KI-Erklärung laden
           </button>
