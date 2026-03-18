@@ -548,9 +548,10 @@ def start_session(data: SessionCreate, user: dict = Depends(get_current_user)):
 
     rows    = conn.execute(q, p).fetchall()
     card_ids = [r["card_id"] for r in rows]
+    pkg_id_val = data.package_id if data.package_id else None
     conn.execute(
         "INSERT INTO sessions (user_id,mode,package_id,category_filter,total_cards) VALUES (?,?,?,?,?)",
-        (uid, data.mode, data.package_id, json.dumps(data.category_filter), len(card_ids))
+        (uid, data.mode, pkg_id_val, json.dumps(data.category_filter), len(card_ids))
     )
     session_id = conn.execute("SELECT last_insert_rowid()").fetchone()[0]
     conn.commit()
