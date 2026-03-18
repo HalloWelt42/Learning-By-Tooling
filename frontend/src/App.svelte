@@ -165,19 +165,14 @@
       {/if}
 
       <div class="sf">
-        <div class="status-row">
+        <div class="sf-line">
           <div class="status-dot" class:online={$backendOnline}></div>
-          <span>API {$backendVersion || '?'}</span>
-        </div>
-        <div class="status-row">
+          <span>API</span>
           <div class="status-dot" class:online={$aiOnline}></div>
-          <span>LM Studio</span>
+          <span>LM</span>
+          <span class="sf-sep">|</span>
+          <span class="mono">v{VERSION}</span>
         </div>
-        <div class="footer-meta">
-          <div class="mono">Frontend v{VERSION}</div>
-          <div class="mono">Backend v{$backendVersion || '-'}</div>
-        </div>
-        <div class="footer-credit">HalloWelt42</div>
         <div class="theme-row">
           {#each [
             {id:'dark',     icon:'fa-moon'},
@@ -282,7 +277,9 @@
   .nbadge.live { background:var(--err);color:#fff; }
   .nbadge.due  { background:var(--accent);color:#fff; }
 
-  .sf { padding:10px 14px;border-top:1px solid var(--border);display:flex;flex-direction:column;gap:8px;margin-top:auto; }
+  .sf { padding:8px 14px;border-top:1px solid var(--border);display:flex;flex-direction:column;gap:6px;margin-top:auto; }
+  .sf-line { display:flex;align-items:center;gap:5px;font-size:10px;color:var(--text3); }
+  .sf-sep { color:var(--border); }
   .user-row { display:flex;align-items:center;gap:7px;font-size:11px;color:var(--text2); }
   .user-row > span:first-of-type { flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap; }
   .badge-bar {
@@ -295,11 +292,9 @@
     font-size:11px;transition:color .12s;
   }
   .logout-btn:hover { color:var(--err); }
-  .status-row { display:flex;align-items:center;gap:7px;font-size:11px;color:var(--text3); }
+
   .status-dot { width:6px;height:6px;border-radius:50%;background:var(--text3);flex-shrink:0; }
   .status-dot.online { background:var(--ok);box-shadow:0 0 5px var(--ok); }
-  .footer-meta { font-size:9px;color:var(--text3);font-family:'JetBrains Mono',monospace; }
-  .footer-credit { font-size:9px;color:var(--text3);font-style:italic; }
   .theme-row { display:flex;gap:4px; }
   .theme-dot {
     width:22px;height:22px;border-radius: 2px;border:1px solid var(--border);
