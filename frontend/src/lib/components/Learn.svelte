@@ -5,13 +5,15 @@
    * KI-Prozesse voll visualisiert, FA-Icons überall
    */
   import { categories, aiOnline, activeSession, showToast, loadGlobal, packages, activePackageId } from '../stores/index.js'
-  import { apiGet, apiPost } from '../utils/api.js'
+  import { apiGet, apiPost, apiDelete } from '../utils/api.js'
   import AiProcess from './AiProcess.svelte'
+  import { onMount } from 'svelte'
   import { marked } from 'marked'
   marked.setOptions({ breaks: true, gfm: true })
 
   // ── State ──────────────────────────────────────────────────
-  let phase   = $state('setup')   // setup | learning | result
+  let phase       = $state('setup')   // setup | learning | result
+  let pendingSession = $state(null)   // offene Session zum Fortsetzen
   let session = $state(null)
   let cardIds = $state([])
   let idx     = $state(0)
@@ -61,6 +63,36 @@
   let correct  = $derived(results.filter(r => r.result === 'correct').length)
   let wrong    = $derived(results.filter(r => r.result === 'wrong').length)
   let skipped  = $derived(results.filter(r => r.result === 'skip').length)
+
+  // ── Mount: Prüfe ob offene Session existiert ───────────────
+  onMount(async () => {
+    try {
+      const active = await apiGet('/api/sessions/active')
+      if (active && active.remaining_ids?.length > 0) {
+        pendingSession = active
+      }
+    } catch(e) { /* keine offene Session */ }
+  })
+
+  async function resumeSession() {
+    if (!pendingSession) return
+    session = { session_id: pendingSession.session_id }
+    cardIds = pendingSession.remaining_ids
+    activeSession.set(session)
+    results = []; idx = 0
+    mode = pendingSession.mode || 'standard'
+    await loadCard(0)
+    phase = 'learning'
+    pendingSession = null
+  }
+
+  async function cancelPending() {
+    try {
+      await apiDelete('/api/sessions/active')
+      pendingSession = null
+      activeSession.set(null)
+    } catch(e) { /* ignore */ }
+  }
 
   // ── Actions ────────────────────────────────────────────────
   async function startSession() {
@@ -188,7 +220,14 @@
     phase = 'result'
   }
 
-  function reset() { phase='setup'; session=null; cardIds=[]; idx=0; card=null; results=[]; wrongCards=[]; showAnalysis=false }
+  function reset() {
+    if (session?.session_id) {
+      apiPost(`/api/sessions/${session.session_id}/end`, {}).catch(() => {})
+    }
+    activeSession.set(null)
+    phase='setup'; session=null; cardIds=[]; idx=0; card=null; results=[]; wrongCards=[]; showAnalysis=false
+    pendingSession = null
+  }
 </script>
 
 <div class="page">
@@ -201,6 +240,27 @@
       <p class="page-sub">Modus wählen und Session starten</p>
     </div>
   </div>
+
+  {#if pendingSession}
+    <div class="card-box pending-session" style="margin-bottom:20px;display:flex;align-items:center;gap:14px;justify-content:space-between">
+      <div>
+        <div style="font-size:13px;font-weight:700;color:var(--text0)">
+          <i class="fa-solid fa-clock-rotate-left" style="color:var(--warn)"></i>
+          Offene Session
+        </div>
+        <div style="font-size:12px;color:var(--text2);margin-top:3px">
+          {pendingSession.reviewed} von {pendingSession.total} Karten beantwortet --
+          {pendingSession.correct} richtig, {pendingSession.wrong} falsch
+        </div>
+      </div>
+      <div style="display:flex;gap:8px;flex-shrink:0">
+        <button class="btn btn-ghost btn-sm" onclick={cancelPending}>Verwerfen</button>
+        <button class="btn btn-primary" onclick={resumeSession}>
+          <i class="fa-solid fa-forward"></i> Fortsetzen
+        </button>
+      </div>
+    </div>
+  {/if}
 
   <div class="setup-grid">
     <!-- Modus -->

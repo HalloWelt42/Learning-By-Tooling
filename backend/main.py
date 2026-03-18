@@ -558,6 +558,68 @@ def start_session(data: SessionCreate, user: dict = Depends(get_current_user)):
     conn.close()
     return {"session_id": session_id, "card_ids": card_ids, "total": len(card_ids)}
 
+@app.get("/api/sessions/active")
+def get_active_session(user: dict = Depends(get_current_user)):
+    """Gibt die aktive (nicht beendete) Session des Users zurück, falls vorhanden."""
+    uid = user["id"]
+    conn = get_db()
+    session = conn.execute(
+        "SELECT * FROM sessions WHERE user_id=? AND ended_at IS NULL ORDER BY started_at DESC LIMIT 1",
+        (uid,)
+    ).fetchone()
+    if not session:
+        conn.close()
+        return None
+    # Reviews dieser Session laden
+    reviews = conn.execute(
+        "SELECT card_id, result FROM reviews WHERE session_id=? AND user_id=?",
+        (session["id"], uid)
+    ).fetchall()
+    reviewed_ids = [r["card_id"] for r in reviews]
+    correct = sum(1 for r in reviews if r["result"] == "correct")
+    wrong = sum(1 for r in reviews if r["result"] == "wrong")
+    skipped = sum(1 for r in reviews if r["result"] == "skip")
+    # Alle Karten der Session (aus der Gesamt-Auswahl) laden
+    cat_filter = json.loads(session["category_filter"]) if session["category_filter"] else []
+    q = "SELECT card_id FROM cards WHERE active=1"
+    p = []
+    if session["package_id"]:
+        q += " AND package_id=?"; p.append(session["package_id"])
+    if cat_filter:
+        pl = ",".join("?" * len(cat_filter))
+        q += f" AND category_code IN ({pl})"; p.extend(cat_filter)
+    q += " ORDER BY RANDOM() LIMIT ?"
+    p.append(session["total_cards"])
+    all_cards = [r["card_id"] for r in conn.execute(q, p).fetchall()]
+    # Noch nicht beantwortete Karten
+    remaining = [c for c in all_cards if c not in reviewed_ids]
+    conn.close()
+    return {
+        "session_id": session["id"],
+        "mode": session["mode"],
+        "package_id": session["package_id"],
+        "total": session["total_cards"],
+        "reviewed": len(reviewed_ids),
+        "correct": correct,
+        "wrong": wrong,
+        "skipped": skipped,
+        "remaining_ids": remaining,
+        "started_at": session["started_at"],
+    }
+
+@app.delete("/api/sessions/active")
+def cancel_active_session(user: dict = Depends(get_current_user)):
+    """Bricht die aktive Session ab (beendet sie ohne Ergebnis)."""
+    uid = user["id"]
+    conn = get_db()
+    conn.execute(
+        "UPDATE sessions SET ended_at=? WHERE user_id=? AND ended_at IS NULL",
+        (datetime.now().isoformat(), uid)
+    )
+    conn.commit()
+    conn.close()
+    return {"ok": True}
+
 @app.post("/api/sessions/{session_id}/end")
 def end_session(session_id: int, user: dict = Depends(get_current_user)):
     uid = user["id"]
