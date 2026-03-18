@@ -241,6 +241,45 @@
     </div>
   {/if}
 
+  <!-- Globale Übersicht (Kopfbereich) -->
+  {#if $globalStats && $globalStats.total_cards > 0}
+    <div class="global-stats">
+      <div class="gs-item">
+        <i class="fa-solid fa-box-archive"></i>
+        <strong>{$globalStats.total_packages}</strong>
+        <span>Pakete</span>
+      </div>
+      <div class="gs-sep"></div>
+      <div class="gs-item">
+        <i class="fa-solid fa-layer-group"></i>
+        <strong>{$globalStats.total_cards}</strong>
+        <span>Karten gesamt</span>
+      </div>
+      <div class="gs-sep"></div>
+      <div class="gs-item ok">
+        <i class="fa-solid fa-bullseye"></i>
+        <strong>{pct($globalStats.total_correct, $globalStats.total_reviews)}%</strong>
+        <span>Trefferquote</span>
+      </div>
+      {#if $globalStats.due_today > 0}
+        <div class="gs-sep"></div>
+        <div class="gs-item warn">
+          <i class="fa-solid fa-brain"></i>
+          <strong>{$globalStats.due_today}</strong>
+          <span>Fällig heute</span>
+        </div>
+      {/if}
+      {#if $globalStats.pending_drafts > 0}
+        <div class="gs-sep"></div>
+        <div class="gs-item accent">
+          <i class="fa-solid fa-file-circle-exclamation"></i>
+          <strong>{$globalStats.pending_drafts}</strong>
+          <span>Entwürfe offen</span>
+        </div>
+      {/if}
+    </div>
+  {/if}
+
   <!-- ── Verfügbare Lernpakete ────────────────────────────────────────────── -->
   {#if bundles.length > 0}
     <div class="bundles-section">
@@ -340,45 +379,6 @@
       </button>
     {/if}
   </div>
-
-  <!-- Globale Übersicht -->
-  {#if $globalStats && $globalStats.total_cards > 0}
-    <div class="global-stats">
-      <div class="gs-item">
-        <i class="fa-solid fa-box-archive"></i>
-        <strong>{$globalStats.total_packages}</strong>
-        <span>Pakete</span>
-      </div>
-      <div class="gs-sep"></div>
-      <div class="gs-item">
-        <i class="fa-solid fa-layer-group"></i>
-        <strong>{$globalStats.total_cards}</strong>
-        <span>Karten gesamt</span>
-      </div>
-      <div class="gs-sep"></div>
-      <div class="gs-item ok">
-        <i class="fa-solid fa-bullseye"></i>
-        <strong>{pct($globalStats.total_correct, $globalStats.total_reviews)}%</strong>
-        <span>Trefferquote</span>
-      </div>
-      {#if $globalStats.due_today > 0}
-        <div class="gs-sep"></div>
-        <div class="gs-item warn">
-          <i class="fa-solid fa-brain"></i>
-          <strong>{$globalStats.due_today}</strong>
-          <span>Fällig heute</span>
-        </div>
-      {/if}
-      {#if $globalStats.pending_drafts > 0}
-        <div class="gs-sep"></div>
-        <div class="gs-item accent">
-          <i class="fa-solid fa-file-circle-exclamation"></i>
-          <strong>{$globalStats.pending_drafts}</strong>
-          <span>Entwürfe offen</span>
-        </div>
-      {/if}
-    </div>
-  {/if}
 
   <!-- Pakete Grid -->
   {#if ($packages || []).length === 0}
