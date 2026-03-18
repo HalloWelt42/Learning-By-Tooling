@@ -15,6 +15,7 @@
   let drafts    = $state([])
   let lexicon   = $state([])
   let paths     = $state([])
+  let materialTexts = $state([])
 
   let loadingCards  = $state(false)
   let searchQ       = $state('')
@@ -97,6 +98,19 @@
   }
   async function loadLexicon() { lexicon = await apiGet(`/api/packages/${pkg.id}/lexicon`).catch(()=>[]) }
   async function loadPaths()   { paths   = await apiGet(`/api/packages/${pkg.id}/paths`).catch(()=>[]) }
+
+  async function loadMaterial() {
+    if (materialTexts.length > 0) return
+    const result = []
+    for (const doc of documents) {
+      try {
+        const data = await apiGet(`/api/documents/${doc.id}/chunks`)
+        const fullText = data.chunks.map(c => c.text).join('\n\n')
+        result.push({ id: doc.id, title: doc.title, filetype: doc.filetype, text: fullText })
+      } catch(e) { /* skip */ }
+    }
+    materialTexts = result
+  }
 
   $effect(() => {
     if (tab === 'cards')   loadCards()
@@ -340,6 +354,7 @@
   <div class="pd-tabs">
     {#each [
       ['overview',  'fa-gauge',       'Übersicht',  0],
+      ['material',  'fa-book',        'Material',   0],
       ['documents', 'fa-file-lines',  'Dokumente',  pending.length],
       ['cards',     'fa-layer-group', 'Karten',     0],
       ['lexicon',   'fa-book-open',   'Lexikon',    0],
@@ -356,8 +371,33 @@
   <!-- ── Tab-Inhalte ───────────────────────────────────────────────────────── -->
   <div class="pd-body">
 
+    <!-- MATERIAL (Lese-Ansicht) -->
+    {#if tab==='material'}
+      <div class="tab-page material-page">
+        {#if documents.length === 0}
+          <div class="empty-state">
+            <i class="fa-solid fa-book"></i>
+            <p>Noch kein Lernmaterial. Lade Dokumente im Tab "Dokumente" hoch.</p>
+          </div>
+        {:else}
+          {#await loadMaterial() then}
+            {#each materialTexts as doc}
+              <article class="material-doc">
+                <div class="material-doc-header">
+                  <i class="fa-solid fa-file-lines"></i>
+                  <h2>{doc.title}</h2>
+                </div>
+                <div class="material-content markdown">
+                  {@html marked(doc.text)}
+                </div>
+              </article>
+            {/each}
+          {/await}
+        {/if}
+      </div>
+
     <!-- ÜBERSICHT -->
-    {#if tab==='overview'}
+    {:else if tab==='overview'}
       <div class="tab-page">
         {#if stats && catCounts.length>0}
           <div class="overview-cols">
@@ -1110,6 +1150,16 @@
   overflow-y: auto;
   padding: 24px;
 }
+.material-page { max-width: 860px; }
+.material-doc { margin-bottom: 32px; }
+.material-doc-header {
+  display: flex; align-items: center; gap: 10px;
+  margin-bottom: 16px; padding-bottom: 10px;
+  border-bottom: 1px solid var(--border);
+}
+.material-doc-header i { color: var(--accent); font-size: 16px; }
+.material-doc-header h2 { font-size: 16px; font-weight: 700; color: var(--text0); margin: 0; }
+.material-content { font-size: 14px; color: var(--text1); line-height: 1.8; }
 .tab-hd {
   display: flex;
   justify-content: space-between;
