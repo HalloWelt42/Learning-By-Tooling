@@ -1157,7 +1157,10 @@ def uninstall_package(pkg_id: int, user: dict = Depends(get_current_user)):
     except Exception:
         pass
 
-    # 9. Paket selbst löschen
+    # 9. Sessions entkoppeln (Statistik bleibt, Paket-Referenz wird entfernt)
+    conn.execute("UPDATE sessions SET package_id=NULL WHERE package_id=?", (pkg_id,))
+
+    # 10. Paket selbst löschen
     conn.execute("DELETE FROM packages WHERE id=?", (pkg_id,))
     conn.commit()
     conn.close()
