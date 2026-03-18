@@ -4,6 +4,7 @@
     theme, currentView, activePackageId,
     loadGlobal, packages, globalStats, aiOnline,
     toastStore, activeSession, authUser,
+    backendOnline, backendVersion,
   } from './lib/stores/index.js'
   import { VERSION } from './lib/utils/version.js'
 
@@ -14,7 +15,7 @@
   import Progress      from './lib/components/Progress.svelte'
   import Guide         from './lib/components/Guide.svelte'
   import Search        from './lib/components/Search.svelte'
-  import { route, initRouter } from './lib/utils/router.js'
+  import { route, initRouter, navigate } from './lib/utils/router.js'
 
   let interval = $state(null)
 
@@ -82,7 +83,7 @@
 
       <nav class="nav">
         <button class="nav-item" class:active={$currentView==='packages'}
-          onclick={() => { currentView.set('packages'); activePackageId.set(null) }}>
+          onclick={() => navigate('/packages')}>
           <i class="fa-solid fa-box-archive"></i>
           <span>Alle Pakete</span>
           {#if ($globalStats?.total_packages ?? 0) > 0}
@@ -91,7 +92,7 @@
         </button>
 
         <button class="nav-item" class:active={$currentView==='learn'}
-          onclick={() => currentView.set('learn')}>
+          onclick={() => navigate('/learn')}>
           <i class="fa-solid fa-play"></i>
           <span>Lernen</span>
           {#if $activeSession}
@@ -103,19 +104,19 @@
         </button>
 
         <button class="nav-item" class:active={$currentView==='progress'}
-          onclick={() => currentView.set('progress')}>
+          onclick={() => navigate('/progress')}>
           <i class="fa-solid fa-chart-line"></i>
           <span>Fortschritt</span>
         </button>
 
         <button class="nav-item" class:active={$currentView==='search'}
-          onclick={() => currentView.set('search')}>
+          onclick={() => navigate('/search')}>
           <i class="fa-solid fa-magnifying-glass"></i>
           <span>Suche</span>
         </button>
 
         <button class="nav-item" class:active={$currentView==='guide'}
-          onclick={() => currentView.set('guide')}>
+          onclick={() => navigate('/guide')}>
           <i class="fa-solid fa-map"></i>
           <span>Anleitung</span>
         </button>
@@ -129,7 +130,7 @@
               class="pkg-item"
               class:active={$activePackageId === pkg.id && $currentView === 'package'}
               style="--c:{pkg.color}"
-              onclick={() => { activePackageId.set(pkg.id); currentView.set('package') }}
+              onclick={() => navigate(`/packages/${pkg.id}`)}
             >
               <div class="pkg-dot" style="background:{pkg.color}">
                 <i class="fa-solid {pkg.icon}"></i>
@@ -147,17 +148,19 @@
       {/if}
 
       <div class="sf">
-        <div class="user-row">
-          <i class="fa-solid fa-user"></i>
-          <span>{$authUser.display_name || $authUser.email}</span>
-          <button class="logout-btn" title="Abmelden" onclick={() => authUser.logout()}>
-            <i class="fa-solid fa-right-from-bracket"></i>
-          </button>
+        <div class="status-row">
+          <div class="status-dot" class:online={$backendOnline}></div>
+          <span>API {$backendVersion || '?'}</span>
         </div>
-        <div class="ai-status" class:online={$aiOnline}>
-          <div class="ai-dot" class:online={$aiOnline} class:offline={!$aiOnline}></div>
+        <div class="status-row">
+          <div class="status-dot" class:online={$aiOnline}></div>
           <span>LM Studio</span>
         </div>
+        <div class="footer-meta">
+          <div class="mono">Frontend v{VERSION}</div>
+          <div class="mono">Backend v{$backendVersion || '-'}</div>
+        </div>
+        <div class="footer-credit">HalloWelt42</div>
         <div class="theme-row">
           {#each [
             {id:'dark',     icon:'fa-moon'},
@@ -177,6 +180,13 @@
               <i class="fa-solid {t.icon}"></i>
             </button>
           {/each}
+        </div>
+        <div class="user-row">
+          <i class="fa-solid fa-user"></i>
+          <span>{$authUser.display_name || $authUser.email}</span>
+          <button class="logout-btn" title="Abmelden" onclick={() => authUser.logout()}>
+            <i class="fa-solid fa-right-from-bracket"></i>
+          </button>
         </div>
       </div>
     </aside>
@@ -263,10 +273,11 @@
     font-size:11px;transition:color .12s;
   }
   .logout-btn:hover { color:var(--err); }
-  .ai-status { display:flex;align-items:center;gap:7px;font-size:11px;color:var(--text3); }
-  .ai-dot    { width:6px;height:6px;border-radius:50%;background:var(--text3);flex-shrink:0; }
-  .ai-dot.online  { background:var(--ok);box-shadow:0 0 5px var(--ok); }
-  .ai-dot.offline { background:var(--text3); }
+  .status-row { display:flex;align-items:center;gap:7px;font-size:11px;color:var(--text3); }
+  .status-dot { width:6px;height:6px;border-radius:50%;background:var(--text3);flex-shrink:0; }
+  .status-dot.online { background:var(--ok);box-shadow:0 0 5px var(--ok); }
+  .footer-meta { font-size:9px;color:var(--text3);font-family:'JetBrains Mono',monospace; }
+  .footer-credit { font-size:9px;color:var(--text3);font-style:italic; }
   .theme-row { display:flex;gap:4px; }
   .theme-dot {
     width:22px;height:22px;border-radius: 2px;border:1px solid var(--border);

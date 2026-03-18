@@ -68,8 +68,10 @@ export const activePackageId = writable(null)
 export const packages    = writable([])
 export const categories  = writable([])
 export const globalStats = writable(null)
-export const aiOnline    = writable(false)
-export const activeSession = writable(null)
+export const aiOnline       = writable(false)
+export const activeSession  = writable(null)
+export const backendVersion = writable(null)
+export const backendOnline  = writable(false)
 
 // -- Toast --------------------------------------------------------------------
 
@@ -83,17 +85,21 @@ export function showToast(message, type = 'info', duration = 3500) {
 
 export async function loadGlobal() {
   try {
-    const [pkgs, cats, stats, ai] = await Promise.all([
+    const [pkgs, cats, stats, ai, health] = await Promise.all([
       apiGet('/api/packages'),
       apiGet('/api/categories'),
       apiGet('/api/stats'),
       apiGet('/api/ai/status'),
+      apiGet('/api/health').catch(() => null),
     ])
     packages.set(pkgs)
     categories.set(cats)
     globalStats.set(stats)
     aiOnline.set(ai.online)
+    backendOnline.set(!!health)
+    if (health) backendVersion.set(health.version)
   } catch(e) {
     console.error('[LBT] loadGlobal:', e)
+    backendOnline.set(false)
   }
 }
