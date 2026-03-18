@@ -14,6 +14,7 @@ from typing import Optional
 from fastapi import FastAPI, HTTPException, UploadFile, File, Form, Depends, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
 from db import get_db, init_db, row_to_dict
@@ -40,6 +41,9 @@ app.add_middleware(
 
 UPLOAD_DIR = Path(os.environ.get("UPLOAD_DIR", str(Path(__file__).parent.parent / "uploads")))
 UPLOAD_DIR.mkdir(exist_ok=True)
+
+# Uploads als statische Dateien bereitstellen
+app.mount("/uploads", StaticFiles(directory=str(UPLOAD_DIR)), name="uploads")
 
 init_db()
 seed_admin()
@@ -751,6 +755,24 @@ def get_documents(pkg_id: int, user: dict = Depends(get_current_user)):
     ).fetchall()
     conn.close()
     return [row_to_dict(r) for r in rows]
+
+@app.get("/api/packages/{pkg_id}/media")
+def get_package_media(pkg_id: int, user: dict = Depends(get_current_user)):
+    """Listet Bilder und andere Medien eines Pakets auf."""
+    pkg_dir = UPLOAD_DIR / str(pkg_id)
+    if not pkg_dir.exists():
+        return []
+    img_exts = {".png", ".jpg", ".jpeg", ".gif", ".svg", ".webp", ".pdf"}
+    files = []
+    for f in sorted(pkg_dir.iterdir()):
+        if f.suffix.lower() in img_exts:
+            files.append({
+                "name": f.name,
+                "type": f.suffix.lower().lstrip("."),
+                "size": f.stat().st_size,
+                "url": f"/uploads/{pkg_id}/{f.name}",
+            })
+    return files
 
 @app.post("/api/packages/{pkg_id}/documents/upload")
 async def upload_document(
@@ -1648,6 +1670,23 @@ async def import_zip(
         and not n.startswith(".")
     ]
 
+    # Bilder importieren (in uploads/ speichern)
+    img_exts = (".png", ".jpg", ".jpeg", ".gif", ".svg", ".webp")
+    img_files = [
+        n for n in names
+        if any(n.lower().endswith(ext) for ext in img_exts)
+        and not n.startswith("__") and not n.startswith(".")
+    ]
+    images_imported = 0
+    uploads_dir = UPLOAD_DIR
+    pkg_upload_dir = uploads_dir / str(package_id)
+    pkg_upload_dir.mkdir(parents=True, exist_ok=True)
+    for img_name in img_files:
+        filename = img_name.split("/")[-1]
+        target = pkg_upload_dir / filename
+        target.write_bytes(zf.read(img_name))
+        images_imported += 1
+
     docs_imported = 0
     for doc_name in doc_files:
         content = zf.read(doc_name)
@@ -1674,6 +1713,7 @@ async def import_zip(
         docs_imported += 1
 
     result["docs_imported"] = docs_imported
+    result["images_imported"] = images_imported
     return result
 
 
