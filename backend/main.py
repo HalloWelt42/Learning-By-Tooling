@@ -1339,6 +1339,45 @@ async def import_zip(
     result = import_markdown_internal(fragen, antworten, package_id)
     result["package_id"] = package_id
 
+    # Lernmaterial-Dateien als Dokumente importieren
+    skip_names = {fragen_name, antwort_name}
+    doc_exts = (".md", ".txt", ".pdf", ".docx")
+    doc_files = [
+        n for n in names
+        if n not in skip_names
+        and not n.lower().startswith("readme")
+        and not n.lower().endswith("bundles.json")
+        and any(n.lower().endswith(ext) for ext in doc_exts)
+        and not n.startswith("__")
+        and not n.startswith(".")
+    ]
+
+    docs_imported = 0
+    for doc_name in doc_files:
+        content = zf.read(doc_name)
+        filename = doc_name.split("/")[-1]
+        ext = filename.rsplit(".", 1)[-1].lower() if "." in filename else "txt"
+        text = extract_text_from_file(content, ext)
+        if not text.strip():
+            continue
+        chunks = chunk_text(text)
+        doc_title = filename.rsplit(".", 1)[0].replace("-", " ").replace("_", " ").strip()
+        conn = get_db()
+        conn.execute(
+            "INSERT INTO documents (package_id,filename,title,filetype,filesize,chunk_count,status) VALUES (?,?,?,?,?,?,?)",
+            (package_id, filename, doc_title, ext, len(content), len(chunks), "ready")
+        )
+        doc_id = conn.execute("SELECT last_insert_rowid()").fetchone()[0]
+        for i, ch in enumerate(chunks):
+            conn.execute(
+                "INSERT INTO document_chunks (document_id,chunk_index,text) VALUES (?,?,?)",
+                (doc_id, i, ch)
+            )
+        conn.commit()
+        conn.close()
+        docs_imported += 1
+
+    result["docs_imported"] = docs_imported
     return result
 
 
