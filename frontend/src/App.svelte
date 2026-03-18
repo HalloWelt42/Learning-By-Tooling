@@ -199,20 +199,21 @@
       {/if}
     </main>
 
-    {#if $toastStore}
-      {#key $toastStore.id}
-        <div class="toast toast--{$toastStore.type}" role="alert">
-          <i class="fa-solid {
-            $toastStore.type==='success' ? 'fa-circle-check' :
-            $toastStore.type==='error'   ? 'fa-circle-xmark' :
-            $toastStore.type==='warn'    ? 'fa-triangle-exclamation' :
-            'fa-circle-info'
-          }"></i>
-          <span>{$toastStore.message}</span>
-        </div>
-      {/key}
-    {/if}
   </div>
+
+  {#if $toastStore}
+    {#key $toastStore.id}
+      <div class="toast-float {$toastStore.type}" role="alert">
+        <i class="fa-solid {
+          $toastStore.type==='success' ? 'fa-circle-check' :
+          $toastStore.type==='error'   ? 'fa-circle-xmark' :
+          $toastStore.type==='warn'    ? 'fa-triangle-exclamation' :
+          'fa-circle-info'
+        }"></i>
+        <span>{$toastStore.message}</span>
+      </div>
+    {/key}
+  {/if}
 {/if}
 
 <style>
@@ -274,4 +275,21 @@
   }
   .theme-dot:hover  { border-color:var(--text2);color:var(--text1); }
   .theme-dot.active { border-color:var(--accent);color:var(--accent);background:var(--glow); }
+
+  .toast-float {
+    position:fixed; bottom:20px; right:20px; z-index:9999;
+    display:flex; align-items:center; gap:9px;
+    padding:10px 16px; background:var(--bg2); border:1px solid var(--border);
+    border-radius:3px; font-size:13px; color:var(--text0);
+    box-shadow:0 4px 20px var(--shadow);
+    max-width:360px; animation:toast-in .15s ease;
+  }
+  .toast-float.success { border-color:var(--ok); }
+  .toast-float.success i { color:var(--ok); }
+  .toast-float.error { border-color:var(--err); }
+  .toast-float.error i { color:var(--err); }
+  .toast-float.warn { border-color:var(--warn); }
+  .toast-float.warn i { color:var(--warn); }
+  .toast-float.info i { color:var(--accent); }
+  @keyframes toast-in { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:translateY(0); } }
 </style>

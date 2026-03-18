@@ -124,7 +124,16 @@
 }
 
 /* ── Reset ────────────────────────────────────────────────────────────────── */
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; user-select: none; -webkit-user-select: none; }
+
+/* Text-Selektion nur bei Inhalten */
+p, .page-sub, .bc-desc, .pk-desc, .step-intro,
+textarea, input, code, pre, .mono,
+.howto-text, .step-tip span, .format-code,
+td, .card-q, .card-a, .detail-q, .detail-a,
+.dp-ai, .ai-explain, .ae-text,
+.ach-desc, .import-ta,
+.lexicon-def, .lex-def { user-select: text; -webkit-user-select: text; }
 
 html, body {
   height: 100%;

@@ -11,8 +11,9 @@ import os
 from pathlib import Path
 from typing import Optional
 
-from fastapi import FastAPI, HTTPException, UploadFile, File, Form, Depends
+from fastapi import FastAPI, HTTPException, UploadFile, File, Form, Depends, Query
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 
 from db import get_db, init_db, row_to_dict
@@ -1018,6 +1019,80 @@ def get_history(limit: int = 30, user: dict = Depends(get_current_user)):
     conn.close()
     return [row_to_dict(r) for r in rows]
 
+# -- Paket exportieren (ZIP mit Fragen + Antworten Markdown) ------------------
+
+@app.get("/api/packages/{pkg_id}/export")
+def export_package(pkg_id: int, token: str = Query(None), user: dict = Depends(get_current_user)):
+    import io, zipfile
+    conn = get_db()
+    pkg = conn.execute("SELECT * FROM packages WHERE id=?", (pkg_id,)).fetchone()
+    if not pkg:
+        conn.close()
+        raise HTTPException(404, "Paket nicht gefunden")
+
+    cards = conn.execute(
+        "SELECT card_id, category_code, question, answer, hint, difficulty FROM cards WHERE package_id=? AND active=1 ORDER BY card_id",
+        (pkg_id,)
+    ).fetchall()
+    conn.close()
+
+    if not cards:
+        raise HTTPException(400, "Paket hat keine Karten zum Exportieren")
+
+    pkg_name = pkg["name"]
+    slug = re.sub(r'[^a-z0-9]+', '-', pkg_name.lower()).strip('-')
+
+    # Fragen-Markdown
+    fragen_lines = [f"# {pkg_name} -- Fragen\n"]
+    for c in cards:
+        fragen_lines.append("---\n")
+        fragen_lines.append(f"```\n{c['card_id']} | {c['category_code']}\n{c['question']}\n```\n")
+    fragen_md = "\n".join(fragen_lines)
+
+    # Antworten-Markdown
+    antworten_lines = [f"# {pkg_name} -- Antworten\n"]
+    for c in cards:
+        antworten_lines.append("---\n")
+        answer_text = c["answer"]
+        if c["hint"]:
+            answer_text += f"\n\nHinweis: {c['hint']}"
+        aid = c["card_id"].replace("K-", "A-")
+        antworten_lines.append(f"```\n{aid} | {c['category_code']} -> {c['card_id']}\n{answer_text}\n```\n")
+    antworten_md = "\n".join(antworten_lines)
+
+    # Bundle-Metadaten für Re-Import
+    cat_counts = {}
+    for c in cards:
+        cat_counts[c["category_code"]] = cat_counts.get(c["category_code"], 0) + 1
+
+    bundle_meta = json.dumps([{
+        "id": slug,
+        "name": pkg_name,
+        "description": pkg["description"] or "",
+        "color": pkg["color"],
+        "icon": pkg["icon"],
+        "version": "1.0",
+        "fragen_file": f"{slug}-fragen.md",
+        "antwort_file": f"{slug}-antworten.md",
+        "card_count": len(cards),
+        "categories": cat_counts,
+    }], ensure_ascii=False, indent=2)
+
+    # ZIP erstellen
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, 'w', zipfile.ZIP_DEFLATED) as zf:
+        zf.writestr(f"{slug}-fragen.md", fragen_md)
+        zf.writestr(f"{slug}-antworten.md", antworten_md)
+        zf.writestr("bundles.json", bundle_meta)
+    buf.seek(0)
+
+    filename = f"{slug}-v1.0.zip"
+    return StreamingResponse(
+        buf,
+        media_type="application/zip",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
+
 # -- Paket zurückziehen (saubere Deinstallation) ------------------------------
 
 @app.delete("/api/packages/{pkg_id}/uninstall")
@@ -1030,15 +1105,9 @@ def uninstall_package(pkg_id: int, user: dict = Depends(get_current_user)):
 
     stats = {}
 
-    # 1. Lernfortschritt der Karten löschen (card_id ist TEXT)
-    card_ids = [r["card_id"] for r in conn.execute(
-        "SELECT card_id FROM cards WHERE package_id=?", (pkg_id,)
-    ).fetchall()]
-
-    if card_ids:
-        placeholders = ",".join("?" * len(card_ids))
-        r = conn.execute(f"DELETE FROM card_stats WHERE card_id IN ({placeholders})", card_ids)
-        stats["card_stats_deleted"] = r.rowcount
+    # 1. Lernstatistik bleibt erhalten (gelernt ist gelernt)
+    #    card_stats und reviews werden NICHT gelöscht.
+    #    Bei Re-Import mit gleichen card_ids werden sie automatisch verknüpft.
 
     # 2. Alle Karten löschen
     r = conn.execute("DELETE FROM cards WHERE package_id=?", (pkg_id,))

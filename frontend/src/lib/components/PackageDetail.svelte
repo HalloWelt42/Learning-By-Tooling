@@ -1,6 +1,6 @@
 <script>
   import { categories, currentView, activePackageId, showToast, loadGlobal, aiOnline } from '../stores/index.js'
-  import { apiGet, apiPost, apiPut, apiDelete, apiUpload } from '../utils/api.js'
+  import { apiGet, apiPost, apiPut, apiDelete, apiUpload, BASE } from '../utils/api.js'
   import { onMount } from 'svelte'
 
   let { pkg } = $props()
@@ -61,6 +61,26 @@
 
   async function loadAll() {
     await Promise.all([loadStats(), loadDocuments(), loadDrafts()])
+  }
+
+  async function exportPkg() {
+    try {
+      const token = localStorage.getItem('lbt-token')
+      const res = await fetch(`${BASE}/api/packages/${pkg.id}/export`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      })
+      if (!res.ok) throw new Error('Export fehlgeschlagen')
+      const blob = await res.blob()
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = res.headers.get('content-disposition')?.match(/filename="(.+)"/)?.[1] || 'paket.zip'
+      a.click()
+      URL.revokeObjectURL(url)
+      showToast('Paket exportiert', 'success')
+    } catch (e) {
+      showToast(e.message, 'error')
+    }
   }
   async function loadStats()     { stats     = await apiGet(`/api/packages/${pkg.id}/stats`).catch(()=>null) }
   async function loadDocuments() { documents = await apiGet(`/api/packages/${pkg.id}/documents`).catch(()=>[]) }
@@ -304,6 +324,9 @@
             <span class="pds-lbl">Entwürfe</span>
           </div>
         {/if}
+        <button class="btn btn-ghost" title="Paket als ZIP exportieren" onclick={exportPkg}>
+          <i class="fa-solid fa-file-export"></i>
+        </button>
         <button class="btn btn-primary" onclick={()=>currentView.set('learn')}>
           <i class="fa-solid fa-play"></i> Lernen
         </button>
@@ -1247,9 +1270,9 @@
 .cl-list { flex: 1; overflow-y: auto; padding: 6px; }
 .list-loading { padding: 24px; text-align: center; color: var(--accent); font-size: 18px; }
 .list-empty   { padding: 20px; text-align: center; color: var(--text3); font-size: 12px; }
-.cl-item { display: block; width: 100%; padding: 9px 10px; border-radius: 4px; text-align: left; cursor: pointer; transition: background .12s; border: 1px solid transparent; margin-bottom: 2px; background: none; font-family: inherit; }
-.cl-item:hover    { background: var(--bg2); }
-.cl-item.selected { background: var(--glow); border-color: var(--accent); }
+.cl-item { display: block; width: 100%; padding: 9px 10px; border-radius: 4px; text-align: left; cursor: pointer; transition: background .12s; border: 1px solid var(--border); margin-bottom: 4px; background: var(--bg1); font-family: inherit; }
+.cl-item:hover    { background: var(--bg2); border-color: var(--text3); }
+.cl-item.selected { background: var(--bg2); border-color: var(--accent); }
 .cl-item.inactive { opacity: .4; }
 .cli-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 3px; }
 .cli-id  { font-size: 9px; color: var(--text3); font-family: 'JetBrains Mono', monospace; letter-spacing: .06em; }

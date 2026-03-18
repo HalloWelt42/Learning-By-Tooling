@@ -16,6 +16,21 @@
   let zipInstalling= $state(false)
   let zipResult    = $state(null)
 
+  const CAT_NAMES = {
+    GB:'Grundlagen', TH:'Theorie', PX:'Praxis', VF:'Verfahren',
+    PR:'Prüfung', VT:'Vertiefung', AL:'Allgemein',
+    AK:'Akteure', GS:'Geschäftsprozesse', AP:'API', HA:'Hash',
+    OA:'OAuth2', TC:'Test Cases', MO:'Mock', KA:'Kafka',
+    FE:'Fehler', DB:'Datenmodell',
+  }
+  const CAT_COLORS = {
+    GB:'#5b8aff', TH:'#9b7ddf', PX:'#3dd68c', VF:'#ff9f43',
+    PR:'#ff6b6b', VT:'#40e0d0', AL:'#6b7280',
+    AK:'#9b7ddf', GS:'#3dd68c', AP:'#ff6b6b', HA:'#ffb347',
+    OA:'#ff69b4', TC:'#40e0d0', MO:'#c084fc', KA:'#fde68a',
+    FE:'#fb7185', DB:'#93c5fd',
+  }
+
   onMount(loadBundles)
 
   async function installZip() {
@@ -111,6 +126,26 @@
   function open(pkg) {
     activePackageId.set(pkg.id)
     currentView.set('package')
+  }
+
+  async function exportPkg(pkgId) {
+    try {
+      const token = localStorage.getItem('lbt-token')
+      const res = await fetch(`${BASE}/api/packages/${pkgId}/export`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      })
+      if (!res.ok) throw new Error('Export fehlgeschlagen')
+      const blob = await res.blob()
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = res.headers.get('content-disposition')?.match(/filename="(.+)"/)?.[1] || 'paket.zip'
+      a.click()
+      URL.revokeObjectURL(url)
+      showToast('Paket exportiert', 'success')
+    } catch (e) {
+      showToast(e.message, 'error')
+    }
   }
 
   function pct(c,t){ return t>0 ? Math.round(c/t*100) : 0 }
@@ -238,7 +273,7 @@
             </div>
             <div class="bc-cats">
               {#each Object.entries(b.categories || {}) as [code, count]}
-                <span class="bc-cat">{code} <span class="bc-cat-n">{count}</span></span>
+                <span class="bc-cat" style="background:{CAT_COLORS[code] || '#6b7280'}20;color:{CAT_COLORS[code] || '#6b7280'}" title="{CAT_NAMES[code] || code}: {count} Karten">{code} <span class="bc-cat-n">{count}</span></span>
               {/each}
             </div>
             <button
@@ -393,12 +428,12 @@
             <button class="btn btn-ghost btn-sm" onclick={e => { e.stopPropagation(); open(pkg) }}>
               <i class="fa-solid fa-arrow-right"></i> Öffnen
             </button>
-            <button
-              class="btn btn-ghost btn-sm"
-              title="Paket zurückziehen"
-              aria-label="Paket zurückziehen"
-              onclick={e => { e.stopPropagation(); confirmPkg = pkg }}
-            >
+            <button class="btn btn-ghost btn-sm" title="Paket als ZIP exportieren"
+              onclick={e => { e.stopPropagation(); exportPkg(pkg.id) }}>
+              <i class="fa-solid fa-file-export" style="font-size:11px"></i>
+            </button>
+            <button class="btn btn-ghost btn-sm" title="Paket zurückziehen"
+              onclick={e => { e.stopPropagation(); confirmPkg = pkg }}>
               <i class="fa-solid fa-trash" style="color:var(--err);font-size:11px"></i>
             </button>
           </div>
@@ -600,22 +635,12 @@
 .bc-cat {
   font-size: 10px;
   font-weight: 700;
-  padding: 2px 7px;
-  border-radius: 4px;
-  background: var(--bg3);
-  color: var(--text2);
+  padding: 2px 8px;
+  border-radius: 3px;
   letter-spacing: .04em;
   font-family: 'JetBrains Mono', monospace;
-  display: flex;
-  align-items: center;
-  gap: 4px;
 }
-.bc-cat-n {
-  background: var(--bg4);
-  border-radius: 3px;
-  padding: 0 4px;
-  font-size: 9px;
-}
+.bc-cat-n { color: var(--text2); font-weight: 500; }
 .bc-btn {
   width: 100%;
   justify-content: center;
