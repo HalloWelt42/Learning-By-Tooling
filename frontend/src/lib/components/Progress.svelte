@@ -78,8 +78,8 @@
               {#if a.level > 0}
                 <span class="ach-belt" style="background:{a.color?.hex || '#666'}">
                   {a.color?.name}
-                  {#each Array(a.stars) as _, s}
-                    <i class="fa-solid fa-star" style="font-size:8px"></i>
+                  {#each a.star_colors || [] as sc, s}
+                    <i class="fa-solid fa-star" style="font-size:9px;color:{sc}"></i>
                   {/each}
                 </span>
                 <span class="ach-lvl mono">Stufe {a.level}/30</span>

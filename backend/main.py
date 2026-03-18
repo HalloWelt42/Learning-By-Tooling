@@ -1165,6 +1165,9 @@ _ACHIEVEMENTS = [
      "thresholds":[1,3,5,7,14,21,30,45,60,90,120,150,180,220,270,330,400,500,600,730,900,1100,1300,1500,1800,2200,2600,3000,3500,4000]},
 ]
 
+# Stern-Farben: Bronze/Silber/Gold je nach Stern-Nummer
+_STAR_COLORS = ["#cd7f32", "#c0c0c0", "#ffd700"]  # 1=Bronze, 2=Silber, 3=Gold
+
 def _calc_level(value: int, thresholds: list[int]) -> dict:
     level = 0
     for t in thresholds:
@@ -1173,11 +1176,14 @@ def _calc_level(value: int, thresholds: list[int]) -> dict:
         else:
             break
     if level == 0:
-        return {"level":0, "stars":0, "color_idx":0, "color":_BELT_COLORS[0], "next_at":thresholds[0] if thresholds else 0}
+        return {"level":0, "stars":0, "color_idx":0, "color":_BELT_COLORS[0],
+                "star_colors":[], "next_at":thresholds[0] if thresholds else 0}
     color_idx = min((level - 1) // 3, 9)
     stars = ((level - 1) % 3) + 1
     next_at = thresholds[level] if level < len(thresholds) else None
-    return {"level":level, "stars":stars, "color_idx":color_idx, "color":_BELT_COLORS[color_idx], "next_at":next_at}
+    star_colors = [_STAR_COLORS[i] for i in range(stars)]
+    return {"level":level, "stars":stars, "color_idx":color_idx, "color":_BELT_COLORS[color_idx],
+            "star_colors":star_colors, "next_at":next_at}
 
 @app.get("/api/achievements")
 def get_achievements(user: dict = Depends(get_current_user)):
