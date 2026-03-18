@@ -4,6 +4,8 @@
    * Alle KI-Prozesse vollständig visualisiert
    */
   import { onMount }  from 'svelte'
+  import { marked } from 'marked'
+  marked.setOptions({ breaks: true, gfm: true })
   import { categories, aiOnline, showToast, loadGlobal } from '../stores/index.js'
   import { API, apiGet, apiDelete, apiPost, apiPut, apiUpload } from '../utils/api.js'
 
@@ -512,7 +514,7 @@
               </span>
             {/if}
           </div>
-          <div class="chunk-text">{chunk.text.slice(0,300)}{chunk.text.length>300?'…':''}</div>
+          <div class="chunk-text markdown">{@html marked(chunk.text)}</div>
         </div>
       </div>
     {/each}

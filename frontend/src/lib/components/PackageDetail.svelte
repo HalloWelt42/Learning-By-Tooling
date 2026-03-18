@@ -580,7 +580,7 @@
                             <span class="chunk-done"><i class="fa-solid fa-check"></i> verarbeitet</span>
                           {/if}
                         </div>
-                        <p class="chunk-text">{chunk.text.slice(0,200)}{chunk.text.length>200?'...':''}</p>
+                        <div class="chunk-text markdown">{@html marked(chunk.text.slice(0,300) + (chunk.text.length>300?'...':''))}</div>
                       </div>
                     </div>
                   {/each}
