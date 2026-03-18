@@ -1,6 +1,6 @@
 <script>
-  import { categories, currentView, activePackageId, showToast, loadGlobal, aiOnline } from '../stores/index.js'
-  import { apiGet, apiPost, apiPut, apiDelete, apiUpload, BASE } from '../utils/api.js'
+  import { categories, currentView, activePackageId, showToast, loadGlobal, aiOnline } from '../../stores/index.js'
+  import { apiGet, apiPost, apiPut, apiDelete, apiUpload, BASE } from '../../utils/api.js'
   import { onMount } from 'svelte'
   import { marked } from 'marked'
   import Paths from './Paths.svelte'

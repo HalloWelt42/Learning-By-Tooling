@@ -1,5 +1,5 @@
 <script>
-  import { globalStats, currentView } from '../stores/index.js'
+  import { globalStats, currentView } from '../../stores/index.js'
   function pct(c,t){ return t>0?Math.round(c/t*100):0 }
 </script>
 

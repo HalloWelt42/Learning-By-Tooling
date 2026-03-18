@@ -3,9 +3,9 @@
    * Packages.svelte -- Uebersicht aller Pakete (Themenwelten)
    * Startseite der App
    */
-  import { packages, globalStats, currentView, activePackageId, loadGlobal, showToast } from '../stores/index.js'
+  import { packages, globalStats, currentView, activePackageId, loadGlobal, showToast } from '../../stores/index.js'
   import { onMount } from 'svelte'
-  import { apiGet, apiPost, apiDelete, apiUpload } from '../utils/api.js'
+  import { apiGet, apiPost, apiDelete, apiUpload } from '../../utils/api.js'
 
   let showCreate = $state(false)
   let bundles      = $state([])

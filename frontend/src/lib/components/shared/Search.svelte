@@ -8,9 +8,9 @@
    * - Snippet-Hervorhebung
    */
   import { onMount } from 'svelte'
-  import { apiGet }  from '../utils/api.js'
-  import { packages, categories, activePackageId, currentView } from '../stores/index.js'
-  import { navigate, navToPackage } from '../utils/router.js'
+  import { apiGet }  from '../../utils/api.js'
+  import { packages, categories, activePackageId, currentView } from '../../stores/index.js'
+  import { navigate, navToPackage } from '../../utils/router.js'
 
   // Props: initiale Query aus URL
   let { initQ = '', initPkg = null } = $props()

@@ -1,7 +1,7 @@
 <script>
   import { onMount } from 'svelte'
-  import { categories, showToast, loadGlobal, aiOnline } from '../stores/index.js'
-  import { apiGet, apiPost, apiPut, apiDelete } from '../utils/api.js'
+  import { categories, showToast, loadGlobal, aiOnline } from '../../stores/index.js'
+  import { apiGet, apiPost, apiPut, apiDelete } from '../../utils/api.js'
 
   let cards    = $state([])
   let loading  = $state(true)

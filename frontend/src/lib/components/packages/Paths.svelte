@@ -4,8 +4,8 @@
 -->
 <script>
   import { onMount } from 'svelte'
-  import { showToast, categories, activePackageId, currentView } from '../stores/index.js'
-  import { apiGet, apiPost, apiPut, apiDelete } from '../utils/api.js'
+  import { showToast, categories, activePackageId, currentView } from '../../stores/index.js'
+  import { apiGet, apiPost, apiPut, apiDelete } from '../../utils/api.js'
   import { marked } from 'marked'
   marked.setOptions({ breaks: true, gfm: true })
 

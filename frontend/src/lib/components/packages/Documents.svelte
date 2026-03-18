@@ -6,8 +6,8 @@
   import { onMount }  from 'svelte'
   import { marked } from 'marked'
   marked.setOptions({ breaks: true, gfm: true })
-  import { categories, aiOnline, showToast, loadGlobal } from '../stores/index.js'
-  import { API, apiGet, apiDelete, apiPost, apiPut, apiUpload } from '../utils/api.js'
+  import { categories, aiOnline, showToast, loadGlobal } from '../../stores/index.js'
+  import { API, apiGet, apiDelete, apiPost, apiPut, apiUpload } from '../../utils/api.js'
 
   // ── State ─────────────────────────────────────────────────
   let documents    = $state([])

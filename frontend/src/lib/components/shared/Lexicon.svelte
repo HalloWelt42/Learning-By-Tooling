@@ -1,8 +1,8 @@
 <!-- Lexicon.svelte -->
 <script>
   import { onMount } from 'svelte'
-  import { categories, showToast } from '../stores/index.js'
-  import { apiGet, apiPost } from '../utils/api.js'
+  import { categories, showToast } from '../../stores/index.js'
+  import { apiGet, apiPost } from '../../utils/api.js'
 
   let entries  = $state([])
   let searchQ  = $state('')

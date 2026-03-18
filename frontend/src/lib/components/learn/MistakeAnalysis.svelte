@@ -4,7 +4,7 @@
    * Nach einer Lerneinheit: zeigt falsche Karten + relevante Dokumentpassagen.
    * 2-Tab-Ansicht: Auszüge (KI-kuratiert) ↔ Dokument (Volltext, Passage hervorgehoben)
    */
-  import { apiPost, apiGet } from '../utils/api.js'
+  import { apiPost, apiGet } from '../../utils/api.js'
 
   let { wrongCards = [], packageId = null, onClose = () => {} } = $props()
 

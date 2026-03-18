@@ -1,5 +1,5 @@
 <script>
-  import { authUser, showToast } from '../stores/index.js'
+  import { authUser, showToast } from '../../stores/index.js'
 
   let email = $state('admin@example.com')
   let password = $state('admin')

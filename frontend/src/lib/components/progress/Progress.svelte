@@ -1,7 +1,7 @@
 <script>
   import { onMount } from 'svelte'
-  import { showToast, loadGlobal, activePackageId } from '../stores/index.js'
-  import { apiGet, apiPost } from '../utils/api.js'
+  import { showToast, loadGlobal, activePackageId } from '../../stores/index.js'
+  import { apiGet, apiPost } from '../../utils/api.js'
   import ShieldBadge from './ShieldBadge.svelte'
 
   let tab          = $state('achievements')

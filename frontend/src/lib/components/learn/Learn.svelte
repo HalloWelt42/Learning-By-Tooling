@@ -4,9 +4,9 @@
    * Learn.svelte -- Lernkarten (standard | write | srs)
    * KI-Prozesse voll visualisiert, FA-Icons überall
    */
-  import { categories, aiOnline, activeSession, showToast, loadGlobal, packages, activePackageId } from '../stores/index.js'
-  import { apiGet, apiPost, apiDelete } from '../utils/api.js'
-  import { navigate } from '../utils/router.js'
+  import { categories, aiOnline, activeSession, showToast, loadGlobal, packages, activePackageId } from '../../stores/index.js'
+  import { apiGet, apiPost, apiDelete } from '../../utils/api.js'
+  import { navigate } from '../../utils/router.js'
   import AiProcess from './AiProcess.svelte'
   import { onMount } from 'svelte'
   import { marked } from 'marked'
