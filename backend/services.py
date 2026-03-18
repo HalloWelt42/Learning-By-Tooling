@@ -243,19 +243,17 @@ def chunk_text(text: str, size: int = 800, overlap: int = 100) -> list[str]:
     paragraphs = [p.strip() for p in re.split(r'\n\n+', text) if p.strip()]
     chunks, current = [], ""
     for para in paragraphs:
-        if len(current) + len(para) + 2 <= size:
+        is_heading = para.startswith('#')
+        # Überschriften starten immer einen neuen Chunk
+        if is_heading and current:
+            chunks.append(current)
+            current = para
+        elif len(current) + len(para) + 2 <= size:
             current = (current + "\n\n" + para).strip()
         else:
             if current:
                 chunks.append(current)
-                words        = current.split()
-                overlap_text = " ".join(words[-overlap // 5:]) if words else ""
-                current      = (overlap_text + "\n\n" + para).strip()
-            else:
-                while len(para) > size:
-                    chunks.append(para[:size])
-                    para = para[size - overlap:]
-                current = para
+            current = para
     if current:
         chunks.append(current)
     return [c for c in chunks if len(c.strip()) > 50]
