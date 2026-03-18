@@ -193,14 +193,18 @@ async def ai_status():
 
 @app.get("/api/packages")
 def get_packages(user: dict = Depends(get_current_user)):
+    uid = user["id"]
     conn = get_db()
     rows = conn.execute("""
         SELECT p.*,
             (SELECT COUNT(*) FROM cards c WHERE c.package_id=p.id AND c.active=1)   as card_count,
             (SELECT COUNT(*) FROM documents d WHERE d.package_id=p.id)               as doc_count,
-            (SELECT COUNT(*) FROM card_drafts cd WHERE cd.package_id=p.id AND cd.status='pending') as draft_count
-        FROM packages p ORDER BY p.created_at ASC
-    """).fetchall()
+            (SELECT COUNT(*) FROM card_drafts cd WHERE cd.package_id=p.id AND cd.status='pending') as draft_count,
+            up.role as user_role
+        FROM packages p
+        JOIN user_packages up ON up.package_id=p.id AND up.user_id=?
+        ORDER BY p.created_at ASC
+    """, (uid,)).fetchall()
     conn.close()
     return [row_to_dict(r) for r in rows]
 
@@ -215,14 +219,17 @@ def get_package(pkg_id: int, user: dict = Depends(get_current_user)):
 
 @app.post("/api/packages")
 def create_package(data: PackageCreate, user: dict = Depends(get_current_user)):
+    uid = user["id"]
     conn = get_db()
     conn.execute(
         "INSERT INTO packages (name,description,color,icon) VALUES (?,?,?,?)",
         (data.name, data.description, data.color, data.icon)
     )
     conn.commit()
-    row = conn.execute("SELECT last_insert_rowid()").fetchone()
-    pkg = conn.execute("SELECT * FROM packages WHERE id=?", (row[0],)).fetchone()
+    pkg_id = conn.execute("SELECT last_insert_rowid()").fetchone()[0]
+    conn.execute("INSERT INTO user_packages (user_id, package_id, role) VALUES (?,?,'owner')", (uid, pkg_id))
+    conn.commit()
+    pkg = conn.execute("SELECT * FROM packages WHERE id=?", (pkg_id,)).fetchone()
     conn.close()
     return row_to_dict(pkg)
 
@@ -248,7 +255,59 @@ def update_package(pkg_id: int, data: PackageUpdate, user: dict = Depends(get_cu
 def delete_package(pkg_id: int, user: dict = Depends(get_current_user)):
     conn = get_db()
     conn.execute("UPDATE cards SET active=0 WHERE package_id=?", (pkg_id,))
+    conn.execute("DELETE FROM user_packages WHERE package_id=?", (pkg_id,))
     conn.execute("DELETE FROM packages WHERE id=?", (pkg_id,))
+    conn.commit()
+    conn.close()
+    return {"ok": True}
+
+# -- Paket-Freigabe ----------------------------------------------------------
+
+@app.get("/api/packages/{pkg_id}/users")
+def get_package_users(pkg_id: int, user: dict = Depends(get_current_user)):
+    """Zeigt alle User die Zugriff auf ein Paket haben."""
+    conn = get_db()
+    rows = conn.execute("""
+        SELECT u.id, u.email, u.display_name, up.role, up.created_at
+        FROM user_packages up JOIN users u ON u.id=up.user_id
+        WHERE up.package_id=?
+    """, (pkg_id,)).fetchall()
+    conn.close()
+    return [row_to_dict(r) for r in rows]
+
+@app.post("/api/packages/{pkg_id}/share")
+def share_package(pkg_id: int, data: dict, user: dict = Depends(get_current_user)):
+    """Gibt ein Paket fuer einen anderen User frei. Nur Owner darf teilen."""
+    uid = user["id"]
+    conn = get_db()
+    # Prüfen ob User owner ist
+    own = conn.execute("SELECT role FROM user_packages WHERE user_id=? AND package_id=?", (uid, pkg_id)).fetchone()
+    if not own or own["role"] != "owner":
+        conn.close()
+        raise HTTPException(403, "Nur der Besitzer kann Pakete freigeben")
+    target_email = data.get("email")
+    target_role = data.get("role", "learner")
+    if target_role not in ("learner", "owner"):
+        raise HTTPException(400, "Rolle muss 'learner' oder 'owner' sein")
+    target = conn.execute("SELECT id FROM users WHERE email=?", (target_email,)).fetchone()
+    if not target:
+        conn.close()
+        raise HTTPException(404, "Benutzer nicht gefunden")
+    conn.execute("INSERT OR REPLACE INTO user_packages (user_id, package_id, role) VALUES (?,?,?)", (target["id"], pkg_id, target_role))
+    conn.commit()
+    conn.close()
+    return {"ok": True, "shared_with": target_email, "role": target_role}
+
+@app.delete("/api/packages/{pkg_id}/share/{target_user_id}")
+def unshare_package(pkg_id: int, target_user_id: int, user: dict = Depends(get_current_user)):
+    """Entzieht einem User den Zugriff auf ein Paket."""
+    uid = user["id"]
+    conn = get_db()
+    own = conn.execute("SELECT role FROM user_packages WHERE user_id=? AND package_id=?", (uid, pkg_id)).fetchone()
+    if not own or own["role"] != "owner":
+        conn.close()
+        raise HTTPException(403, "Nur der Besitzer kann Freigaben entziehen")
+    conn.execute("DELETE FROM user_packages WHERE user_id=? AND package_id=?", (target_user_id, pkg_id))
     conn.commit()
     conn.close()
     return {"ok": True}
@@ -1457,6 +1516,7 @@ def install_bundle(bundle_id: str, user: dict = Depends(get_current_user)):
         "SELECT id FROM packages WHERE name=?", (bundle["name"],)
     ).fetchone()
 
+    uid = user["id"]
     if existing:
         pkg_id = existing["id"]
     else:
@@ -1467,6 +1527,10 @@ def install_bundle(bundle_id: str, user: dict = Depends(get_current_user)):
         conn.commit()
         pkg_id = conn.execute("SELECT last_insert_rowid()").fetchone()[0]
 
+    # User dem Paket zuordnen (owner bei Neuinstall, learner bei bestehendem)
+    role = "owner" if not existing else "learner"
+    conn.execute("INSERT OR IGNORE INTO user_packages (user_id, package_id, role) VALUES (?,?,?)", (uid, pkg_id, role))
+    conn.commit()
     conn.close()
 
     import_result = import_markdown_internal(fragen, antworten, pkg_id)
@@ -1553,6 +1617,7 @@ async def import_zip(
 
         conn = get_db()
         existing = conn.execute("SELECT id FROM packages WHERE name=?", (pkg_name,)).fetchone()
+        uid = user["id"]
         if existing:
             package_id = existing["id"]
         else:
@@ -1562,6 +1627,9 @@ async def import_zip(
             )
             conn.commit()
             package_id = conn.execute("SELECT last_insert_rowid()").fetchone()[0]
+        # User dem Paket zuordnen
+        conn.execute("INSERT OR IGNORE INTO user_packages (user_id, package_id, role) VALUES (?,?,'owner')", (uid, package_id))
+        conn.commit()
         conn.close()
 
     result = import_markdown_internal(fragen, antworten, package_id)

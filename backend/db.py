@@ -214,6 +214,18 @@ def init_db():
         content='lexicon', content_rowid='id'
     );
 
+    -- Paket-Zuordnung pro Benutzer
+    CREATE TABLE IF NOT EXISTS user_packages (
+        id         INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id    INTEGER NOT NULL,
+        package_id INTEGER NOT NULL,
+        role       TEXT    NOT NULL DEFAULT 'learner',
+        created_at TEXT    DEFAULT (datetime('now')),
+        FOREIGN KEY (user_id)    REFERENCES users(id),
+        FOREIGN KEY (package_id) REFERENCES packages(id),
+        UNIQUE(user_id, package_id)
+    );
+
     """)
     conn.commit()
     _migrate(conn)
@@ -317,6 +329,18 @@ def _migrate(conn: sqlite3.Connection):
         lex_cols = {r[1] for r in conn.execute("PRAGMA table_info(lexicon)").fetchall()}
         if 'package_id' not in lex_cols:
             conn.execute("ALTER TABLE lexicon ADD COLUMN package_id INTEGER")
+            conn.commit()
+
+    # user_packages: Bestehende Pakete allen Usern zuweisen (Migration)
+    if 'user_packages' in existing_tables:
+        count = conn.execute("SELECT COUNT(*) FROM user_packages").fetchone()[0]
+        if count == 0:
+            # Erste Migration: Alle bestehenden Pakete allen Usern als owner geben
+            conn.execute("""
+                INSERT OR IGNORE INTO user_packages (user_id, package_id, role)
+                SELECT u.id, p.id, 'owner'
+                FROM users u, packages p
+            """)
             conn.commit()
 
     # Kategorie-Namen: Umlaute korrigieren (falls alte ASCII-Version in DB)
