@@ -63,6 +63,21 @@
   let light40 = $derived(lighten(color.hex, 40))
   let showCrown = $derived(tier === 4 && size >= 36)
   let canShowNum = $derived(showNum && size >= 28 && level > 0)
+
+  // Innenfläche: leichte Einfärbung der Level-Farbe auf bg0
+  function mixColor(hex, alpha) {
+    const r = parseInt(hex.slice(1,3),16)
+    const g = parseInt(hex.slice(3,5),16)
+    const b = parseInt(hex.slice(5,7),16)
+    // Mix mit dunklem Hintergrund (Näherung)
+    const br = 13, bg2 = 13, bb = 15
+    const nr = Math.round(br + (r - br) * alpha)
+    const ng = Math.round(bg2 + (g - bg2) * alpha)
+    const nb = Math.round(bb + (b - bb) * alpha)
+    return '#' + [nr,ng,nb].map(v => Math.max(0,Math.min(255,v)).toString(16).padStart(2,'0')).join('')
+  }
+  let bgInner = $derived(mixColor(color.hex, 0.05))
+  let bgMid = $derived(mixColor(color.hex, 0.1))
 </script>
 
 <div class="shield" class:tier4={tier === 4} style:--glow="{color.hex}60">
@@ -70,7 +85,7 @@
     <!-- TIER 1: Flach, dünn, gedämpft -->
     <svg width={size} height={h} viewBox="0 0 {size} {h}">
       <path d={outerPath} fill={color.hex} opacity="0.5"/>
-      <path d={innerT1} fill="#0d0d0f"/>
+      <path d={innerT1} fill={bgInner}/>
       {#if canShowNum}
         <text x={size/2} y={h*0.82} text-anchor="middle" font-family="'Orbitron',sans-serif" font-weight="900" letter-spacing="-0.5" font-size={numSize} fill={color.hex} opacity="0.85">{level}</text>
       {/if}
@@ -87,7 +102,7 @@
         </linearGradient>
       </defs>
       <path d={outerPath} fill="url(#g2_{uid})"/>
-      <path d={innerT1} fill="#0d0d0f"/>
+      <path d={innerT1} fill={bgInner}/>
       {#if canShowNum}
         <text x={size/2} y={h*0.82} text-anchor="middle" font-family="'Orbitron',sans-serif" font-weight="900" letter-spacing="-0.5" font-size={numSize} fill={color.hex}>{level}</text>
       {/if}
@@ -105,8 +120,8 @@
         </linearGradient>
       </defs>
       <path d={outerPath} fill="url(#g3_{uid})"/>
-      <path d={midPath} fill="#131316"/>
-      <path d={innerPath} fill="#0a0a0c"/>
+      <path d={midPath} fill={bgMid}/>
+      <path d={innerPath} fill={bgInner}/>
       {#if canShowNum}
         <text x={size/2} y={h*0.82} text-anchor="middle" font-family="'Orbitron',sans-serif" font-weight="900" letter-spacing="-0.5" font-size={numSize} fill={light30}>{level}</text>
       {/if}
@@ -124,7 +139,7 @@
         </linearGradient>
         <radialGradient id="inner4_{uid}" cx="50%" cy="30%">
           <stop offset="0%" stop-color={color.hex} stop-opacity="0.15"/>
-          <stop offset="100%" stop-color="#0a0a0c" stop-opacity="1"/>
+          <stop offset="100%" stop-color={bgInner} stop-opacity="1"/>
         </radialGradient>
       </defs>
       {#if showCrown}
@@ -134,7 +149,7 @@
         />
       {/if}
       <path d={outerPath} fill="url(#g4_{uid})"/>
-      <path d={midPath} fill="#131316"/>
+      <path d={midPath} fill={bgMid}/>
       <path d={innerPath} fill="url(#inner4_{uid})"/>
       {#if canShowNum}
         <text x={size/2} y={h*0.82} text-anchor="middle" font-family="'Orbitron',sans-serif" font-weight="900" letter-spacing="-0.5" font-size={numSize} fill={light40}>{level}</text>

@@ -92,11 +92,11 @@
               <div style="flex:1;height:5px;background:var(--bg3);border-radius: 3px;overflow:hidden">
                 <div style="height:100%;background:var(--ok);border-radius: 3px;width:{pct(s.correct,s.total_cards)}%"></div>
               </div>
-              <span class="mono" style="font-size:11px;font-weight:700;color:var(--ok);min-width:34px;text-align:right">{pct(s.correct,s.total_cards)}%</span>
+              <span class="mono" style="font-size:12px;font-weight:800;color:var(--text0);min-width:38px;text-align:right">{pct(s.correct,s.total_cards)}%</span>
             </div>
-            <div style="display:flex;gap:8px;font-size:12px;font-weight:700;font-family:'JetBrains Mono',monospace">
+            <div style="display:flex;gap:6px;font-size:12px;font-weight:700;font-family:'JetBrains Mono',monospace">
               <span style="color:var(--ok)"><i class="fa-solid fa-check"></i> {s.correct||0}</span>
-              <span style="color:var(--text3)">/{s.total_cards}</span>
+              <span style="color:var(--text2)">/{s.total_cards}</span>
             </div>
           </div>
         {/each}
