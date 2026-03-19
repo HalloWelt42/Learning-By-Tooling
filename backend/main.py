@@ -482,15 +482,15 @@ def get_cards(
 ):
     conn = get_db()
     if search:
-        rows = conn.execute("""
-            SELECT c.* FROM cards c
-            JOIN cards_fts f ON c.card_id=f.card_id
-            WHERE cards_fts MATCH ?
-            AND (? IS NULL OR c.package_id=?)
-            AND (? IS NULL OR c.category_code=?)
-            AND (? = 0 OR c.active=1)
-            LIMIT ? OFFSET ?
-        """, (search, package_id, package_id, category, category, int(active_only), limit, offset)).fetchall()
+        # Erst direkte card_id oder Textsuche in Frage/Antwort
+        q = """SELECT * FROM cards WHERE
+            (card_id LIKE ? OR question LIKE ? OR answer LIKE ?)
+            AND (? IS NULL OR package_id=?)
+            AND (? IS NULL OR category_code=?)
+            AND (? = 0 OR active=1)
+            LIMIT ? OFFSET ?"""
+        like = f"%{search}%"
+        rows = conn.execute(q, (like, like, like, package_id, package_id, category, category, int(active_only), limit, offset)).fetchall()
     else:
         q = "SELECT * FROM cards WHERE 1=1"
         p: list = []

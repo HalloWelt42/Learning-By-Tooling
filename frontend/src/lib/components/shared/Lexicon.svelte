@@ -51,7 +51,7 @@
       <button class="btn btn-primary btn-sm" onclick={() => showForm = true}><i class="fa-solid fa-plus"></i> Neu</button>
     </div>
     <div class="lp-filters">
-      <input type="search" placeholder="Begriff suchen…" bind:value={searchQ} oninput={onSearch} />
+      <input type="text" placeholder="Begriff suchen…" bind:value={searchQ} oninput={onSearch} />
       <select bind:value={filterCat}>
         <option value="">Alle Kategorien</option>
         {#each $categories as cat (cat.code)}<option value={cat.code}>{cat.icon} {cat.name}</option>{/each}

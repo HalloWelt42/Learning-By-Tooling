@@ -106,7 +106,7 @@
     <div class="lp-filters">
       <div class="search-wrap">
         <i class="fa-solid fa-magnifying-glass si"></i>
-        <input type="search" placeholder="Suchen…" bind:value={searchQ} oninput={onSearch} class="search-inp" />
+        <input type="text" placeholder="Suchen…" bind:value={searchQ} oninput={onSearch} class="search-inp" />
       </div>
       <select bind:value={fCat}>
         <option value="">Alle Kategorien</option>

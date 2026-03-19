@@ -827,7 +827,7 @@
           <div class="cl-filters">
             <div class="search-wrap">
               <i class="fa-solid fa-magnifying-glass search-icon"></i>
-              <input type="search" placeholder="Suchen..." bind:value={searchQ} oninput={onSearch} class="search-inp">
+              <input type="text" placeholder="Suchen..." bind:value={searchQ} oninput={onSearch} class="search-inp">
             </div>
             <select bind:value={filterCat}>
               <option value="">Alle Kategorien</option>
