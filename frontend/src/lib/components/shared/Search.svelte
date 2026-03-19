@@ -102,7 +102,7 @@
       <i class="fa-solid fa-magnifying-glass si-icon"></i>
       <input
         class="search-input"
-        type="search"
+        type="text"
         placeholder="Suchbegriff eingeben (min. 2 Zeichen)…"
         bind:value={q}
         autofocus
