@@ -295,7 +295,7 @@ HTTP 200 mit {"status":"ok"}
 <style>
 .guide-wrap { padding: 28px 32px; max-width: 900px; }
 
-.guide-tabs { display:flex;gap:2px;margin-bottom:24px;border-bottom:1px solid var(--border); }
+.guide-tabs { display:flex;gap:2px;margin-bottom:0;border-bottom:1px solid var(--border);position:sticky;top:0;background:var(--bg0);z-index:10;padding-top:4px; }
 .guide-tab {
   padding:9px 18px;font-size:12px;font-weight:700;color:var(--text2);
   border:none;border-bottom:2px solid transparent;background:none;
