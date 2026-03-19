@@ -1721,10 +1721,24 @@ def install_bundle(bundle_id: str, user: dict = Depends(get_current_user)):
         "total":     import_result["total"],
     }
 
+# Mapping: volle Kategorie-Namen -> Codes (beides akzeptiert)
+_CAT_NAME_MAP = {
+    "grundlagen": "GB", "theorie": "TH", "praxis": "PX",
+    "verfahren": "VF", "pruefung": "PR", "prüfung": "PR",
+    "vertiefung": "VT", "allgemein": "AL",
+}
+
+def _resolve_category(raw: str) -> str:
+    """Akzeptiert Code (GB) oder vollen Namen (Grundlagen) und gibt den Code zurück."""
+    clean = raw.strip().upper()
+    if len(clean) == 2:
+        return clean  # Schon ein Code
+    return _CAT_NAME_MAP.get(raw.strip().lower(), "AL")
+
 def import_markdown_internal(fragen: str, antworten: str, package_id: int) -> dict:
-    card_pat = re.compile(r"```\s*\n(K-\w+)\s*\|\s*(\w+)\s*\n([\s\S]*?)```", re.MULTILINE)
-    ans_pat  = re.compile(r"```\s*\n(A-\w+)\s*\|[^\n]*\n([\s\S]*?)```",         re.MULTILINE)
-    questions = {m.group(1): (m.group(2).strip(), m.group(3).strip()) for m in card_pat.finditer(fragen)}
+    card_pat = re.compile(r"```\s*\n(K-\w+)\s*\|\s*([^\n]+?)\s*\n([\s\S]*?)```", re.MULTILINE)
+    ans_pat  = re.compile(r"```\s*\n(A-\w+)\s*\|[^\n]*\n([\s\S]*?)```",           re.MULTILINE)
+    questions = {m.group(1): (_resolve_category(m.group(2)), m.group(3).strip()) for m in card_pat.finditer(fragen)}
     answers   = {m.group(1).replace("A-","K-"): m.group(2).strip() for m in ans_pat.finditer(antworten)}
     conn = get_db()
     created = skipped = 0
@@ -1876,9 +1890,9 @@ async def import_zip(
 
 @app.post("/api/import/markdown")
 def import_markdown(data: MarkdownImport, user: dict = Depends(get_current_user)):
-    card_pat = re.compile(r"```\s*\n(K-\d+)\s*\|\s*(\w+)\s*\n([\s\S]*?)```", re.MULTILINE)
-    ans_pat  = re.compile(r"```\s*\n(A-\d+)\s*\|[^\n]*\n([\s\S]*?)```",       re.MULTILINE)
-    questions = {m.group(1): (m.group(2).strip(), m.group(3).strip()) for m in card_pat.finditer(data.fragen)}
+    card_pat = re.compile(r"```\s*\n(K-\d+)\s*\|\s*([^\n]+?)\s*\n([\s\S]*?)```", re.MULTILINE)
+    ans_pat  = re.compile(r"```\s*\n(A-\d+)\s*\|[^\n]*\n([\s\S]*?)```",         re.MULTILINE)
+    questions = {m.group(1): (_resolve_category(m.group(2)), m.group(3).strip()) for m in card_pat.finditer(data.fragen)}
     answers   = {m.group(1).replace("A-","K-"): m.group(2).strip() for m in ans_pat.finditer(data.antworten)}
     conn = get_db()
     created = skipped = 0

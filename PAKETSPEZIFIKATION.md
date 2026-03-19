@@ -43,14 +43,14 @@ Jede Frage steht in einem eigenen Block:
 
 ````
 ```
-K-001 | GB
+K-001 | Grundlagen
 Was bedeutet API?
 ```
 ````
 
 Aufbau:
 - `K-001` -- Karten-Nummer (fortlaufend)
-- `GB` -- Kategorie (siehe Tabelle unten)
+- `Grundlagen` -- Kategorie (siehe Tabelle unten, voller Name oder Kurzcode)
 - Danach der Fragetext (kann auch mehrere Zeilen lang sein)
 
 ### Antworten-Datei
@@ -59,7 +59,7 @@ Jede Antwort verweist auf ihre Frage:
 
 ````
 ```
-A-001 | GB -> K-001
+A-001 | Grundlagen -> K-001
 API steht fuer Application Programming Interface.
 Es ist eine Schnittstelle über die Programme
 miteinander kommunizieren.
@@ -149,8 +149,8 @@ K-001 | GB
 
 Regeln:
 - Nummeriere fortlaufend: K-001, K-002, K-003 usw.
-- Nutze diese Kategorien: GB (Grundlagen), TH (Theorie),
-  PX (Praxis), VF (Verfahren), PR (Pruefung), AL (Allgemein)
+- Nutze diese Kategorien als vollen Namen nach dem Pipe-Zeichen:
+  Grundlagen, Theorie, Praxis, Verfahren, Pruefung, Vertiefung, Allgemein
 - Fragen sollen klar und eindeutig beantwortbar sein
 - Mische leichte und schwere Fragen
 - Keine Multiple-Choice -- offene Fragen
