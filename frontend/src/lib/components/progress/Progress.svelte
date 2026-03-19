@@ -122,7 +122,7 @@
   .ach-desc { font-size:11px;color:var(--text2);margin-top:2px; }
   .ach-level-row { display:flex;align-items:center;gap:8px;margin-top:6px;flex-wrap:wrap; }
   .ach-color-dot { width:8px;height:8px;border-radius:2px;flex-shrink:0; }
-  .ach-lvl  { font-size:10px;color:var(--text1); }
+  .ach-lvl  { font-size:10px;color:var(--text2); }
   .ach-next { font-size:10px;color:var(--text3); }
   .ach-prog-wrap { width:80px;flex-shrink:0; }
   .ach-prog-bar { height:4px;background:var(--bg3);border-radius:2px; }
