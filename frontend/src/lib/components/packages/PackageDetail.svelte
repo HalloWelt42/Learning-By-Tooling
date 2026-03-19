@@ -1,6 +1,7 @@
 <script>
   import { categories, currentView, activePackageId, showToast, loadGlobal, aiOnline } from '../../stores/index.js'
   import { apiGet, apiPost, apiPut, apiDelete, apiUpload, BASE } from '../../utils/api.js'
+  import { navigate } from '../../utils/router.js'
   import { onMount } from 'svelte'
   import { marked } from 'marked'
   import Paths from './Paths.svelte'
@@ -358,7 +359,7 @@
   <!-- ── Header ──────────────────────────────────────────────────────────── -->
   <div class="pd-header">
     <div class="pd-hd-left">
-      <button class="back-btn" onclick={() => { currentView.set('packages'); activePackageId.set(null) }}>
+      <button class="back-btn" onclick={() => navigate('/packages')}>
         <i class="fa-solid fa-arrow-left"></i> Lernpakete
       </button>
       <div class="pd-title-row">
@@ -421,7 +422,7 @@
         <button class="btn btn-ghost" title="Paket als ZIP exportieren" onclick={exportPkg}>
           <i class="fa-solid fa-file-export"></i>
         </button>
-        <button class="btn btn-primary" onclick={()=>currentView.set('learn')}>
+        <button class="btn btn-primary" onclick={()=>navigate('/learn')}>
           <i class="fa-solid fa-play"></i> Lernen
         </button>
       </div>

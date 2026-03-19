@@ -6,6 +6,7 @@
   import { packages, globalStats, currentView, activePackageId, loadGlobal, showToast } from '../../stores/index.js'
   import { onMount } from 'svelte'
   import { apiGet, apiPost, apiDelete, apiUpload } from '../../utils/api.js'
+  import { navigate } from '../../utils/router.js'
 
   let showCreate = $state(false)
   let bundles      = $state([])
@@ -141,8 +142,7 @@
 
 
   function open(pkg) {
-    activePackageId.set(pkg.id)
-    currentView.set('package')
+    navigate(`/packages/${pkg.id}`)
   }
 
   async function exportPkg(pkgId) {
@@ -329,7 +329,7 @@
           <span style="color:var(--text2)">{zipResult.skipped} übersprungen</span>
         {/if}
         {#if zipResult.package_id}
-          <button class="btn btn-ghost btn-sm" onclick={() => { activePackageId.set(zipResult.package_id); currentView.set('package') }}>
+          <button class="btn btn-ghost btn-sm" onclick={() => navigate(`/packages/${zipResult.package_id}`)}>
             <i class="fa-solid fa-arrow-right"></i> Paket öffnen
           </button>
         {/if}
