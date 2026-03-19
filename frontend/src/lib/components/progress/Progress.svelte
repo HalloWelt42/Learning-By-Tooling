@@ -115,7 +115,7 @@
 
   .ach-summary { display:flex;align-items:center;gap:14px;margin-bottom:24px;padding:18px;background:var(--bg1);border:1px solid var(--border);border-radius: 4px; }
   .ach-n    { font-size:30px;font-weight:800;color:var(--accent);font-family:'JetBrains Mono',monospace; }
-  .ach-list { display:flex;flex-direction:column;gap:10px;max-width:700px; }
+  .ach-list { display:grid;grid-template-columns:repeat(2,1fr);gap:10px; }
   .ach-row  { display:flex;align-items:center;gap:14px;background:var(--bg1);border:1px solid var(--border);border-radius: 4px;padding:14px 18px; }
   .ach-info { flex:1;min-width:0; }
   .ach-name { font-size:13px;font-weight:700;color:var(--text0); }
