@@ -5,17 +5,17 @@
 
 /* Dunkel -- angenehm dunkel, gute Lesbarkeit */
 :root, [data-theme="dark"] {
-  --bg0:    #141720;
-  --bg1:    #191d28;
-  --bg2:    #1e2330;
-  --bg3:    #252b3a;
-  --bg4:    #2c3442;
-  --border: #283040;
-  --bdr2:   #222836;
-  --text0:  #e8eaee;
-  --text1:  #b0b4be;
-  --text2:  #787e8e;
-  --text3:  #4a5060;
+  --bg0:    #161616;
+  --bg1:    #1c1c1c;
+  --bg2:    #232323;
+  --bg3:    #2c2c2c;
+  --bg4:    #343434;
+  --border: #2e2e2e;
+  --bdr2:   #272727;
+  --text0:  #ececec;
+  --text1:  #b0b0b0;
+  --text2:  #808080;
+  --text3:  #505050;
   --accent: #5b8def;
   --ac2:    #e0a050;
   --ac3:    #2cc4a0;
