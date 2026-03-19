@@ -1569,6 +1569,19 @@ async def generate_mc_batch(data: dict, user: dict = Depends(get_current_user)):
     conn.close()
     return {"generated": generated, "total": len(cards)}
 
+@app.get("/api/mc/status/{package_id}")
+def mc_cache_status(package_id: int, user: dict = Depends(get_current_user)):
+    """Zeigt wie viele Karten MC-Optionen im Cache haben."""
+    conn = get_db()
+    total = conn.execute("SELECT COUNT(*) FROM cards WHERE package_id=? AND active=1", (package_id,)).fetchone()[0]
+    today = date.today().isoformat()
+    cached = conn.execute(
+        "SELECT COUNT(*) FROM mc_options WHERE package_id=? AND (expires_at IS NULL OR expires_at > ?)",
+        (package_id, today)
+    ).fetchone()[0]
+    conn.close()
+    return {"total": total, "cached": cached, "missing": total - cached}
+
 @app.delete("/api/mc/cache/{package_id}")
 async def clear_mc_cache(package_id: int, user: dict = Depends(get_current_user)):
     """Löscht den MC-Cache für ein Paket (erzwingt Neugenerierung)."""

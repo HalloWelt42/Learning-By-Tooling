@@ -44,19 +44,29 @@
   let mcRevealed    = $state(false)
   let mcPrepProgress = $state(0)    // 0-100 Vorbereitung
   let mcPrepText     = $state('')
+  let mcStatus       = $state(null) // {total, cached, missing}
+
+  // MC-Status laden wenn Modus wechselt
+  $effect(() => {
+    if (mode === 'mc' && $activePackageId) {
+      apiGet(`/api/mc/status/${$activePackageId}`).then(s => mcStatus = s).catch(() => mcStatus = null)
+    }
+  })
 
   async function prepareMcOptions() {
     if (!$aiOnline) { showToast('LM Studio offline', 'warn'); return }
     const pkgId = $activePackageId || null
+    if (!pkgId) { showToast('Paket auswählen', 'warn'); return }
     mcPrepProgress = 1
     mcPrepText = 'Starte Generierung...'
     try {
-      // Batch-Generierung per API -- generiert alle fehlenden auf einmal
-      const r = await apiPost('/api/mc/generate-batch', { package_id: pkgId, limit: cardLimit })
+      const r = await apiPost('/api/mc/generate-batch', { package_id: pkgId, limit: 50 })
       mcPrepProgress = 100
       mcPrepText = `${r.generated} MC-Optionen generiert`
       if (r.generated > 0) showToast(`${r.generated} MC-Optionen erstellt`, 'success')
       else showToast('Alle MC-Optionen waren bereits im Cache', 'success')
+      // Status aktualisieren
+      mcStatus = await apiGet(`/api/mc/status/${pkgId}`).catch(() => null)
     } catch(e) {
       mcPrepProgress = 0
       mcPrepText = ''
@@ -478,11 +488,22 @@
           {:else}
             <div class="mc-status">
               <i class="fa-solid fa-wand-magic-sparkles" style="color:var(--accent)"></i>
-              <span>KI generiert 3 falsche Optionen pro Karte. Cache: 7 Tage.</span>
+              {#if mcStatus}
+                <span>{mcStatus.cached} von {mcStatus.total} Karten haben MC-Optionen</span>
+              {:else}
+                <span>KI generiert falsche Antwortoptionen pro Karte</span>
+              {/if}
             </div>
-            <button class="btn btn-ghost btn-sm" style="margin-top:8px" onclick={prepareMcOptions}>
-              <i class="fa-solid fa-bolt"></i> Optionen jetzt generieren
-            </button>
+            {#if mcStatus && mcStatus.missing > 0}
+              <button class="btn btn-ghost btn-sm" style="margin-top:8px" onclick={prepareMcOptions}>
+                <i class="fa-solid fa-bolt"></i> {mcStatus.missing} fehlende generieren
+              </button>
+            {:else if mcStatus && mcStatus.missing === 0}
+              <div class="mc-status ok" style="margin-top:6px">
+                <i class="fa-solid fa-circle-check"></i>
+                Alle Karten bereit
+              </div>
+            {/if}
           {/if}
         </div>
       {:else if mode === 'srs'}
