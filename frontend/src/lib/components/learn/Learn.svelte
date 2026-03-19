@@ -799,13 +799,13 @@
           <!-- Standard + Write: Falsch/Skip/Richtig -->
           {#if aiState !== 'loading'}
             <div class="rate-row">
-              <button class="rate-btn rb-err"  onclick={() => rate('wrong')}>
+              <button class="rate-btn rb-err" onclick={async () => { await submitReview('wrong'); idx++; await loadCard(idx) }}>
                 <i class="fa-solid fa-xmark"></i> Falsch
               </button>
-              <button class="rate-btn rb-skip" onclick={() => rate('skip')}>
+              <button class="rate-btn rb-skip" onclick={async () => { await submitReview('skip'); idx++; await loadCard(idx) }}>
                 <i class="fa-solid fa-forward"></i> Skip
               </button>
-              <button class="rate-btn rb-ok"   onclick={() => rate('correct')}>
+              <button class="rate-btn rb-ok" onclick={async () => { await submitReview('correct'); idx++; await loadCard(idx) }}>
                 <i class="fa-solid fa-check"></i> Richtig
               </button>
             </div>
