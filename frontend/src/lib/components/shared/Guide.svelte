@@ -4,7 +4,24 @@
   Karten importieren, Lernen starten.
 -->
 <script>
+  import { marked } from 'marked'
+  marked.setOptions({ breaks: true, gfm: true })
+
+  let guideTab = $state('workflow')
   let activeStep = $state(0)
+  let specContent = $state('')
+
+  import { apiGet } from '../../utils/api.js'
+
+  async function loadSpec() {
+    if (specContent) return
+    try {
+      const data = await apiGet('/api/docs/paketspezifikation')
+      specContent = data.content || ''
+    } catch(e) {
+      specContent = 'Fehler beim Laden der Paketspezifikation.'
+    }
+  }
 
   const STEPS = [
     {
@@ -101,11 +118,22 @@
   <div class="guide-header">
     <div>
       <h1 class="page-title">
-        <i class="fa-solid fa-map"></i> Workflow-Übersicht
+        <i class="fa-solid fa-map"></i> Anleitung
       </h1>
-      <p class="page-sub">Von Paket anlegen bis Lernen starten -- der komplette Ablauf</p>
+      <p class="page-sub">Alles was du wissen musst</p>
     </div>
   </div>
+
+  <div class="guide-tabs">
+    <button class="guide-tab" class:active={guideTab === 'workflow'} onclick={() => guideTab = 'workflow'}>
+      <i class="fa-solid fa-route"></i> Workflow
+    </button>
+    <button class="guide-tab" class:active={guideTab === 'pakete'} onclick={() => { guideTab = 'pakete'; loadSpec() }}>
+      <i class="fa-solid fa-box-archive"></i> Pakete erstellen
+    </button>
+  </div>
+
+  {#if guideTab === 'workflow'}
 
   <!-- Schritt-Leiste -->
   <div class="step-bar">
@@ -251,10 +279,46 @@ HTTP 200 mit {"status":"ok"}
     {/if}
   {/each}
 
+  {:else}
+    <!-- Pakete erstellen -->
+    <div class="spec-content markdown">
+      {#if specContent}
+        {@html marked(specContent)}
+      {:else}
+        <p style="color:var(--text3)">Wird geladen...</p>
+      {/if}
+    </div>
+  {/if}
+
 </div>
 
 <style>
 .guide-wrap { padding: 28px 32px; max-width: 900px; }
+
+.guide-tabs { display:flex;gap:2px;margin-bottom:24px;border-bottom:1px solid var(--border); }
+.guide-tab {
+  padding:9px 18px;font-size:12px;font-weight:700;color:var(--text2);
+  border:none;border-bottom:2px solid transparent;background:none;
+  cursor:pointer;font-family:inherit;transition:all .15s;letter-spacing:.03em;
+}
+.guide-tab.active { color:var(--accent);border-bottom-color:var(--accent); }
+.guide-tab:hover { color:var(--text0); }
+
+.spec-content {
+  max-width:680px;margin:0 auto;font-size:14px;line-height:1.7;color:var(--text1);
+}
+.spec-content h1 { font-size:22px;font-weight:800;color:var(--text0);margin:32px 0 12px; }
+.spec-content h2 { font-size:17px;font-weight:700;color:var(--text0);margin:28px 0 10px;padding-top:16px;border-top:1px solid var(--border); }
+.spec-content h3 { font-size:14px;font-weight:700;color:var(--text0);margin:20px 0 6px; }
+.spec-content p { margin-bottom:10px; }
+.spec-content ul, .spec-content ol { margin:0 0 10px 20px; }
+.spec-content li { margin-bottom:4px; }
+.spec-content code { background:var(--bg2);padding:1px 5px;border-radius:3px;font-size:12px;font-family:'JetBrains Mono',monospace;color:var(--accent); }
+.spec-content pre { background:var(--bg2);border:1px solid var(--border);border-radius:4px;padding:12px;margin:10px 0;overflow-x:auto; }
+.spec-content pre code { background:none;padding:0;font-size:12px;color:var(--text1); }
+.spec-content table { width:100%;border-collapse:collapse;margin:10px 0;font-size:13px; }
+.spec-content th { text-align:left;padding:6px 10px;border-bottom:2px solid var(--border);color:var(--text0);font-weight:700; }
+.spec-content td { padding:6px 10px;border-bottom:1px solid var(--border); }
 
 .step-bar {
   display: flex;

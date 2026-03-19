@@ -1622,6 +1622,14 @@ def admin_rebuild_fts(user: dict = Depends(get_current_user)):
     conn.close()
     return {"ok": True}
 
+@app.get("/api/docs/paketspezifikation")
+def get_paketspezifikation():
+    """Gibt die Paketspezifikation als Markdown-Text zurück."""
+    spec_path = Path(__file__).parent.parent / "PAKETSPEZIFIKATION.md"
+    if not spec_path.exists():
+        raise HTTPException(404, "Paketspezifikation nicht gefunden")
+    return {"content": spec_path.read_text(encoding="utf-8")}
+
 @app.get("/api/history")
 def get_history(limit: int = 30, user: dict = Depends(get_current_user)):
     uid = user["id"]
