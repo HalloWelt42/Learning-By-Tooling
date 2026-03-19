@@ -29,17 +29,17 @@
 
 /* Hell -- gedämpftes Weiß, augenfreundlich */
 [data-theme="light"] {
-  --bg0:    #e8eaef;
-  --bg1:    #f0f1f4;
-  --bg2:    #e2e4ea;
-  --bg3:    #d8dbe2;
-  --bg4:    #cdd0d8;
-  --border: #c4c8d2;
-  --bdr2:   #babec8;
-  --text0:  #1a1e2e;
-  --text1:  #3a4058;
-  --text2:  #586078;
-  --text3:  #8890a4;
+  --bg0:    #e8e6e2;
+  --bg1:    #efede9;
+  --bg2:    #e2e0dc;
+  --bg3:    #d8d6d2;
+  --bg4:    #cdcbc7;
+  --border: #c8c5c0;
+  --bdr2:   #bbb8b3;
+  --text0:  #1c1c1a;
+  --text1:  #3a3a36;
+  --text2:  #606058;
+  --text3:  #8e8e86;
   --accent: #3860c8;
   --ac2:    #6850b0;
   --ac3:    #189878;
