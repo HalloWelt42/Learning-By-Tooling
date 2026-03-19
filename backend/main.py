@@ -61,4 +61,4 @@ app.include_router(import_export_router)
 
 @app.get("/api/health")
 def health():
-    return {"status": "ok", "version": "3.0.0", "app": "Learning-By-Tooling"}
+    return {"status": "ok", "version": "4.0.0", "app": "Learning-By-Tooling"}
