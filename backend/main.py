@@ -1521,22 +1521,9 @@ async def get_mc_options(card_id: str, user: dict = Depends(get_current_user)):
     if cached and (not cached["expires_at"] or cached["expires_at"] > today):
         conn.close()
         return {"card_id": card_id, "options": json.loads(cached["options"]), "cached": True}
-    # Neu generieren
-    if not await _ai_online():
-        conn.close()
-        raise HTTPException(503, "LM Studio nicht erreichbar -- MC-Optionen können nicht generiert werden")
-    options = await generate_mc_options(card["question"], card["answer"])
-    if not options or len(options) < 3:
-        conn.close()
-        raise HTTPException(500, "MC-Optionen konnten nicht generiert werden")
-    expires = (date.today() + timedelta(days=7)).isoformat()
-    conn.execute(
-        "INSERT OR REPLACE INTO mc_options (card_id, package_id, options, expires_at) VALUES (?,?,?,?)",
-        (card_id, card["package_id"], json.dumps(options), expires)
-    )
-    conn.commit()
+    # Nicht im Cache -- sofort 404 statt live generieren
     conn.close()
-    return {"card_id": card_id, "options": options, "cached": False}
+    raise HTTPException(404, "MC-Optionen nicht im Cache. Bitte zuerst generieren.")
 
 @app.post("/api/mc/generate-batch")
 async def generate_mc_batch(data: dict, user: dict = Depends(get_current_user)):
