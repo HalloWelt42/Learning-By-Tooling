@@ -510,14 +510,15 @@
       <div style="margin-top:auto;padding-top:12px;border-top:1px solid var(--border)">
         <div class="limit-row">
           {#each [5, 10, 20, 30, 50, 100].filter(n => n <= selectedCatCards) as n}
-            <button class="limit-chip" class:active={cardLimit === n} onclick={() => cardLimit = n}>{n}</button>
+            <button class="limit-chip" onclick={() => { cardLimit = n; startSession() }}>
+              <i class="fa-solid fa-play"></i> {n}
+            </button>
           {/each}
-          {#if selectedCatCards > 0 && ![5,10,20,50].includes(selectedCatCards)}
-            <button class="limit-chip" class:active={cardLimit === selectedCatCards} onclick={() => cardLimit = selectedCatCards}>Alle ({selectedCatCards})</button>
+          {#if selectedCatCards > 0 && ![5,10,20,30,50,100].includes(selectedCatCards)}
+            <button class="limit-chip" onclick={() => { cardLimit = selectedCatCards; startSession() }}>
+              <i class="fa-solid fa-play"></i> Alle ({selectedCatCards})
+            </button>
           {/if}
-          <button class="btn btn-primary start-btn" onclick={startSession}>
-            <i class="fa-solid fa-play"></i> {cardLimit} Karten starten
-          </button>
         </div>
       </div>
     </div>
