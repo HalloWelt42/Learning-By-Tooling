@@ -1,6 +1,6 @@
 <script>
   import { onMount } from 'svelte'
-  import { showToast, packages } from '../../stores/index.js'
+  import { showToast, packages, authUser } from '../../stores/index.js'
   import { apiGet, apiPost, apiDelete } from '../../utils/api.js'
 
   let users = $state([])
@@ -27,6 +27,28 @@
       showToast(e.message || 'Fehler beim Anlegen', 'error')
     }
     creating = false
+  }
+
+  let resetUser = $state(null)
+  let resetPw = $state('')
+
+  async function doResetPassword() {
+    if (!resetPw || resetPw.length < 4) { showToast('Mindestens 4 Zeichen', 'error'); return }
+    try {
+      await apiPost(`/api/admin/users/${resetUser.id}/reset-password`, { new_password: resetPw })
+      showToast(`Passwort für ${resetUser.email} zurückgesetzt`, 'success')
+      resetUser = null; resetPw = ''
+    } catch(e) {
+      showToast(e.message || 'Fehler', 'error')
+    }
+  }
+
+  async function toggleUser(u) {
+    try {
+      await apiPost(`/api/admin/users/${u.id}/toggle`, {})
+      showToast(`${u.email} ${u.disabled ? 'aktiviert' : 'pausiert'}`, 'success')
+      await loadUsers()
+    } catch(e) { showToast(e.message || 'Fehler', 'error') }
   }
 
   async function removeUser(u) {
@@ -86,12 +108,34 @@
               <span><i class="fa-solid fa-box"></i> {u.packages} Pakete</span>
             </div>
           </div>
-          <button class="btn-icon" title="Benutzer entfernen" onclick={() => removeUser(u)}>
-            <i class="fa-solid fa-trash-can"></i>
+          <button class="btn-icon" title="Passwort zurücksetzen" onclick={() => { resetUser = u; resetPw = '' }}>
+            <i class="fa-solid fa-key"></i>
           </button>
+          {#if u.id !== $authUser?.id}
+            <button class="btn-icon" title="{u.disabled ? 'Aktivieren' : 'Pausieren'}" onclick={() => toggleUser(u)}>
+              <i class="fa-solid {u.disabled ? 'fa-play' : 'fa-pause'}"></i>
+            </button>
+            <button class="btn-icon" title="Benutzer entfernen" onclick={() => removeUser(u)}>
+              <i class="fa-solid fa-trash-can"></i>
+            </button>
+          {/if}
         </div>
       {/each}
     </div>
+
+    {#if resetUser}
+      <div class="reset-form">
+        <div style="font-size:12px;font-weight:600;color:var(--text1);margin-bottom:6px">
+          Neues Passwort für {resetUser.display_name || resetUser.email}
+        </div>
+        <div style="display:flex;gap:6px;align-items:center">
+          <input type="password" placeholder="Neues Passwort (mind. 4 Zeichen)" bind:value={resetPw}
+            style="flex:1;background:var(--bg2);border:1px solid var(--border);border-radius:4px;padding:6px 10px;font-size:12px;color:var(--text0);font-family:inherit" />
+          <button class="btn btn-primary btn-sm" onclick={doResetPassword}>Setzen</button>
+          <button class="btn btn-ghost btn-sm" onclick={() => resetUser = null}>Abbrechen</button>
+        </div>
+      </div>
+    {/if}
   </div>
 </div>
 
@@ -102,6 +146,7 @@
   }
   .admin-form .btn { grid-column:span 2; }
   .user-list { display:flex;flex-direction:column;gap:6px; }
+  .reset-form { margin-top:12px;padding:12px;background:var(--bg2);border:1px solid var(--accent);border-radius:4px; }
   .user-item {
     display:flex;align-items:center;gap:12px;padding:12px;
     background:var(--bg2);border:1px solid var(--border);border-radius:4px;

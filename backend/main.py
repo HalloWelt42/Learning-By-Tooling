@@ -268,6 +268,33 @@ def admin_delete_user(user_id: int, user: dict = Depends(get_current_user)):
     conn.close()
     return {"ok": True}
 
+@app.post("/api/admin/users/{user_id}/reset-password")
+def admin_reset_password(user_id: int, data: dict, user: dict = Depends(get_current_user)):
+    new_pw = data.get("new_password", "")
+    if not new_pw or len(new_pw) < 4:
+        raise HTTPException(400, "Mindestens 4 Zeichen")
+    from auth import _hash_password
+    conn = get_db()
+    conn.execute("UPDATE users SET password_hash=? WHERE id=?", (_hash_password(new_pw), user_id))
+    conn.commit()
+    conn.close()
+    return {"ok": True}
+
+@app.post("/api/admin/users/{user_id}/toggle")
+def admin_toggle_user(user_id: int, user: dict = Depends(get_current_user)):
+    if user_id == user["id"]:
+        raise HTTPException(400, "Du kannst dich nicht selbst deaktivieren")
+    conn = get_db()
+    current = conn.execute("SELECT disabled FROM users WHERE id=?", (user_id,)).fetchone()
+    if not current:
+        conn.close()
+        raise HTTPException(404, "Benutzer nicht gefunden")
+    new_val = 0 if current["disabled"] else 1
+    conn.execute("UPDATE users SET disabled=? WHERE id=?", (new_val, user_id))
+    conn.commit()
+    conn.close()
+    return {"ok": True, "disabled": bool(new_val)}
+
 # -- Health (öffentlich) -------------------------------------------------------
 
 @app.get("/api/health")
