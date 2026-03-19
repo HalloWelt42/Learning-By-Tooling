@@ -444,27 +444,18 @@
           {/if}
 
           <div class="pk-stats">
-            <span>
-              <i class="fa-solid fa-layer-group"></i>
-              {pkg.card_count} Karten
-            </span>
-            <span>
-              <i class="fa-solid fa-file-lines"></i>
-              {pkg.doc_count} Dokumente
-            </span>
+            <span><i class="fa-solid fa-layer-group"></i> {pkg.card_count} Karten</span>
+            <span><i class="fa-solid fa-file-lines"></i> {pkg.doc_count} Dokumente</span>
           </div>
-
           <div class="pk-footer">
             <button class="btn btn-ghost btn-sm" onclick={e => { e.stopPropagation(); open(pkg) }}>
               <i class="fa-solid fa-arrow-right"></i> Öffnen
             </button>
-            <button class="btn btn-ghost btn-sm" title="Paket als ZIP exportieren"
-              onclick={e => { e.stopPropagation(); exportPkg(pkg.id) }}>
-              <i class="fa-solid fa-file-export" style="font-size:11px"></i>
+            <button class="btn btn-ghost btn-sm" onclick={e => { e.stopPropagation(); exportPkg(pkg.id) }}>
+              <i class="fa-solid fa-file-export"></i> Export
             </button>
-            <button class="btn btn-ghost btn-sm" title="Paket zurückziehen"
-              onclick={e => { e.stopPropagation(); confirmPkg = pkg }}>
-              <i class="fa-solid fa-trash" style="color:var(--err);font-size:11px"></i>
+            <button class="btn-icon" style="margin-left:auto" onclick={e => { e.stopPropagation(); confirmPkg = pkg }}>
+              <i class="fa-solid fa-trash-can"></i>
             </button>
           </div>
         </div>
@@ -582,7 +573,7 @@
 .pk-desc{font-size:12px;color:var(--text2);line-height:1.5;flex:1}
 .pk-stats{display:flex;gap:14px;font-size:11px;color:var(--text3);font-family:'JetBrains Mono',monospace}
 .pk-stats i{margin-right:4px}
-.pk-footer{margin-top:4px}
+.pk-footer{margin-top:auto;padding-top:10px;display:flex;align-items:center;gap:6px}
 
 /* ── Bundle Install ───────────────────────────────────────────────────────── */
 .bundles-section {
@@ -769,6 +760,6 @@
 }
 .btn-err:hover { opacity: .85; }
 .btn-err:disabled { opacity: .5; cursor: wait; }
-.pk-footer { display: flex; align-items: center; justify-content: space-between; }
+/* pk-footer: siehe oben */
 
 </style>
