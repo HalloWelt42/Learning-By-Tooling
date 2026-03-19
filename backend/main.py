@@ -432,14 +432,22 @@ def get_package_stats(pkg_id: int, user: dict = Depends(get_current_user)):
 # -- Kategorien ----------------------------------------------------------------
 
 @app.get("/api/categories")
-def get_categories(user: dict = Depends(get_current_user)):
+def get_categories(package_id: Optional[int] = None, user: dict = Depends(get_current_user)):
     conn = get_db()
-    rows = conn.execute("""
-        SELECT c.*, COUNT(ca.id) as card_count
-        FROM categories c
-        LEFT JOIN cards ca ON ca.category_code=c.code AND ca.active=1
-        GROUP BY c.id ORDER BY c.code
-    """).fetchall()
+    if package_id:
+        rows = conn.execute("""
+            SELECT c.*, COUNT(ca.id) as card_count
+            FROM categories c
+            LEFT JOIN cards ca ON ca.category_code=c.code AND ca.active=1 AND ca.package_id=?
+            GROUP BY c.id ORDER BY c.code
+        """, (package_id,)).fetchall()
+    else:
+        rows = conn.execute("""
+            SELECT c.*, COUNT(ca.id) as card_count
+            FROM categories c
+            LEFT JOIN cards ca ON ca.category_code=c.code AND ca.active=1
+            GROUP BY c.id ORDER BY c.code
+        """).fetchall()
     conn.close()
     return [row_to_dict(r) for r in rows]
 
