@@ -66,26 +66,33 @@
       return
     }
 
-    // Karten einzeln generieren mit Live-Fortschritt
-    const cards = await apiGet(`/api/cards?package_id=${pkgId}&limit=200`).catch(() => [])
     const total = status.missing
-    let done = 0
-    mcPrepProgress = 1
-    mcPrepText = `0 / ${total} Karten...`
+    mcPrepProgress = 5
+    mcPrepText = `${total} Karten werden generiert...`
 
-    for (const card of cards) {
-      try {
-        await apiGet(`/api/mc/${card.card_id}`)
-      } catch(e) { /* einzelne Fehler ignorieren */ }
-      done++
-      mcPrepProgress = Math.round(done / total * 100)
-      mcPrepText = `${done} / ${total} Karten...`
-      if (done >= total) break
+    // Fortschritts-Polling parallel zum Batch starten
+    const pollInterval = setInterval(async () => {
+      const s = await apiGet(`/api/mc/status/${pkgId}`).catch(() => null)
+      if (s) {
+        const generated = s.cached - status.cached
+        mcPrepProgress = Math.max(5, Math.round(generated / total * 100))
+        mcPrepText = `${generated} / ${total} Karten...`
+      }
+    }, 2000)
+
+    // Batch starten (dauert bei LM Studio mehrere Sekunden pro Karte)
+    const batchResult = await apiPost('/api/mc/generate-batch', { package_id: pkgId, limit: total }).catch(() => null)
+    clearInterval(pollInterval)
+
+    if (batchResult) {
+      mcPrepProgress = 100
+      mcPrepText = `${batchResult.generated} MC-Optionen generiert`
+      showToast(`${batchResult.generated} MC-Optionen erstellt`, 'success')
+    } else {
+      mcPrepProgress = 0
+      mcPrepText = ''
+      showToast('Generierung fehlgeschlagen', 'error')
     }
-
-    mcPrepProgress = 100
-    mcPrepText = `${done} MC-Optionen generiert`
-    showToast(`${done} MC-Optionen erstellt`, 'success')
     mcStatus = await apiGet(`/api/mc/status/${pkgId}`).catch(() => null)
   }
 
