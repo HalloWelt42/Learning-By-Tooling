@@ -45,6 +45,25 @@
   let mcPrepProgress = $state(0)    // 0-100 Vorbereitung
   let mcPrepText     = $state('')
 
+  async function prepareMcOptions() {
+    if (!$aiOnline) { showToast('LM Studio offline', 'warn'); return }
+    const pkgId = $activePackageId || null
+    mcPrepProgress = 1
+    mcPrepText = 'Starte Generierung...'
+    try {
+      // Batch-Generierung per API -- generiert alle fehlenden auf einmal
+      const r = await apiPost('/api/mc/generate-batch', { package_id: pkgId, limit: cardLimit })
+      mcPrepProgress = 100
+      mcPrepText = `${r.generated} MC-Optionen generiert`
+      if (r.generated > 0) showToast(`${r.generated} MC-Optionen erstellt`, 'success')
+      else showToast('Alle MC-Optionen waren bereits im Cache', 'success')
+    } catch(e) {
+      mcPrepProgress = 0
+      mcPrepText = ''
+      showToast('MC-Generierung fehlgeschlagen: ' + e.message, 'error')
+    }
+  }
+
   // KI-Assistenz
   let hintText      = $state('')
   let hintLoading   = $state(false)
@@ -125,22 +144,6 @@
       activeSession.set(data)
       results = []; idx = 0
 
-      // MC-Modus: Optionen vorbereiten
-      if (mode === 'mc' && $aiOnline) {
-        phase = 'preparing'
-        mcPrepProgress = 0
-        mcPrepText = `MC-Optionen werden vorbereitet (0/${cardIds.length})...`
-        let prepared = 0
-        for (const cid of cardIds) {
-          try {
-            await apiGet(`/api/mc/${cid}`)
-          } catch(e) { /* einzelne Fehler ignorieren */ }
-          prepared++
-          mcPrepProgress = Math.round(prepared / cardIds.length * 100)
-          mcPrepText = `MC-Optionen werden vorbereitet (${prepared}/${cardIds.length})...`
-        }
-      }
-
       await loadCard(0)
       phase = 'learning'
     } catch(e) {
@@ -166,11 +169,26 @@
       mcLoading = true
       try {
         const mc = await apiGet(`/api/mc/${card.card_id}`)
-        // 3 falsche + 1 richtige mischen
-        const opts = mc.options.map(t => ({text: t, correct: false}))
-        // Richtige Antwort kürzen (erste Zeile oder max 120 Zeichen)
+        const wrongOpts = mc.options.map(t => ({text: t, correct: false}))
         const correctText = card.answer.split('\n')[0].substring(0, 120)
-        opts.push({text: correctText, correct: true})
+
+        // Variation: 70% normal (1 richtig, 3 falsch), 15% keine richtige, 15% "Alle oben" als richtige
+        const roll = Math.random()
+        let opts
+        if (roll < 0.15) {
+          // Keine richtige dabei -- 4 falsche, "Keine der Antworten" als 5. Option
+          opts = [...wrongOpts.slice(0, 4)]
+          opts.push({text: 'Keine der genannten Optionen', correct: true})
+        } else if (roll < 0.30) {
+          // Richtige + 2 falsche + "Alle oben sind falsch" (falsch)
+          opts = wrongOpts.slice(0, 2).map(o => ({...o}))
+          opts.push({text: correctText, correct: true})
+          opts.push({text: 'Keine der genannten Optionen', correct: false})
+        } else {
+          // Standard: 1 richtig, 3 falsch
+          opts = wrongOpts.slice(0, 3).map(o => ({...o}))
+          opts.push({text: correctText, correct: true})
+        }
         // Mischen
         for (let j = opts.length - 1; j > 0; j--) {
           const k = Math.floor(Math.random() * (j + 1));
@@ -378,7 +396,7 @@
           ['standard','fa-layer-group','Karteikarte','Aufdecken und selbst bewerten'],
           ['mc',      'fa-list-check', 'Multiple Choice','4 Optionen, 1 richtig (KI-generiert)'],
           ['write',   'fa-keyboard',   'Freitext',   'Antwort eingeben, KI bewertet'],
-          ['srs',     'fa-brain',      'Spaced Repetition','SM-2 -- fällige Karten zuerst'],
+          ['srs',     'fa-brain',      'Spaced Repetition','Schwache Karten öfter, starke seltener'],
         ] as [id,fa,lbl,desc]}
           <button class="mode-btn" class:active={mode===id} onclick={() => mode=id}>
             <i class="fa-solid {fa} mode-icon"></i>
@@ -396,14 +414,40 @@
         </label>
       {/if}
       {#if mode === 'mc'}
-        <div class="srs-info">
-          <i class="fa-solid fa-circle-info" style="color:var(--accent)"></i>
-          {$aiOnline ? 'KI generiert 3 falsche Optionen pro Karte. Cache: 7 Tage.' : 'LM Studio offline -- MC-Modus nicht verfügbar.'}
+        <div class="mc-setup-box">
+          {#if !$aiOnline}
+            <div class="mc-status err">
+              <i class="fa-solid fa-circle-xmark"></i>
+              LM Studio offline -- MC-Optionen können nicht generiert werden.
+            </div>
+          {:else if mcPrepProgress > 0 && mcPrepProgress < 100}
+            <div class="mc-status">
+              <i class="fa-solid fa-brain aip-pulse" style="color:var(--accent)"></i>
+              <span>{mcPrepText}</span>
+              <span class="mono" style="font-weight:800;color:var(--accent)">{mcPrepProgress}%</span>
+            </div>
+            <div style="height:4px;background:var(--bg3);border-radius:2px;overflow:hidden;margin-top:8px">
+              <div style="height:100%;background:var(--accent);border-radius:2px;transition:width .3s;width:{mcPrepProgress}%"></div>
+            </div>
+          {:else if mcPrepProgress >= 100}
+            <div class="mc-status ok">
+              <i class="fa-solid fa-circle-check"></i>
+              MC-Optionen bereit. Session kann gestartet werden.
+            </div>
+          {:else}
+            <div class="mc-status">
+              <i class="fa-solid fa-wand-magic-sparkles" style="color:var(--accent)"></i>
+              <span>KI generiert 3 falsche Optionen pro Karte. Cache: 7 Tage.</span>
+            </div>
+            <button class="btn btn-ghost btn-sm" style="margin-top:8px" onclick={prepareMcOptions}>
+              <i class="fa-solid fa-bolt"></i> Optionen jetzt generieren
+            </button>
+          {/if}
         </div>
       {:else if mode === 'srs'}
         <div class="srs-info">
           <i class="fa-solid fa-circle-info" style="color:var(--accent)"></i>
-          SM-2 priorisiert fällige Karten. Deine Bewertung steuert den nächsten Termin.
+          Karten die du schlecht kannst kommen öfter. Gut gekonnte erst nach Tagen oder Wochen wieder.
         </div>
       {/if}
     </div>
@@ -438,27 +482,6 @@
   </div>
 
 <!-- ── LEARNING ────────────────────────────────────────────── -->
-{:else if phase === 'preparing'}
-  <div class="page-hd">
-    <div>
-      <h1 class="page-title"><i class="fa-solid fa-wand-magic-sparkles"></i> Vorbereitung</h1>
-      <p class="page-sub">{mcPrepText}</p>
-    </div>
-  </div>
-  <div class="card-box" style="max-width:500px;padding:24px">
-    <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">
-      <i class="fa-solid fa-brain aip-pulse" style="font-size:20px;color:var(--accent)"></i>
-      <div style="flex:1">
-        <div style="font-size:13px;font-weight:700">Multiple-Choice-Optionen generieren</div>
-        <div style="font-size:11px;color:var(--text2);margin-top:2px">{mcPrepText}</div>
-      </div>
-      <span class="mono" style="font-size:14px;font-weight:800;color:var(--accent)">{mcPrepProgress}%</span>
-    </div>
-    <div style="height:6px;background:var(--bg3);border-radius:3px;overflow:hidden">
-      <div style="height:100%;background:var(--accent);border-radius:3px;transition:width .3s;width:{mcPrepProgress}%"></div>
-    </div>
-  </div>
-
 {:else if phase === 'learning' && card}
 
   <!-- Progress Bar -->
@@ -863,6 +886,12 @@
 .ai-explain { background:var(--bg2);border:1px solid color-mix(in srgb,var(--ac2) 40%,transparent);border-radius: 4px;padding:12px 16px;margin-bottom:14px; }
 .ae-header  { font-size:11px;font-weight:700;color:var(--ac2);letter-spacing:.07em;display:flex;align-items:center;gap:6px;margin-bottom:8px;text-transform:uppercase; }
 .ai-explain p { font-size:12px;color:var(--text1);line-height:1.65; }
+
+/* ── MC Setup ─────────────────────────────────────── */
+.mc-setup-box { margin-top:12px;background:var(--bg2);border:1px solid var(--border);border-radius:4px;padding:12px; }
+.mc-status { display:flex;align-items:center;gap:8px;font-size:11px;color:var(--text1); }
+.mc-status.ok { color:var(--ok); }
+.mc-status.err { color:var(--err); }
 
 /* ── Multiple Choice ──────────────────────────────── */
 .mc-grid { display:flex;flex-direction:column;gap:8px;margin-top:8px; }
