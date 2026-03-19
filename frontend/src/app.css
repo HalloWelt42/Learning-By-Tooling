@@ -420,6 +420,28 @@ input[type="range"]::-webkit-slider-thumb {
 .page-sub { font-size: 12px; color: var(--text2); margin-top: 3px; }
 
 /* ── Karten & Boxen ───────────────────────────────────────────────────────── */
+/* Passwort-Feld mit Augen-Toggle */
+.pw-field {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+.pw-field input {
+  flex: 1;
+  padding-right: 36px;
+}
+.pw-toggle {
+  position: absolute;
+  right: 8px;
+  background: none;
+  border: none;
+  color: var(--text3);
+  cursor: pointer;
+  font-size: 13px;
+  padding: 4px;
+}
+.pw-toggle:hover { color: var(--text1); }
+
 .card-box {
   background: var(--bg1);
   border: 1px solid var(--border);

@@ -5,6 +5,7 @@
   let password = $state('')
   let loading = $state(false)
   let error = $state('')
+  let showPw = $state(false)
 
   async function handleLogin() {
     error = ''
@@ -35,7 +36,12 @@
 
       <label>
         <span>Passwort</span>
-        <input type="password" bind:value={password} required autocomplete="current-password" />
+        <div class="pw-field">
+          <input type={showPw ? 'text' : 'password'} bind:value={password} required autocomplete="current-password" />
+          <button type="button" class="pw-toggle" onclick={() => showPw = !showPw} tabindex="-1">
+            <i class="fa-solid {showPw ? 'fa-eye-slash' : 'fa-eye'}"></i>
+          </button>
+        </div>
       </label>
 
       {#if error}

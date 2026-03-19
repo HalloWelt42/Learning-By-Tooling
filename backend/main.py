@@ -28,7 +28,7 @@ from auth import (
     get_current_user, authenticate, create_user, create_token, seed_admin,
 )
 
-app = FastAPI(title="Learning-By-Tooling", version="3.0.0")
+app = FastAPI(title="Learning-By-Tooling", version="4.0.0")
 
 # CORS -- großzügig für die Entwicklungsphase
 app.add_middleware(
