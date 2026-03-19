@@ -42,6 +42,7 @@
   let mcSelected    = $state(null)  // Index der gewählten Option
   let mcLoading     = $state(false)
   let mcRevealed    = $state(false)
+  let mcCache       = $state({})    // card_id -> [option1, option2, option3]
   let mcPrepProgress = $state(0)    // 0-100 Vorbereitung
   let mcPrepText     = $state('')
   let mcStatus       = $state(null) // {total, cached, missing}
@@ -189,6 +190,15 @@
       activeSession.set(data)
       results = []; idx = 0
 
+      // MC: Alle Optionen parallel vorladen
+      if (mode === 'mc') {
+        mcCache = {}
+        const promises = data.card_ids.map(cid =>
+          apiGet(`/api/mc/${cid}`).then(mc => { mcCache[cid] = mc.options }).catch(() => {})
+        )
+        await Promise.all(promises)
+      }
+
       await loadCard(0)
       phase = 'learning'
     } catch(e) {
@@ -211,25 +221,38 @@
     mcRevealed    = false
     // MC-Optionen laden wenn MC-Modus
     if (mode === 'mc' && card) {
-      mcLoading = true
-      try {
-        const mc = await apiGet(`/api/mc/${card.card_id}`)
+      const cached = mcCache[card.card_id]
+      if (cached && cached.length >= 3) {
         const correctText = card.answer.split('\n')[0].substring(0, 150)
-        // Immer 4 Optionen: 1 richtig + 3 falsch, gemischt
         const opts = [
           {text: correctText, correct: true},
-          ...mc.options.slice(0, 3).map(t => ({text: t, correct: false}))
+          ...cached.slice(0, 3).map(t => ({text: t, correct: false}))
         ]
-        // Mischen (Fisher-Yates)
         for (let j = opts.length - 1; j > 0; j--) {
           const k = Math.floor(Math.random() * (j + 1));
           [opts[j], opts[k]] = [opts[k], opts[j]]
         }
         mcOptions = opts
-      } catch(e) {
-        mcOptions = []
+      } else {
+        // Fallback: Live laden
+        mcLoading = true
+        try {
+          const mc = await apiGet(`/api/mc/${card.card_id}`)
+          const correctText = card.answer.split('\n')[0].substring(0, 150)
+          const opts = [
+            {text: correctText, correct: true},
+            ...mc.options.slice(0, 3).map(t => ({text: t, correct: false}))
+          ]
+          for (let j = opts.length - 1; j > 0; j--) {
+            const k = Math.floor(Math.random() * (j + 1));
+            [opts[j], opts[k]] = [opts[k], opts[j]]
+          }
+          mcOptions = opts
+        } catch(e) {
+          mcOptions = []
+        }
+        mcLoading = false
       }
-      mcLoading = false
     }
   }
 
