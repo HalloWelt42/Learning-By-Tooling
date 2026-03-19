@@ -861,8 +861,8 @@
       <button class="btn btn-primary btn-lg" onclick={reset}>
         <i class="fa-solid fa-rotate-right"></i> Neue Session
       </button>
-      <button class="btn btn-ghost btn-lg" onclick={() => navigate('/packages')}>
-        <i class="fa-solid fa-box-archive"></i> Lernpakete
+      <button class="btn btn-ghost btn-lg" onclick={reset}>
+        <i class="fa-solid fa-arrow-left"></i> Zurück
       </button>
       {#if wrongCards.length > 0}
         <button class="btn btn-ghost btn-lg" onclick={() => showAnalysis = true}>
