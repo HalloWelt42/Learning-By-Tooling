@@ -378,7 +378,7 @@
           ['standard','fa-layer-group','Karteikarte','Aufdecken und selbst bewerten'],
           ['mc',      'fa-list-check', 'Multiple Choice','4 Optionen, 1 richtig (KI-generiert)'],
           ['write',   'fa-keyboard',   'Freitext',   'Antwort eingeben, KI bewertet'],
-          ['srs',     'fa-brain',      'Spaced Rep.','SM-2 -- fällige Karten zuerst'],
+          ['srs',     'fa-brain',      'Spaced Repetition','SM-2 -- fällige Karten zuerst'],
         ] as [id,fa,lbl,desc]}
           <button class="mode-btn" class:active={mode===id} onclick={() => mode=id}>
             <i class="fa-solid {fa} mode-icon"></i>
