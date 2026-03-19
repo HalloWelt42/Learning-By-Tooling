@@ -125,7 +125,7 @@ def create_user(email: str, password: str, display_name: str = "") -> dict:
         user = conn.execute("SELECT id, email, display_name FROM users WHERE email=?", (email,)).fetchone()
         return dict(user)
     except Exception as e:
-        raise HTTPException(400, f"Benutzer existiert bereits: {e}")
+        raise HTTPException(400, "E-Mail bereits registriert")
     finally:
         conn.close()
 

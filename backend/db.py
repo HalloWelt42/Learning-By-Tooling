@@ -66,7 +66,7 @@ def init_db():
     -- Karten
     CREATE TABLE IF NOT EXISTS cards (
         id            INTEGER PRIMARY KEY AUTOINCREMENT,
-        card_id       TEXT    NOT NULL UNIQUE,
+        card_id       TEXT    NOT NULL,
         package_id    INTEGER,
         category_code TEXT    NOT NULL,
         question      TEXT    NOT NULL,
@@ -78,7 +78,8 @@ def init_db():
         created_at    TEXT    DEFAULT (datetime('now')),
         updated_at    TEXT    DEFAULT (datetime('now')),
         FOREIGN KEY (package_id)    REFERENCES packages(id),
-        FOREIGN KEY (category_code) REFERENCES categories(code)
+        FOREIGN KEY (category_code) REFERENCES categories(code),
+        UNIQUE(card_id, package_id)
     );
 
     CREATE VIRTUAL TABLE IF NOT EXISTS cards_fts USING fts5(
@@ -342,6 +343,27 @@ def _migrate(conn: sqlite3.Connection):
                 FROM users u, packages p
             """)
             conn.commit()
+
+    # cards: UNIQUE(card_id) -> UNIQUE(card_id, package_id) Migration
+    # Prüfe ob der alte globale UNIQUE-Index noch existiert
+    if 'cards' in existing_tables:
+        indexes = conn.execute("PRAGMA index_list(cards)").fetchall()
+        has_old_unique = any(
+            idx[1] == 'sqlite_autoindex_cards_1' or
+            (idx[2] == 1 and len(conn.execute(f"PRAGMA index_info({idx[1]})").fetchall()) == 1)
+            for idx in indexes
+        )
+        if has_old_unique:
+            try:
+                conn.execute("DROP INDEX IF EXISTS sqlite_autoindex_cards_1")
+            except Exception:
+                pass
+            # Neuen zusammengesetzten Index erstellen
+            try:
+                conn.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_cards_pkg_cardid ON cards(card_id, package_id)")
+                conn.commit()
+            except Exception:
+                pass
 
     # Kategorie-Namen: Umlaute korrigieren (falls alte ASCII-Version in DB)
     umlaut_fixes = [

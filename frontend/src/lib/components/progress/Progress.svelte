@@ -1,16 +1,12 @@
 <script>
   import { onMount } from 'svelte'
-  import { showToast, loadGlobal, activePackageId } from '../../stores/index.js'
-  import { apiGet, apiPost } from '../../utils/api.js'
+  import { showToast } from '../../stores/index.js'
+  import { apiGet } from '../../utils/api.js'
   import ShieldBadge from './ShieldBadge.svelte'
 
   let tab          = $state('achievements')
   let achievements = $state([])
   let history      = $state([])
-  let importFragen = $state('')
-  let importAntwt  = $state('')
-  let importResult = $state(null)
-  let importing    = $state(false)
 
   onMount(async () => {
     await Promise.all([loadAch(), loadHist()])
@@ -18,19 +14,6 @@
 
   async function loadAch()  { achievements = await apiGet('/api/achievements') }
   async function loadHist() { history      = await apiGet('/api/history') }
-
-  async function doImport() {
-    if (!importFragen || !importAntwt) { showToast('Beide Texte einfügen','error'); return }
-    importing = true
-    try {
-      importResult = await apiPost('/api/import/markdown', { fragen: importFragen, antworten: importAntwt, package_id: $activePackageId || null })
-      showToast(`${importResult.created} Karten importiert`, 'success')
-      await loadGlobal()
-    } catch(e) {
-      showToast('Import fehlgeschlagen','error')
-    }
-    importing = false
-  }
 
   let totalLevels = $derived(achievements.reduce((s, a) => s + a.level, 0))
 
@@ -120,35 +103,6 @@
       </div>
     {/if}
 
-  <!-- Import -->
-  {:else}
-    <div class="card-box" style="max-width:900px">
-      <div style="font-size:15px;font-weight:700;margin-bottom:8px">Karten aus Markdown importieren</div>
-      <div style="font-size:12px;color:var(--text2);margin-bottom:20px;line-height:1.6">
-        Füge den Inhalt der Fragen- und Antworten-Datei ein.<br>
-        Format: <code style="background:var(--bg2);padding:1px 5px;border-radius: 3px;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--accent)">paketname-fragen.md</code> +
-        <code style="background:var(--bg2);padding:1px 5px;border-radius: 3px;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--accent)">paketname-antworten.md</code>
-      </div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
-        <label style="display:flex;flex-direction:column;gap:5px;font-size:11px;font-weight:600;color:var(--text2)">
-          Fragen-Datei
-          <textarea bind:value={importFragen} rows="12" style="font-family:'JetBrains Mono',monospace;font-size:11px" placeholder="Inhalt hier einfügen…"></textarea>
-        </label>
-        <label style="display:flex;flex-direction:column;gap:5px;font-size:11px;font-weight:600;color:var(--text2)">
-          Antworten-Datei
-          <textarea bind:value={importAntwt} rows="12" style="font-family:'JetBrains Mono',monospace;font-size:11px" placeholder="Inhalt hier einfügen…"></textarea>
-        </label>
-      </div>
-      {#if importResult}
-        <div style="display:flex;gap:16px;padding:10px 14px;background:var(--bg2);border-radius: 4px;margin-bottom:14px;font-size:13px;font-weight:700">
-          <span style="color:var(--ok)"><i class="fa-solid fa-circle-check"></i> {importResult.created} importiert</span>
-          {#if importResult.skipped > 0}<span style="color:var(--warn)"><i class="fa-solid fa-circle-minus"></i> {importResult.skipped} übersprungen</span>{/if}
-        </div>
-      {/if}
-      <button class="btn btn-primary" onclick={doImport} disabled={importing}>
-        {importing ? 'Importiere…' : 'Importieren'}
-      </button>
-    </div>
   {/if}
 </div>
 

@@ -1503,8 +1503,11 @@ def uninstall_package(pkg_id: int, user: dict = Depends(get_current_user)):
     except Exception:
         stats["lexicon_deleted"] = 0
 
-    # 7. Lernpfade löschen
+    # 7. Lernpfade und Kapitel löschen
     try:
+        paths = conn.execute("SELECT id FROM learning_paths WHERE package_id=?", (pkg_id,)).fetchall()
+        for p in paths:
+            conn.execute("DELETE FROM path_chapters WHERE path_id=?", (p["id"],))
         r = conn.execute("DELETE FROM learning_paths WHERE package_id=?", (pkg_id,))
         stats["paths_deleted"] = r.rowcount
     except Exception:
@@ -1519,7 +1522,10 @@ def uninstall_package(pkg_id: int, user: dict = Depends(get_current_user)):
     # 9. Sessions entkoppeln (Statistik bleibt, Paket-Referenz wird entfernt)
     conn.execute("UPDATE sessions SET package_id=NULL WHERE package_id=?", (pkg_id,))
 
-    # 10. Paket selbst löschen
+    # 10. User-Zuordnungen löschen
+    conn.execute("DELETE FROM user_packages WHERE package_id=?", (pkg_id,))
+
+    # 11. Paket selbst löschen
     conn.execute("DELETE FROM packages WHERE id=?", (pkg_id,))
     conn.commit()
     conn.close()
