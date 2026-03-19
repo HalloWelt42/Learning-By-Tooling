@@ -711,8 +711,8 @@
           </button>
         {/if}
 
-      {:else}
-        <!-- Antwort aufgedeckt -->
+      {:else if mode !== 'mc'}
+        <!-- Antwort aufgedeckt (nicht im MC-Modus) -->
         <div class="fc-ans-lbl">
           <i class="fa-solid fa-square-check" style="color:var(--accent)"></i> Antwort
         </div>
@@ -810,7 +810,7 @@
         <!-- Nachlesen-Link zum Lernmaterial -->
         {#if $activePackageId}
           <button class="btn btn-ghost btn-sm" style="margin-top:10px;font-size:11px"
-            onclick={() => navigate(`/packages/${$activePackageId}?tab=documents`)}>
+            onclick={() => window.open(`/#/packages/${$activePackageId}?tab=material`, '_blank')}>
             <i class="fa-solid fa-book-open"></i> Im Material nachlesen
           </button>
         {/if}
