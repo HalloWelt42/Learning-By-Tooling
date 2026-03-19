@@ -70,9 +70,11 @@
   }
 
   function openCard(item) {
-    activePackageId.set(item.package_id)
-    currentView.set('package')
-    navigate(`/packages/${item.package_id}`)
+    if (item.package_id) {
+      activePackageId.set(item.package_id)
+      currentView.set('package')
+      navigate(`/packages/${item.package_id}?tab=cards&q=${encodeURIComponent(item.card_id || '')}`)
+    }
   }
 
   function diffLabel(d) {

@@ -97,7 +97,17 @@
   let importResult  = $state(null)
   let importing     = $state(false)
 
-  onMount(() => loadAll())
+  onMount(() => {
+    loadAll()
+    // Query-Parameter auswerten (z.B. ?tab=cards&q=K-001)
+    const hash = window.location.hash
+    const qIdx = hash.indexOf('?')
+    if (qIdx > -1) {
+      const params = new URLSearchParams(hash.substring(qIdx))
+      if (params.get('tab')) tab = params.get('tab')
+      if (params.get('q')) searchQ = params.get('q')
+    }
+  })
 
   async function loadAll() {
     await Promise.all([loadStats(), loadDocuments(), loadDrafts()])
