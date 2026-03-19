@@ -665,7 +665,7 @@
                 <span class="fb-verdict">{aiFeedback.score>=0.6?'Richtig!':'Noch nicht ganz'}</span>
               </div>
               {#if aiFeedback.feedback}
-                <p class="fb-text">{aiFeedback.feedback}</p>
+                <div class="fb-text markdown">{@html marked(aiFeedback.feedback)}</div>
               {/if}
               <button class="btn btn-primary" onclick={flip} style="margin-top:10px">
                 <i class="fa-solid fa-eye"></i> Richtige Antwort zeigen
@@ -693,7 +693,7 @@
               <span class="fb-verdict">{aiFeedback.score>=0.6?'Richtig!':'Noch nicht ganz'}</span>
             </div>
             {#if aiFeedback.feedback}
-              <p class="fb-text">{aiFeedback.feedback}</p>
+              <div class="fb-text markdown">{@html marked(aiFeedback.feedback)}</div>
             {/if}
           </div>
         {/if}
@@ -716,7 +716,7 @@
               <i class="fa-solid fa-wand-magic-sparkles" style="color:var(--ac2)"></i>
               KI-Erklärung
             </div>
-            <p>{aiExplanation}</p>
+            <div class="markdown">{@html marked(aiExplanation)}</div>
           </div>
         {/if}
 
@@ -734,7 +734,7 @@
         {#if hintText}
           <div class="ai-hint-box">
             <i class="fa-solid fa-lightbulb" style="color:var(--warn)"></i>
-            <span>{hintText}</span>
+            <span class="markdown">{@html marked(hintText)}</span>
           </div>
         {/if}
         {#if relatedIds.length > 0}
