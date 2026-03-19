@@ -167,7 +167,7 @@
 
   let st
   function onSearch() { clearTimeout(st); st = setTimeout(loadCards, 280) }
-  $effect(() => { filterCat; if(tab==='cards') loadCards() })
+  $effect(() => { filterCat; searchQ; if(tab==='cards') loadCards() })
 
   // ── Karten ──────────────────────────────────────────────────────────────
   function openCreate() {
@@ -1471,7 +1471,7 @@
 .detail-q    { font-size: 15px; font-weight: 600; color: var(--text0); background: var(--bg2); border-radius: 4px; padding: 12px 14px; line-height: 1.5; }
 .detail-hint { font-size: 12px; color: var(--text2); background: var(--bg2); border-radius: 4px; padding: 8px 12px; display: flex; align-items: center; gap: 6px; }
 .detail-hint i { flex-shrink: 0; }
-.detail-ans  { font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--text1); background: var(--bg1); border: 1px solid var(--border); border-radius: 4px; padding: 12px 14px; white-space: pre-wrap; line-height: 1.65; }
+.detail-ans  { font-size: 12px; color: var(--text1); background: var(--bg1); border: 1px solid var(--border); border-radius: 4px; padding: 12px 14px; line-height: 1.65; }
 .detail-ai   { font-size: 13px; color: var(--text1); background: var(--bg2); border: 1px solid color-mix(in srgb, var(--ac2) 35%, transparent); border-radius: 4px; padding: 12px 14px; line-height: 1.6; }
 .ai-load-indicator { display: flex; align-items: center; gap: 12px; padding: 10px 14px; background: var(--glow); border: 1px solid color-mix(in srgb, var(--accent) 30%, transparent); border-radius: 4px; margin-top: 4px; }
 .ai-load-indicator > i { color: var(--accent); flex-shrink: 0; }
