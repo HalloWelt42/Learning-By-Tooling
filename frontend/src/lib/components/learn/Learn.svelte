@@ -675,8 +675,8 @@
             </button>
           {/if}
         {:else}
-          <div style="font-size:11px;color:var(--text3);padding:8px">MC nicht verfügbar -- KI offline oder Fehler</div>
-          <button class="btn btn-primary flip-btn" onclick={flip}>
+          <div style="font-size:11px;color:var(--text3);padding:8px">MC nicht verfügbar -- Fallback auf Karteikarte</div>
+          <button class="btn btn-primary flip-btn" onclick={() => { mode = 'standard'; flip() }}>
             <i class="fa-solid fa-eye"></i> Antwort zeigen
           </button>
         {/if}
@@ -790,8 +790,9 @@
             {/each}
           </div>
 
-        {:else if mode !== 'write' || !useAI || aiState !== 'idle'}
-          {#if !(mode === 'write' && useAI && (aiState === 'loading' || aiFeedback))}
+        {:else}
+          <!-- Standard + Write: Falsch/Skip/Richtig -->
+          {#if aiState !== 'loading'}
             <div class="rate-row">
               <button class="rate-btn rb-err"  onclick={() => rate('wrong')}>
                 <i class="fa-solid fa-xmark"></i> Falsch
