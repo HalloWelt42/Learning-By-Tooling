@@ -146,20 +146,17 @@ Standard-Kategorien in jeder Installation:
 
 | Code | Name | Verwendung |
 |------|------|------------|
-| `GB` | Grundbegriffe | Definitionen, Konzepte, Fachvokabular |
-| `AK` | Akteure | Rollen, Personen, Organisationen |
-| `GS` | Geschäftsprozesse | Abläufe, Workflows |
-| `AP` | API | Endpunkte, Parameter, HTTP |
-| `HA` | Hash | Kryptographie, Hashing |
-| `OA` | OAuth2 | Authentifizierung, Token |
-| `TC` | Test Cases | Tests, Zertifizierung |
-| `MO` | Mock | Testumgebungen |
-| `KA` | Kafka | Messaging, Events |
-| `FE` | Fehler | Fehlerbehandlung, Debugging |
-| `DB` | Datenmodell | Schemas, Datenstrukturen |
-| `AL` | Allgemein | Alles was nicht passt |
+| `GB` | Grundlagen | Definitionen, Konzepte, Fachbegriffe |
+| `TH` | Theorie | Theoretisches Wissen, Zusammenhänge |
+| `PX` | Praxis | Praktische Anwendung, Übungen |
+| `VF` | Verfahren | Abläufe, Prozesse, Methoden |
+| `PR` | Prüfung | Prüfungsrelevante Fragen |
+| `VT` | Vertiefung | Weiterführende, schwierige Themen |
+| `AL` | Allgemein | Alles was in keine andere Kategorie passt |
 
-Für themenspezifische Pakete: `GB` und `AL` verwenden wenn die spezifischen Codes nicht passen.
+Wenn du unsicher bist, nimm `AL` (Allgemein).
+
+Hinweis: Ältere Pakete können noch die erweiterten Kategoriecodes verwenden (AK, GS, AP, HA, OA, TC, MO, KA, FE, DB). Diese funktionieren weiterhin, werden aber für neue Pakete nicht mehr empfohlen.
 
 ---
 
@@ -275,6 +272,67 @@ Authorization: Bearer <token>
 ]
 ```
 
+### Lernsession starten
+
+```http
+POST /api/sessions
+Authorization: Bearer <token>
+Content-Type: application/json
+
+{
+  "mode": "standard",
+  "package_id": 1,
+  "category_filter": [],
+  "card_limit": 10,
+  "srs_mode": false
+}
+```
+
+Modi: `standard`, `mc`, `write`, `srs`
+
+**Antwort:**
+```json
+{
+  "session_id": 42,
+  "card_ids": ["K-001", "K-005", "K-012"],
+  "total": 3
+}
+```
+
+### Aktuelle Karte abrufen
+
+```http
+GET /api/sessions/42/current-card
+Authorization: Bearer <token>
+```
+
+### Karte bewerten und nächste holen
+
+```http
+POST /api/sessions/42/review-and-next
+Authorization: Bearer <token>
+Content-Type: application/json
+
+{
+  "result": "correct",
+  "time_ms": 8500,
+  "user_answer": "Freitext-Antwort",
+  "use_ai": true,
+  "srs_quality": null
+}
+```
+
+Einziger Endpoint für den gesamten Session-Ablauf. Bewertet die aktuelle Karte, speichert Review + Statistik, und gibt die nächste Karte zurück. Bei `use_ai: true` wird die Antwort zusätzlich vom Sprachmodell bewertet (Score + Feedback).
+
+### Abzeichen abrufen
+
+```http
+GET /api/achievements
+Authorization: Bearer <token>
+```
+
+6 Kategorien mit je 30 Stufen (Weiß bis Platin, 3 Sterne pro Farbe).
+
 ---
 
 ## 8. Validierung
@@ -367,12 +425,15 @@ zip mein-kurs-v1.0.zip fragen.md antworten.md
 
 | Eigenschaft | Wert |
 |-------------|------|
+| Version | 0.4.0 |
 | Backend | Python 3.11, FastAPI |
-| Frontend | Svelte 5, Vite |
+| Frontend | Svelte 5, Vite 6 |
 | Datenbank | SQLite mit FTS5 |
+| Sprachmodell | LM Studio (lokal, 192.168.178.45:1234) |
 | Port Backend | 8030 |
 | Port Frontend | 8031 |
 | Deployment | Docker Compose |
+| Lernmodi | Karteikarte, Multiple Choice, Freitext, Spaced Repetition |
 | API-Doku | http://localhost:8030/docs |
 
 ---
