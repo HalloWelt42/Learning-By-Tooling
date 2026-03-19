@@ -25,7 +25,7 @@
   // Setup
   let mode       = $state('standard')
   let catFilter  = $state([])
-  let cardLimit  = $state(20)
+  let cardLimit  = $state(10)
 
   // Card interaction
   let userAnswer    = $state('')
@@ -106,6 +106,13 @@
 
   let totalCatCards = $derived((localCats || []).reduce((s, c) => s + (c.card_count || 0), 0))
   let selectedCatCards = $derived(catFilter.length === 0 ? totalCatCards : (localCats || []).filter(c => catFilter.includes(c.code)).reduce((s, c) => s + (c.card_count || 0), 0))
+
+  // cardLimit auf verfügbare Karten begrenzen
+  $effect(() => {
+    if (selectedCatCards > 0 && cardLimit > selectedCatCards) cardLimit = selectedCatCards
+    if (selectedCatCards > 0 && cardLimit === 0) cardLimit = Math.min(selectedCatCards, 10)
+  })
+
   let progress = $derived(cardIds.length > 0 ? idx / cardIds.length : 0)
   let correct  = $derived(results.filter(r => r.result === 'correct').length)
   let wrong    = $derived(results.filter(r => r.result === 'wrong').length)
@@ -499,14 +506,17 @@
           </label>
         {/each}
       </div>
-      <!-- Anzahl + Start direkt unter den Kategorien -->
+      <!-- Schnellwahl + Start -->
       <div style="margin-top:auto;padding-top:12px;border-top:1px solid var(--border)">
         <div class="limit-row">
-          <span class="limit-n mono">{cardLimit}</span>
-          <input type="range" min="5" max="105" step="5" bind:value={cardLimit}
-                 style="flex:1;accent-color:var(--accent)" />
+          {#each [5, 10, 20, 50].filter(n => n <= selectedCatCards) as n}
+            <button class="limit-chip" class:active={cardLimit === n} onclick={() => cardLimit = n}>{n}</button>
+          {/each}
+          {#if selectedCatCards > 0 && ![5,10,20,50].includes(selectedCatCards)}
+            <button class="limit-chip" class:active={cardLimit === selectedCatCards} onclick={() => cardLimit = selectedCatCards}>Alle ({selectedCatCards})</button>
+          {/if}
           <button class="btn btn-primary start-btn" onclick={startSession}>
-            <i class="fa-solid fa-play"></i> Starten
+            <i class="fa-solid fa-play"></i> {cardLimit} Karten starten
           </button>
         </div>
       </div>
@@ -872,8 +882,15 @@
 .cat-cnt { font-size:10px;color:var(--text3); }
 .cat-sum { font-size:10px;color:var(--text2);margin-left:auto;font-weight:400; }
 .setup-bot { grid-column:1/-1; }
-.limit-row { display:flex;align-items:center;gap:12px; }
-.limit-n { font-size:18px;font-weight:800;color:var(--text0);min-width:30px; }
+.limit-row { display:flex;align-items:center;gap:8px;flex-wrap:wrap; }
+.limit-chip {
+  padding:6px 14px;border-radius:4px;border:1px solid var(--border);background:none;
+  font-size:13px;font-weight:700;color:var(--text2);cursor:pointer;font-family:inherit;
+  transition:all .15s;
+}
+.limit-chip:hover { border-color:var(--accent);color:var(--text0); }
+.limit-chip.active { border-color:var(--accent);background:var(--glow);color:var(--accent); }
+.start-btn { margin-left:auto; }
 .limit-wrap { display:flex;align-items:center;gap:12px; }
 .limit-n   { font-size:24px;font-weight:700;font-family:'JetBrains Mono',monospace;color:var(--text0);width:54px;text-align:center; }
 .start-btn { align-self:flex-end; }
