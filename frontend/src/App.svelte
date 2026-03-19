@@ -18,7 +18,7 @@
   import Admin         from './lib/components/shared/Admin.svelte'
   import ShieldBadge   from './lib/components/progress/ShieldBadge.svelte'
   import { route, initRouter, navigate } from './lib/utils/router.js'
-  import { apiGet } from './lib/utils/api.js'
+  import { apiGet, apiPost } from './lib/utils/api.js'
 
   let interval = $state(null)
   let userBadges = $state([])
