@@ -24,6 +24,7 @@
 
   // Setup
   let mode       = $state('standard')
+  let sessionMode = $state('standard')  // Original-Modus der Session
   let catFilter  = $state([])
   let cardLimit  = $state(10)
 
@@ -195,6 +196,7 @@
       cardIds = data.card_ids
       activeSession.set(data)
       results = []; idx = 0
+      sessionMode = mode
 
       await loadCard(0)
       phase = 'learning'
@@ -205,6 +207,7 @@
 
   async function loadCard(i) {
     if (i >= cardIds.length) { await endSession(); return }
+    mode          = sessionMode  // Mode zurücksetzen (falls Fallback ihn geändert hat)
     card          = await apiGet(`/api/cards/${cardIds[i]}`).catch(()=>null)
     flipped       = false
     userAnswer    = ''
