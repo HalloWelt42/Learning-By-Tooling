@@ -208,7 +208,13 @@ code, pre, .mono {
 
 .btn-sm  { padding: 4px 9px; font-size: 12px; }
 .btn-lg  { padding: 10px 20px; font-size: 14px; }
-.btn-icon { padding: 6px; width: 30px; height: 30px; justify-content: center; }
+.btn-icon {
+  padding: 6px; width: 30px; height: 30px; justify-content: center;
+  background: none; border: 1px solid var(--border); border-radius: 4px;
+  color: var(--text3); cursor: pointer; display: flex; align-items: center;
+  transition: all .15s; font-size: 13px;
+}
+.btn-icon:hover { color: var(--err); border-color: var(--err); }
 
 /* ── Formulare ────────────────────────────────────────────────────────────── */
 input[type="text"],
