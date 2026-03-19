@@ -13,7 +13,7 @@
   marked.setOptions({ breaks: true, gfm: true })
 
   // ── State ──────────────────────────────────────────────────
-  let phase       = $state('setup')   // setup | learning | result
+  let phase       = $state('setup')   // setup | preparing | learning | result
   let pendingSession = $state(null)   // offene Session zum Fortsetzen
   let session = $state(null)
   let cardIds = $state([])
@@ -42,6 +42,8 @@
   let mcSelected    = $state(null)  // Index der gewählten Option
   let mcLoading     = $state(false)
   let mcRevealed    = $state(false)
+  let mcPrepProgress = $state(0)    // 0-100 Vorbereitung
+  let mcPrepText     = $state('')
 
   // KI-Assistenz
   let hintText      = $state('')
@@ -122,6 +124,23 @@
       cardIds = data.card_ids
       activeSession.set(data)
       results = []; idx = 0
+
+      // MC-Modus: Optionen vorbereiten
+      if (mode === 'mc' && $aiOnline) {
+        phase = 'preparing'
+        mcPrepProgress = 0
+        mcPrepText = `MC-Optionen werden vorbereitet (0/${cardIds.length})...`
+        let prepared = 0
+        for (const cid of cardIds) {
+          try {
+            await apiGet(`/api/mc/${cid}`)
+          } catch(e) { /* einzelne Fehler ignorieren */ }
+          prepared++
+          mcPrepProgress = Math.round(prepared / cardIds.length * 100)
+          mcPrepText = `MC-Optionen werden vorbereitet (${prepared}/${cardIds.length})...`
+        }
+      }
+
       await loadCard(0)
       phase = 'learning'
     } catch(e) {
@@ -419,6 +438,27 @@
   </div>
 
 <!-- ── LEARNING ────────────────────────────────────────────── -->
+{:else if phase === 'preparing'}
+  <div class="page-hd">
+    <div>
+      <h1 class="page-title"><i class="fa-solid fa-wand-magic-sparkles"></i> Vorbereitung</h1>
+      <p class="page-sub">{mcPrepText}</p>
+    </div>
+  </div>
+  <div class="card-box" style="max-width:500px;padding:24px">
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">
+      <i class="fa-solid fa-brain aip-pulse" style="font-size:20px;color:var(--accent)"></i>
+      <div style="flex:1">
+        <div style="font-size:13px;font-weight:700">Multiple-Choice-Optionen generieren</div>
+        <div style="font-size:11px;color:var(--text2);margin-top:2px">{mcPrepText}</div>
+      </div>
+      <span class="mono" style="font-size:14px;font-weight:800;color:var(--accent)">{mcPrepProgress}%</span>
+    </div>
+    <div style="height:6px;background:var(--bg3);border-radius:3px;overflow:hidden">
+      <div style="height:100%;background:var(--accent);border-radius:3px;transition:width .3s;width:{mcPrepProgress}%"></div>
+    </div>
+  </div>
+
 {:else if phase === 'learning' && card}
 
   <!-- Progress Bar -->

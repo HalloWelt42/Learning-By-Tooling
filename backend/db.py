@@ -343,17 +343,17 @@ def _migrate(conn: sqlite3.Connection):
             conn.execute("ALTER TABLE lexicon ADD COLUMN package_id INTEGER")
             conn.commit()
 
-    # user_packages: Bestehende Pakete allen Usern zuweisen (Migration)
+    # user_packages: Sicherstellen dass jeder User alle Pakete sieht
     if 'user_packages' in existing_tables:
-        count = conn.execute("SELECT COUNT(*) FROM user_packages").fetchone()[0]
-        if count == 0:
-            # Erste Migration: Alle bestehenden Pakete allen Usern als owner geben
-            conn.execute("""
-                INSERT OR IGNORE INTO user_packages (user_id, package_id, role)
-                SELECT u.id, p.id, 'owner'
-                FROM users u, packages p
-            """)
-            conn.commit()
+        conn.execute("""
+            INSERT OR IGNORE INTO user_packages (user_id, package_id, role)
+            SELECT u.id, p.id, 'owner'
+            FROM users u, packages p
+            WHERE NOT EXISTS (
+                SELECT 1 FROM user_packages up WHERE up.user_id=u.id AND up.package_id=p.id
+            )
+        """)
+        conn.commit()
 
     # cards: UNIQUE(card_id) -> UNIQUE(card_id, package_id) Migration
     # Prüfe ob der alte globale UNIQUE-Index noch existiert
