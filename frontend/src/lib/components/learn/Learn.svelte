@@ -293,7 +293,6 @@
   }
 
   async function submitReview(result) {
-    results = [...results, { card_id: card.card_id, result }]
     if (result === 'wrong' && card) recordWrong(card)
     await apiPost('/api/reviews', {
       session_id: session.session_id,
@@ -301,6 +300,7 @@
       result,
       use_ai:     false,
     }).catch(()=>{})
+    results = [...results, { card_id: card.card_id, result }]
   }
 
   async function rateSRS(quality) {
