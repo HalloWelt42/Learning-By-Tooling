@@ -307,15 +307,24 @@ def _migrate(conn: sqlite3.Connection):
     if 'user_id' not in sess_cols:
         conn.execute("ALTER TABLE sessions ADD COLUMN user_id INTEGER NOT NULL DEFAULT 1")
         conn.commit()
+    if 'card_order' not in sess_cols:
+        conn.execute("ALTER TABLE sessions ADD COLUMN card_order TEXT DEFAULT '[]'")
+        conn.commit()
+    if 'current_index' not in sess_cols:
+        conn.execute("ALTER TABLE sessions ADD COLUMN current_index INTEGER DEFAULT 0")
+        conn.commit()
 
-    # reviews: user_id
+    # reviews: user_id, time_ms
     if 'reviews' in existing_tables:
         rev_cols = {r[1] for r in conn.execute("PRAGMA table_info(reviews)").fetchall()}
         if 'user_id' not in rev_cols:
             conn.execute("ALTER TABLE reviews ADD COLUMN user_id INTEGER NOT NULL DEFAULT 1")
             conn.commit()
+        if 'time_ms' not in rev_cols:
+            conn.execute("ALTER TABLE reviews ADD COLUMN time_ms INTEGER DEFAULT 0")
+            conn.commit()
 
-    # card_stats: user_id
+    # card_stats: user_id, avg_quality, avg_time_ms
     if 'card_stats' in existing_tables:
         stat_cols = {r[1] for r in conn.execute("PRAGMA table_info(card_stats)").fetchall()}
         if 'user_id' not in stat_cols:
@@ -326,6 +335,12 @@ def _migrate(conn: sqlite3.Connection):
             conn.commit()
         if 'interval_days' not in stat_cols:
             conn.execute("ALTER TABLE card_stats ADD COLUMN interval_days INTEGER DEFAULT 1")
+            conn.commit()
+        if 'avg_quality' not in stat_cols:
+            conn.execute("ALTER TABLE card_stats ADD COLUMN avg_quality REAL DEFAULT 0.0")
+            conn.commit()
+        if 'avg_time_ms' not in stat_cols:
+            conn.execute("ALTER TABLE card_stats ADD COLUMN avg_time_ms INTEGER DEFAULT 0")
             conn.commit()
 
     # documents: package_id

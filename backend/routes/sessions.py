@@ -2,15 +2,15 @@
 
 from __future__ import annotations
 import json
-from datetime import datetime, date
+from datetime import datetime, date, timedelta
 from typing import Optional
 
 from fastapi import APIRouter, HTTPException, Depends
 
 from db import get_db, row_to_dict
 from auth import get_current_user
-from schemas import SessionCreate, ReviewSubmit, MistakeAnalysisRequest
-from services import evaluate_answer
+from schemas import SessionCreate, ReviewSubmit, SessionReviewNext, MistakeAnalysisRequest
+from services import evaluate_answer, sm2_update
 
 router = APIRouter(tags=["sessions"])
 
@@ -44,8 +44,8 @@ def start_session(data: SessionCreate, user: dict = Depends(get_current_user)):
     card_ids = [r["card_id"] for r in rows]
     pkg_id_val = data.package_id if data.package_id else None
     conn.execute(
-        "INSERT INTO sessions (user_id,mode,package_id,category_filter,total_cards) VALUES (?,?,?,?,?)",
-        (uid, data.mode, pkg_id_val, json.dumps(data.category_filter), len(card_ids))
+        "INSERT INTO sessions (user_id,mode,package_id,category_filter,total_cards,card_order,current_index) VALUES (?,?,?,?,?,?,0)",
+        (uid, data.mode, pkg_id_val, json.dumps(data.category_filter), len(card_ids), json.dumps(card_ids))
     )
     session_id = conn.execute("SELECT last_insert_rowid()").fetchone()[0]
     conn.commit()
@@ -70,35 +70,26 @@ def get_active_session(user: dict = Depends(get_current_user)):
         "SELECT card_id, result FROM reviews WHERE session_id=? AND user_id=?",
         (session["id"], uid)
     ).fetchall()
-    reviewed_ids = [r["card_id"] for r in reviews]
     correct = sum(1 for r in reviews if r["result"] == "correct")
     wrong = sum(1 for r in reviews if r["result"] == "wrong")
     skipped = sum(1 for r in reviews if r["result"] == "skip")
-    # Alle Karten der Session (aus der Gesamt-Auswahl) laden
-    cat_filter = json.loads(session["category_filter"]) if session["category_filter"] else []
-    q = "SELECT card_id FROM cards WHERE active=1"
-    p = []
-    if session["package_id"]:
-        q += " AND package_id=?"; p.append(session["package_id"])
-    if cat_filter:
-        pl = ",".join("?" * len(cat_filter))
-        q += f" AND category_code IN ({pl})"; p.extend(cat_filter)
-    q += " ORDER BY RANDOM() LIMIT ?"
-    p.append(session["total_cards"])
-    all_cards = [r["card_id"] for r in conn.execute(q, p).fetchall()]
-    # Noch nicht beantwortete Karten
-    remaining = [c for c in all_cards if c not in reviewed_ids]
+
+    # card_order aus DB nutzen (strikte Session)
+    card_order = json.loads(session["card_order"] or "[]")
+    current_index = session["current_index"] or 0
+
     conn.close()
     return {
         "session_id": session["id"],
         "mode": session["mode"],
         "package_id": session["package_id"],
         "total": session["total_cards"],
-        "reviewed": len(reviewed_ids),
+        "reviewed": len(reviews),
         "correct": correct,
         "wrong": wrong,
         "skipped": skipped,
-        "remaining_ids": remaining,
+        "card_order": card_order,
+        "current_index": current_index,
         "started_at": session["started_at"],
     }
 
@@ -132,6 +123,195 @@ def end_session(session_id: int, user: dict = Depends(get_current_user)):
     conn.commit()
     conn.close()
     return {"ok": True, "correct": s["c"] or 0, "total": s["t"]}
+
+
+# -- Strikte Session-Steuerung ------------------------------------------------
+
+def _load_card_data(conn, card_id: str) -> Optional[dict]:
+    """Laedt eine Karte als dict oder None."""
+    row = conn.execute("SELECT * FROM cards WHERE card_id=?", (card_id,)).fetchone()
+    return row_to_dict(row) if row else None
+
+
+def _session_progress(conn, session_id: int, uid: int, session: dict) -> dict:
+    """Berechnet Fortschritt einer Session."""
+    reviews = conn.execute(
+        "SELECT card_id, result FROM reviews WHERE session_id=? AND user_id=?",
+        (session_id, uid)
+    ).fetchall()
+    correct = sum(1 for r in reviews if r["result"] == "correct")
+    wrong   = sum(1 for r in reviews if r["result"] == "wrong")
+    skipped = sum(1 for r in reviews if r["result"] == "skip")
+    return {
+        "reviewed": len(reviews),
+        "correct": correct,
+        "wrong": wrong,
+        "skipped": skipped,
+        "total": session["total_cards"],
+    }
+
+
+@router.get("/api/sessions/{session_id}/current-card")
+def get_current_card(session_id: int, user: dict = Depends(get_current_user)):
+    """Gibt die aktuelle Karte der Session zurueck (Backend-gesteuert)."""
+    uid = user["id"]
+    conn = get_db()
+    session = conn.execute(
+        "SELECT * FROM sessions WHERE id=? AND user_id=?", (session_id, uid)
+    ).fetchone()
+    if not session:
+        conn.close()
+        raise HTTPException(404, "Session nicht gefunden")
+    if session["ended_at"]:
+        conn.close()
+        return {"done": True, "card": None, "progress": None}
+
+    card_order = json.loads(session["card_order"] or "[]")
+    idx = session["current_index"] or 0
+
+    if idx >= len(card_order):
+        conn.close()
+        return {"done": True, "card": None, "progress": None}
+
+    card = _load_card_data(conn, card_order[idx])
+    progress = _session_progress(conn, session_id, uid, session)
+    progress["current_index"] = idx
+    conn.close()
+    return {
+        "done": False,
+        "card": card,
+        "progress": progress,
+        "mode": session["mode"],
+        "package_id": session["package_id"],
+    }
+
+
+@router.post("/api/sessions/{session_id}/review-and-next")
+async def review_and_next(session_id: int, data: SessionReviewNext, user: dict = Depends(get_current_user)):
+    """Bewertet die aktuelle Karte und gibt die naechste zurueck.
+    Ein einziger Endpoint fuer den gesamten Session-Ablauf."""
+    uid = user["id"]
+    conn = get_db()
+    session = conn.execute(
+        "SELECT * FROM sessions WHERE id=? AND user_id=?", (session_id, uid)
+    ).fetchone()
+    if not session:
+        conn.close()
+        raise HTTPException(404, "Session nicht gefunden")
+    if session["ended_at"]:
+        conn.close()
+        raise HTTPException(400, "Session bereits beendet")
+
+    card_order = json.loads(session["card_order"] or "[]")
+    idx = session["current_index"] or 0
+    if idx >= len(card_order):
+        conn.close()
+        raise HTTPException(400, "Keine Karten mehr in dieser Session")
+
+    current_card_id = card_order[idx]
+    card = conn.execute("SELECT * FROM cards WHERE card_id=?", (current_card_id,)).fetchone()
+
+    # -- KI-Bewertung (Freitext mit KI) --
+    ai_score = ai_feedback = None
+    result = data.result
+    if data.use_ai and data.user_answer and card:
+        eval_ctx = ""
+        try:
+            doc_rows = conn.execute(
+                "SELECT dc.text FROM document_chunks dc JOIN documents d ON d.id=dc.document_id WHERE d.package_id=? ORDER BY d.id, dc.chunk_index LIMIT 20",
+                (card["package_id"],)
+            ).fetchall()
+            eval_ctx = "\n\n".join(r["text"] for r in doc_rows if r["text"])
+        except Exception:
+            pass
+        ev = await evaluate_answer(
+            card["question"], card["answer"], data.user_answer,
+            doc_context=eval_ctx
+        )
+        ai_score = ev["score"]; ai_feedback = ev["feedback"]
+        if data.result == "unknown":
+            result = "correct" if ev["score"] >= 0.6 else "wrong"
+
+    # -- Review speichern (mit Antwortzeit) --
+    time_ms = max(0, data.time_ms or 0)
+    conn.execute(
+        "INSERT INTO reviews (user_id,session_id,card_id,result,user_answer,ai_score,ai_feedback,time_ms) VALUES (?,?,?,?,?,?,?,?)",
+        (uid, session_id, current_card_id, result, data.user_answer, ai_score, ai_feedback, time_ms)
+    )
+
+    # -- Qualitaets-Score: KI-Score oder 1.0/0.0 basierend auf Ergebnis --
+    quality = ai_score if ai_score is not None else (1.0 if result == "correct" else 0.0 if result == "wrong" else 0.5)
+
+    # -- card_stats aktualisieren (inkl. avg_quality, avg_time_ms) --
+    conn.execute("""
+        INSERT INTO card_stats (user_id,card_id,times_shown,times_correct,times_wrong,last_reviewed,streak,avg_quality,avg_time_ms)
+        VALUES (?,?,1,?,?,?,?,?,?)
+        ON CONFLICT(user_id,card_id) DO UPDATE SET
+            times_shown=times_shown+1,
+            times_correct=times_correct+excluded.times_correct,
+            times_wrong=times_wrong+excluded.times_wrong,
+            last_reviewed=excluded.last_reviewed,
+            streak=CASE WHEN excluded.times_correct=1 THEN streak+1 ELSE 0 END,
+            avg_quality=ROUND((avg_quality * (times_shown - 1) + ?) / times_shown, 3),
+            avg_time_ms=CASE WHEN ?> 0 THEN ROUND((avg_time_ms * (times_shown - 1) + ?) / times_shown) ELSE avg_time_ms END
+    """, (uid, current_card_id, 1 if result=="correct" else 0, 1 if result=="wrong" else 0,
+          datetime.now().isoformat(), 1 if result=="correct" else 0, quality, time_ms,
+          quality, time_ms, time_ms))
+
+    # -- SRS-Update falls gewuenscht --
+    if data.srs_quality is not None:
+        stat = conn.execute(
+            "SELECT ease_factor, interval_days, COALESCE(times_correct,0) as reps FROM card_stats WHERE user_id=? AND card_id=?",
+            (uid, current_card_id)
+        ).fetchone()
+        if stat:
+            new_ease, new_interval, new_reps = sm2_update(
+                stat["ease_factor"], stat["interval_days"], stat["reps"], data.srs_quality
+            )
+            due = (date.today() + timedelta(days=new_interval)).isoformat()
+            conn.execute(
+                "UPDATE card_stats SET ease_factor=?, interval_days=?, due_date=? WHERE user_id=? AND card_id=?",
+                (new_ease, new_interval, due, uid, current_card_id)
+            )
+
+    # -- Index vorruecken --
+    next_idx = idx + 1
+    conn.execute(
+        "UPDATE sessions SET current_index=? WHERE id=?", (next_idx, session_id)
+    )
+
+    # -- Session beenden falls fertig --
+    done = next_idx >= len(card_order)
+    if done:
+        s = conn.execute(
+            "SELECT COUNT(*) as t, SUM(result='correct') as c, SUM(result='skip') as sk FROM reviews WHERE session_id=? AND user_id=?",
+            (session_id, uid)
+        ).fetchone()
+        conn.execute(
+            "UPDATE sessions SET ended_at=?, correct=?, skipped=? WHERE id=? AND user_id=?",
+            (datetime.now().isoformat(), s["c"] or 0, s["sk"] or 0, session_id, uid)
+        )
+
+    conn.commit()
+
+    # -- Naechste Karte laden oder Ende --
+    next_card = None
+    if not done:
+        next_card = _load_card_data(conn, card_order[next_idx])
+
+    progress = _session_progress(conn, session_id, uid, dict(session))
+    progress["current_index"] = next_idx
+    conn.close()
+
+    return {
+        "ok": True,
+        "result": result,
+        "ai_score": ai_score,
+        "ai_feedback": ai_feedback,
+        "done": done,
+        "next_card": next_card,
+        "progress": progress,
+    }
 
 
 @router.post("/api/reviews")

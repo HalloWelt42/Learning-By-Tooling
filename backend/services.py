@@ -103,19 +103,24 @@ async def explain_card(question: str, answer: str,
 async def evaluate_answer(question: str, correct_answer: str,
                           user_answer: str, doc_context: str = "") -> dict:
     ctx      = doc_context[:20_000]
-    ctx_hint = f"\nKontext:\n{ctx}" if ctx else ""
+    ctx_hint = f"\nKontext aus Lernmaterial:\n{ctx}" if ctx else ""
     system   = f"Lernkarten-Korrektor. Antworte NUR mit JSON.{ctx_hint}"
 
     user = (
         f"Frage: {question}\n"
         f"Richtige Antwort: {correct_answer}\n"
         f"Benutzerantwort: {user_answer}\n\n"
-        f"Bewertung: score 0.0-1.0, feedback auf Deutsch (max 2 Saetze, sachlich, kein 'Leider').\n"
+        f"Bewerte die Benutzerantwort. Regeln:\n"
+        f"- score 0.0-1.0 (wie vollstaendig und korrekt die Antwort ist)\n"
+        f"- feedback: Auf Deutsch, sachlich, direkt zur Sache.\n"
+        f"  Nenne was richtig war. Nenne was fehlte oder falsch war.\n"
+        f"  Korrigiere falsche Aussagen mit der richtigen Information.\n"
+        f"  Kein 'Leider', kein 'Gerne', kein Lob-Gelaber.\n"
         f'Antworte NUR mit: {{"score": 0.0, "correct": false, "feedback": "..."}}'
     )
-    result = await _chat(user, system, max_tokens=150, temperature=0.1, timeout=15.0)
+    result = await _chat(user, system, max_tokens=400, temperature=0.1, timeout=20.0)
     if not result:
-        return {"score": 0.5, "correct": None, "feedback": "Bewertung nicht verfügbar."}
+        return {"score": 0.5, "correct": None, "feedback": "Bewertung nicht verfuegbar."}
     try:
         d = json.loads(_strip_json(result))
         return {
