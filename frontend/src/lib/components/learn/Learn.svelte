@@ -93,6 +93,8 @@
   const DL  = ['','Leicht','Mittel','Schwer']
   const DC  = ['','d1','d2','d3']
 
+  let totalCatCards = $derived(($categories || []).reduce((s, c) => s + (c.card_count || 0), 0))
+  let selectedCatCards = $derived(catFilter.length === 0 ? totalCatCards : ($categories || []).filter(c => catFilter.includes(c.code)).reduce((s, c) => s + (c.card_count || 0), 0))
   let progress = $derived(cardIds.length > 0 ? idx / cardIds.length : 0)
   let correct  = $derived(results.filter(r => r.result === 'correct').length)
   let wrong    = $derived(results.filter(r => r.result === 'wrong').length)
@@ -475,14 +477,14 @@
 
     <!-- Kategorien -->
     <div class="card-box">
-      <div class="section-label">Kategorien</div>
+      <div class="section-label">Kategorien <span class="cat-sum mono">{selectedCatCards}/{totalCatCards} Karten</span></div>
       <div class="cat-checks">
         {#each $categories as cat (cat.code)}
           <label class="cat-row" style="--c:{cat.color}">
             <input type="checkbox" bind:group={catFilter} value={cat.code} />
             <i class="fa-solid {cat.icon} cat-em"></i>
             <span class="cat-nm">{cat.name}</span>
-            <span class="cat-cnt">{cat.card_count}</span>
+            <span class="cat-cnt mono">{cat.card_count}</span>
           </label>
         {/each}
       </div>
@@ -858,7 +860,8 @@
 .cat-row:hover { background:var(--bg2); }
 .cat-em { font-size:14px; }
 .cat-nm { flex:1;font-size:12px;font-weight:500;color:var(--text1); }
-.cat-cnt { font-size:10px;color:var(--text3);font-family:'JetBrains Mono',monospace; }
+.cat-cnt { font-size:10px;color:var(--text3); }
+.cat-sum { font-size:10px;color:var(--text2);margin-left:auto;font-weight:400; }
 .setup-bot { grid-column:1/-1;display:flex;flex-direction:column;gap:14px; }
 .limit-wrap { display:flex;align-items:center;gap:12px; }
 .limit-n   { font-size:24px;font-weight:700;font-family:'JetBrains Mono',monospace;color:var(--text0);width:54px;text-align:center; }
