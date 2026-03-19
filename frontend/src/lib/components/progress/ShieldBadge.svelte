@@ -64,23 +64,35 @@
   let showCrown = $derived(tier === 4 && size >= 36)
   let canShowNum = $derived(showNum && size >= 28 && level > 0)
 
-  // Innenfläche: leichte Einfärbung der Level-Farbe auf bg0
+  // Innenfläche: leichte Einfärbung der Level-Farbe auf Theme-Hintergrund
+  let baseBg = $state([13, 13, 15])
+  let shieldEl = $state(null)
+
+  function readBaseBg() {
+    if (!shieldEl) return
+    const raw = getComputedStyle(shieldEl).getPropertyValue('--bg0').trim()
+    if (raw && raw.startsWith('#') && raw.length >= 7) {
+      baseBg = [parseInt(raw.slice(1,3),16), parseInt(raw.slice(3,5),16), parseInt(raw.slice(5,7),16)]
+    }
+  }
+
+  $effect(() => { if (shieldEl) readBaseBg() })
+
   function mixColor(hex, alpha) {
     const r = parseInt(hex.slice(1,3),16)
     const g = parseInt(hex.slice(3,5),16)
     const b = parseInt(hex.slice(5,7),16)
-    // Mix mit dunklem Hintergrund (Näherung)
-    const br = 13, bg2 = 13, bb = 15
+    const [br, bg2, bb] = baseBg
     const nr = Math.round(br + (r - br) * alpha)
     const ng = Math.round(bg2 + (g - bg2) * alpha)
     const nb = Math.round(bb + (b - bb) * alpha)
     return '#' + [nr,ng,nb].map(v => Math.max(0,Math.min(255,v)).toString(16).padStart(2,'0')).join('')
   }
-  let bgInner = $derived(mixColor(color.hex, 0.05))
-  let bgMid = $derived(mixColor(color.hex, 0.1))
+  let bgInner = $derived(mixColor(color.hex, 0.06))
+  let bgMid = $derived(mixColor(color.hex, 0.12))
 </script>
 
-<div class="shield" class:tier4={tier === 4} style:--glow="{color.hex}60">
+<div class="shield" class:tier4={tier === 4} style:--glow="{color.hex}60" bind:this={shieldEl}>
   {#if tier <= 1}
     <!-- TIER 1: Flach, dünn, gedämpft -->
     <svg width={size} height={h} viewBox="0 0 {size} {h}">
