@@ -54,6 +54,18 @@
   let showPathForm  = $state(false)
   let pathForm      = $state({ name:'', description:'', category_codes:[] })
 
+  // Reset
+  let confirmReset = $state(false)
+  async function resetStats() {
+    if (!confirmReset) { confirmReset = true; setTimeout(() => confirmReset = false, 3000); return }
+    try {
+      await apiPost('/api/reset/my-stats', { package_id: pkg.id })
+      showToast('Lernfortschritt zurückgesetzt', 'success')
+      confirmReset = false
+      await loadStats()
+    } catch(e) { showToast(e.message, 'error') }
+  }
+
   // Medien
   let media = $state([])
   async function loadMedia() {
@@ -421,6 +433,9 @@
         {/if}
         <button class="btn btn-ghost" title="Paket als ZIP exportieren" onclick={exportPkg}>
           <i class="fa-solid fa-file-export"></i>
+        </button>
+        <button class="btn btn-ghost btn-sm" class:btn-warn={confirmReset} title="Lernfortschritt für dieses Paket zurücksetzen" onclick={resetStats}>
+          <i class="fa-solid fa-arrow-rotate-left"></i> {confirmReset ? 'Wirklich?' : ''}
         </button>
         <button class="btn btn-primary" onclick={()=>navigate('/learn')}>
           <i class="fa-solid fa-play"></i> Lernen

@@ -1578,6 +1578,50 @@ async def clear_mc_cache(package_id: int, user: dict = Depends(get_current_user)
     conn.close()
     return {"deleted": r.rowcount}
 
+# -- Reset-Funktionen (kein DB-Löschen, nur Lerndaten) -----------------------
+
+@app.post("/api/reset/my-stats")
+def reset_my_stats(data: dict, user: dict = Depends(get_current_user)):
+    """Eigene Lernstatistik zurücksetzen (pro Paket oder alles)."""
+    uid = user["id"]
+    pkg_id = data.get("package_id")
+    conn = get_db()
+    if pkg_id:
+        # Nur ein Paket
+        card_ids = [r["card_id"] for r in conn.execute("SELECT card_id FROM cards WHERE package_id=?", (pkg_id,)).fetchall()]
+        if card_ids:
+            pl = ",".join("?" * len(card_ids))
+            conn.execute(f"DELETE FROM card_stats WHERE user_id=? AND card_id IN ({pl})", [uid] + card_ids)
+            conn.execute(f"DELETE FROM reviews WHERE user_id=? AND card_id IN ({pl})", [uid] + card_ids)
+        conn.execute("DELETE FROM sessions WHERE user_id=? AND package_id=?", (uid, pkg_id))
+    else:
+        # Alles
+        conn.execute("DELETE FROM card_stats WHERE user_id=?", (uid,))
+        conn.execute("DELETE FROM reviews WHERE user_id=?", (uid,))
+        conn.execute("DELETE FROM sessions WHERE user_id=?", (uid,))
+    conn.commit()
+    conn.close()
+    return {"ok": True}
+
+@app.post("/api/admin/reset-user-stats/{target_id}")
+def admin_reset_user_stats(target_id: int, user: dict = Depends(get_current_user)):
+    """Admin: Lernstatistik eines Users komplett zurücksetzen."""
+    conn = get_db()
+    conn.execute("DELETE FROM card_stats WHERE user_id=?", (target_id,))
+    conn.execute("DELETE FROM reviews WHERE user_id=?", (target_id,))
+    conn.execute("DELETE FROM sessions WHERE user_id=?", (target_id,))
+    conn.commit()
+    conn.close()
+    return {"ok": True}
+
+@app.post("/api/admin/rebuild-fts")
+def admin_rebuild_fts(user: dict = Depends(get_current_user)):
+    """Admin: FTS-Index neu aufbauen."""
+    conn = get_db()
+    _rebuild_fts(conn)
+    conn.close()
+    return {"ok": True}
+
 @app.get("/api/history")
 def get_history(limit: int = 30, user: dict = Depends(get_current_user)):
     uid = user["id"]

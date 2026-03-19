@@ -43,6 +43,14 @@
     }
   }
 
+  async function resetUserStats(u) {
+    try {
+      await apiPost(`/api/admin/reset-user-stats/${u.id}`, {})
+      showToast(`Lernfortschritt von ${u.display_name || u.email} zurückgesetzt`, 'success')
+      await loadUsers()
+    } catch(e) { showToast(e.message || 'Fehler', 'error') }
+  }
+
   async function toggleUser(u) {
     try {
       await apiPost(`/api/admin/users/${u.id}/toggle`, {})
@@ -110,6 +118,9 @@
           </div>
           <button class="btn-icon" title="Passwort zurücksetzen" onclick={() => { resetUser = u; resetPw = '' }}>
             <i class="fa-solid fa-key"></i>
+          </button>
+          <button class="btn-icon" title="Lernfortschritt zurücksetzen" onclick={() => resetUserStats(u)}>
+            <i class="fa-solid fa-arrow-rotate-left"></i>
           </button>
           {#if u.id !== $authUser?.id}
             <button class="btn-icon" title="{u.disabled ? 'Aktivieren' : 'Pausieren'}" onclick={() => toggleUser(u)}>
