@@ -116,6 +116,7 @@ class ReviewSubmit(BaseModel):
 class SRSReview(BaseModel):
     card_id: str
     quality: int
+    session_id: Optional[int] = None
 
 class LexiconCreate(BaseModel):
     package_id:    Optional[int]  = None
@@ -559,12 +560,19 @@ def get_due_cards(limit: int = 20, package_id: Optional[int] = None, user: dict 
 def srs_review(data: SRSReview, user: dict = Depends(get_current_user)):
     uid = user["id"]
     conn = get_db()
+    # Karte prüfen
+    card = conn.execute("SELECT id FROM cards WHERE card_id=? AND active=1", (data.card_id,)).fetchone()
+    if not card:
+        conn.close()
+        raise HTTPException(404, "Karte nicht gefunden")
     stats = conn.execute("SELECT * FROM card_stats WHERE card_id=? AND user_id=?", (data.card_id, uid)).fetchone()
     ease     = float(stats["ease_factor"])   if stats and stats["ease_factor"]   else 2.5
     interval = int(stats["interval_days"])   if stats and stats["interval_days"] else 1
     reps     = int(stats["times_shown"])     if stats and stats["times_shown"]   else 0
     ease, interval, reps = sm2_update(ease, interval, reps, data.quality)
     due = (date.today() + timedelta(days=interval)).isoformat()
+    result = "correct" if data.quality >= 3 else "wrong"
+    # card_stats aktualisieren
     conn.execute("""
         INSERT INTO card_stats (user_id,card_id,times_shown,times_correct,times_wrong,last_reviewed,due_date,ease_factor,interval_days)
         VALUES (?,?,1,?,?,?,?,?,?)
@@ -579,9 +587,15 @@ def srs_review(data: SRSReview, user: dict = Depends(get_current_user)):
             streak=CASE WHEN excluded.times_correct=1 THEN streak+1 ELSE 0 END
     """, (uid, data.card_id, 1 if data.quality>=3 else 0, 1 if data.quality<3 else 0,
           datetime.now().isoformat(), due, ease, interval))
+    # Auch in reviews schreiben (fuer Session-Ergebnis und Achievements)
+    if data.session_id:
+        conn.execute(
+            "INSERT INTO reviews (user_id,session_id,card_id,result) VALUES (?,?,?,?)",
+            (uid, data.session_id, data.card_id, result)
+        )
     conn.commit()
     conn.close()
-    return {"due_date": due, "interval_days": interval}
+    return {"due_date": due, "interval_days": interval, "result": result}
 
 # -- Sessions ------------------------------------------------------------------
 

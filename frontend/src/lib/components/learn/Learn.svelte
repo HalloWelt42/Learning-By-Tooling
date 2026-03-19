@@ -198,7 +198,7 @@
   async function rateSRS(quality) {
     results = [...results, { card_id: card.card_id, result: quality >= 3 ? 'correct' : 'wrong' }]
     if (quality < 3 && card) recordWrong(card)
-    await apiPost('/api/srs/review', { card_id: card.card_id, quality }).catch(()=>{})
+    await apiPost('/api/srs/review', { card_id: card.card_id, quality, session_id: session?.session_id }).catch(()=>{})
     idx++
     await loadCard(idx)
   }
