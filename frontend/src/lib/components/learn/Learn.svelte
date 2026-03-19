@@ -509,7 +509,7 @@
       <!-- Schnellwahl + Start -->
       <div style="margin-top:auto;padding-top:12px;border-top:1px solid var(--border)">
         <div class="limit-row">
-          {#each [5, 10, 20, 50].filter(n => n <= selectedCatCards) as n}
+          {#each [5, 10, 20, 30, 50, 100].filter(n => n <= selectedCatCards) as n}
             <button class="limit-chip" class:active={cardLimit === n} onclick={() => cardLimit = n}>{n}</button>
           {/each}
           {#if selectedCatCards > 0 && ![5,10,20,50].includes(selectedCatCards)}
