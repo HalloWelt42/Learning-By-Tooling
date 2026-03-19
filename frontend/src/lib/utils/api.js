@@ -45,5 +45,6 @@ async function req(method, path, body, isForm = false) {
 export const apiGet    = (path)        => req('GET',    path)
 export const apiPost   = (path, body)  => req('POST',   path, body)
 export const apiPut    = (path, body)  => req('PUT',    path, body)
+export const apiPatch  = (path, body)  => req('PATCH',  path, body)
 export const apiDelete = (path)        => req('DELETE', path)
 export const apiUpload = (path, form)  => req('POST',   path, form, true)

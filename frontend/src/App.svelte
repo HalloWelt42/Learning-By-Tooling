@@ -1,10 +1,13 @@
 <script>
   import { onMount } from 'svelte'
+  import { tweened } from 'svelte/motion'
+  import { cubicOut } from 'svelte/easing'
   import {
     theme, currentView, activePackageId,
     loadGlobal, packages, globalStats, aiOnline,
     toastStore, activeSession, authUser, showToast,
-    backendOnline, backendVersion,
+    backendOnline, backendVersion, loadSettings,
+    streakData, loadStreak, xpData, loadXp, initSound,
   } from './lib/stores/index.js'
   import { VERSION } from './lib/utils/version.js'
 
@@ -16,6 +19,8 @@
   import Guide         from './lib/components/shared/Guide.svelte'
   import Search        from './lib/components/shared/Search.svelte'
   import Admin         from './lib/components/shared/Admin.svelte'
+  import Settings      from './lib/components/shared/Settings.svelte'
+  import ScratchPad    from './lib/components/shared/ScratchPad.svelte'
   import ShieldBadge   from './lib/components/progress/ShieldBadge.svelte'
   import { route, initRouter, navigate } from './lib/utils/router.js'
   import { apiGet, apiPost } from './lib/utils/api.js'
@@ -23,8 +28,20 @@
   let interval = $state(null)
   let userBadges = $state([])
   let showPwWarn = $state(false)
+  let showScratchPad = $state(false)
   let sessionTimer = $state(null)
   let sessionElapsed = $state(0)
+
+  // Animiertes Hochzaehlen der Sidebar-XP
+  let sidebarXp = tweened(0, { duration: 2800, easing: cubicOut })
+  let sidebarStreak = tweened(0, { duration: 1200, easing: cubicOut })
+
+  $effect(() => {
+    if ($xpData.xp_total > 0) sidebarXp.set($xpData.xp_total)
+  })
+  $effect(() => {
+    if ($streakData.current >= 0) sidebarStreak.set($streakData.current)
+  })
 
   $effect(() => {
     if ($activeSession) {
@@ -60,10 +77,16 @@
   $effect(() => {
     if ($authUser) {
       loadGlobal()
+      loadSettings()
+      loadStreak()
+      loadXp()
+      initSound()
       apiGet('/api/achievements').then(a => { userBadges = (a||[]).sort((x,y) => y.level - x.level) }).catch(() => {})
       apiGet('/api/auth/me').then(me => { if (me?.default_password) showPwWarn = true }).catch(() => {})
       interval = setInterval(() => {
         loadGlobal()
+        loadStreak()
+        loadXp()
         apiGet('/api/achievements').then(a => { userBadges = (a||[]).sort((x,y) => y.level - x.level) }).catch(() => {})
       }, 30_000)
 
@@ -73,7 +96,7 @@
         if (r.view === 'package' && r.params?.pkg_id) {
           activePackageId.set(r.params.pkg_id)
           currentView.set('package')
-        } else if (['packages','learn','progress','guide','search','admin'].includes(r.view)) {
+        } else if (['packages','learn','progress','guide','search','admin','settings'].includes(r.view)) {
           currentView.set(r.view)
         }
       })
@@ -122,6 +145,36 @@
         </div>
       {/if}
 
+      <div class="gamify-bar">
+        {#if $streakData.current > 0 || $streakData.today}
+          <div class="gamify-item" role="button" tabindex="0" onclick={() => navigate('/progress')} title="Tagessträhne: {$streakData.current} Tage">
+            <i class="fa-solid fa-fire" class:streak-active={$streakData.today}></i>
+            <span class="gamify-num">{Math.round($sidebarStreak)}</span>
+            {#if !$streakData.today}
+              <i class="fa-solid fa-triangle-exclamation streak-warn-icon"></i>
+            {/if}
+          </div>
+        {/if}
+        {#if $xpData.xp_total > 0}
+          {@const xpAnimated = Math.round($sidebarXp)}
+          {@const diamonds = Math.floor(xpAnimated / 1000000)}
+          {@const gold = Math.floor((xpAnimated % 1000000) / 1000)}
+          {@const silver = xpAnimated % 1000}
+          <div class="gamify-item" title="Silber: {silver} / Gold: {gold} / Diamant: {diamonds} -- Gesamt: {$xpData.xp_total} XP">
+            {#if diamonds > 0}
+              <span class="xp-diamond-mini"></span>
+              <span class="gamify-num gn-diamond">{diamonds}</span>
+            {/if}
+            {#if gold > 0}
+              <span class="xp-gold-mini"></span>
+              <span class="gamify-num gn-gold">{gold}</span>
+            {/if}
+            <span class="xp-silver-mini"></span>
+            <span class="gamify-num gn-silver">{silver}</span>
+          </div>
+        {/if}
+      </div>
+
       <nav class="nav">
         <button class="nav-item" class:active={$currentView==='packages'}
           onclick={() => navigate('/packages')}>
@@ -165,7 +218,7 @@
           <span>Anleitung</span>
         </button>
 
-        <button class="nav-item" class:active={$currentView==='admin'}
+        <button class="nav-item" class:active={$currentView==='admin' || $currentView==='settings'}
           onclick={() => navigate('/admin')}>
           <i class="fa-solid fa-gear"></i>
           <span>Verwaltung</span>
@@ -226,6 +279,16 @@
             </button>
           {/each}
         </div>
+        <div class="util-row">
+          <button
+            class="util-btn"
+            class:active={showScratchPad}
+            title="Spickzettel"
+            onclick={() => showScratchPad = !showScratchPad}
+          >
+            <i class="fa-solid fa-note-sticky"></i>
+          </button>
+        </div>
         <div class="user-row">
           <i class="fa-solid fa-user"></i>
           <span>{$authUser.display_name || $authUser.email}</span>
@@ -273,7 +336,7 @@
         <Guide />
       {:else if $currentView === 'search'}
         <Search initQ={$route?.query?.q || ''} initPkg={$route?.query?.pkg || null} />
-      {:else if $currentView === 'admin'}
+      {:else if $currentView === 'admin' || $currentView === 'settings'}
         <Admin />
       {:else}
         <Packages />
@@ -281,6 +344,8 @@
     </main>
 
   </div>
+
+  <ScratchPad visible={showScratchPad} onClose={() => showScratchPad = false} />
 
   {#if $toastStore}
     {#key $toastStore.id}
@@ -358,6 +423,46 @@
     cursor:pointer;border-radius:4px;transition:background .15s;
   }
   .badge-bar:hover { background:var(--bg2); }
+
+  .gamify-bar {
+    display:flex;align-items:center;justify-content:center;gap:12px;
+    padding:4px 10px;
+  }
+  .gamify-item {
+    display:flex;align-items:center;gap:4px;cursor:pointer;
+    padding:2px 6px;border-radius:3px;transition:background .12s;
+  }
+  .gamify-item:hover { background:var(--bg2); }
+  .gamify-item i { font-size:12px;color:var(--text3); }
+  .gamify-item i.streak-active { color:#ff6b35; }
+  .streak-warn-icon { color:var(--warn) !important;font-size:10px !important; }
+  .gamify-num { font-size:13px;font-weight:800;color:var(--text0);font-family:'Orbitron',sans-serif; }
+  .gn-silver { color:#C0C0C0; }
+  .gn-gold { color:#FFD700; }
+  .gn-diamond { color:#4FC3F7; }
+  .xp-silver-mini {
+    width:14px;height:14px;border-radius:50%;flex-shrink:0;
+    background:radial-gradient(circle at 35% 35%, #E8E8E8, #909090);
+    border:1px solid #A0A0A0;
+  }
+  .xp-gold-mini {
+    width:14px;height:14px;border-radius:50%;flex-shrink:0;
+    background:radial-gradient(circle at 35% 35%, #FFD700, #B8860B);
+    border:1px solid #DAA520;
+  }
+  .xp-diamond-mini {
+    width:14px;height:14px;flex-shrink:0;
+    background:radial-gradient(circle at 30% 30%, #81D4FA, #0288D1);
+    border:1px solid #4FC3F7;
+    clip-path:polygon(50% 0%, 100% 38%, 82% 100%, 18% 100%, 0% 38%);
+  }
+  .util-row { display:flex;gap:4px;justify-content:center;padding:2px 0; }
+  .util-btn {
+    background:none;border:1px solid var(--border);color:var(--text3);cursor:pointer;
+    padding:4px 8px;border-radius:3px;font-size:11px;transition:all .12s;
+  }
+  .util-btn:hover { color:var(--warn);border-color:var(--warn); }
+  .util-btn.active { color:var(--warn);border-color:var(--warn);background:rgba(232,168,48,.08); }
   .logout-btn {
     background:none;border:none;color:var(--text3);cursor:pointer;padding:2px 4px;
     font-size:11px;transition:color .12s;

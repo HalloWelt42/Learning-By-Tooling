@@ -1,5 +1,5 @@
 import { writable } from 'svelte/store'
-import { apiGet, apiPost, BASE } from '../utils/api.js'
+import { apiGet, apiPost, apiPatch, BASE } from '../utils/api.js'
 
 // -- Auth ---------------------------------------------------------------------
 
@@ -72,6 +72,112 @@ export const aiOnline       = writable(false)
 export const activeSession  = writable(null)
 export const backendVersion = writable(null)
 export const backendOnline  = writable(false)
+
+// -- Streak -------------------------------------------------------------------
+
+export const streakData = writable({ current: 0, longest: 0, today: false })
+
+export async function loadStreak() {
+  try {
+    const s = await apiGet('/api/stats/streak')
+    streakData.set(s)
+  } catch(e) {}
+}
+
+// -- XP ----------------------------------------------------------------------
+
+export const xpData = writable({ xp_total: 0, xp_today: 0 })
+export const xpFlash = writable(null)  // { amount: 10 } fuer Animation
+
+export async function loadXp() {
+  try {
+    const x = await apiGet('/api/stats/xp')
+    xpData.set(x)
+  } catch(e) {}
+}
+
+// -- Sound -------------------------------------------------------------------
+
+let _audioCtx = null
+let _buffers = {}
+let _soundReady = false
+
+export async function initSound() {
+  try {
+    _audioCtx = new (window.AudioContext || window.webkitAudioContext)()
+    const names = ['correct', 'coin', 'bonus', 'error', 'perfect']
+    const responses = await Promise.all(names.map(n => fetch(`/sounds/${n}.mp3`)))
+    for (let i = 0; i < names.length; i++) {
+      if (responses[i].ok) {
+        _buffers[names[i]] = await _audioCtx.decodeAudioData(await responses[i].arrayBuffer())
+      }
+    }
+    _soundReady = Object.keys(_buffers).length > 0
+  } catch(e) {
+    _soundReady = false
+  }
+}
+
+function _playBuffer(name, volume = 0.4) {
+  if (!_soundReady || !_buffers[name] || !_audioCtx) return
+  try {
+    if (_audioCtx.state === 'suspended') _audioCtx.resume()
+    const src = _audioCtx.createBufferSource()
+    src.buffer = _buffers[name]
+    const gain = _audioCtx.createGain()
+    gain.gain.value = volume
+    src.connect(gain).connect(_audioCtx.destination)
+    src.start()
+  } catch(e) {}
+}
+
+export function playCoinSound(settings) {
+  if (!settings?.sound_enabled) return
+  _playBuffer('correct', 0.4)
+}
+
+export function playBonusSound(settings) {
+  if (!settings?.sound_enabled) return
+  _playBuffer('bonus', 0.5)
+}
+
+export function playErrorSound(settings) {
+  if (!settings?.sound_enabled) return
+  _playBuffer('error', 0.35)
+}
+
+export function playCoinRainSound(settings) {
+  if (!settings?.sound_enabled) return
+  _playBuffer('coin', 0.3)
+}
+
+export function playPerfectSound(settings) {
+  if (!settings?.sound_enabled) return
+  _playBuffer('perfect', 0.5)
+}
+
+// -- User Settings ------------------------------------------------------------
+
+export const userSettings = writable({
+  sound_enabled: true,
+  daily_goal: 100,
+  preferred_mode: 'standard',
+  session_size: 10,
+})
+
+export async function loadSettings() {
+  try {
+    const s = await apiGet('/api/auth/settings')
+    userSettings.set(s)
+  } catch(e) {}
+}
+
+export async function saveSetting(key, value) {
+  try {
+    const s = await apiPatch('/api/auth/settings', { [key]: value })
+    userSettings.set(s)
+  } catch(e) {}
+}
 
 // -- Toast --------------------------------------------------------------------
 

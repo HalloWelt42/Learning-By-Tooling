@@ -5,7 +5,7 @@
    * Delegiert Kartenlogik an isolierte Komponenten pro Modus.
    * Session-Zustand wird vollstaendig vom Backend kontrolliert.
    */
-  import { categories, aiOnline, activeSession, showToast, loadGlobal, packages, activePackageId } from '../../stores/index.js'
+  import { categories, aiOnline, activeSession, showToast, loadGlobal, packages, activePackageId, streakData, loadStreak, loadXp, playCoinSound, playBonusSound, playErrorSound, playCoinRainSound, playPerfectSound, userSettings } from '../../stores/index.js'
   import { apiGet, apiPost, apiDelete } from '../../utils/api.js'
   import MistakeAnalysis from './MistakeAnalysis.svelte'
   import SessionBar from './SessionBar.svelte'
@@ -14,6 +14,8 @@
   import CardWrite from './CardWrite.svelte'
   import CardSRS from './CardSRS.svelte'
   import { onMount } from 'svelte'
+  import { tweened } from 'svelte/motion'
+  import { cubicOut } from 'svelte/easing'
 
   // -- Phase --
   let phase = $state('setup')  // setup | learning | result
@@ -26,6 +28,18 @@
   let progress    = $state({ reviewed:0, correct:0, wrong:0, skipped:0, total:0, current_index:0 })
   let results     = $state([])
   let wrongCards  = $state([])
+  let combo       = $state(0)
+  let comboPeak   = $state(0)
+  let comboFlash  = $state(false)
+  let sessionXp   = $state(0)
+  let xpFlashFlag = $state(false)
+  let xpFloats    = $state([])  // [{id, amount, x}]
+  let xpCountUp   = tweened(0, { duration: 2200, easing: cubicOut })
+  let completionBonus = $state(0)
+  let showCoinRain = $state(false)
+  let showConfetti = $state(false)
+  let showPerfectStar = $state(false)
+  let showStreakFire = $state(false)
 
   // -- Setup State --
   let mode        = $state('standard')
@@ -160,6 +174,29 @@
       results = [...results, { card_id: card.card_id, result: resp.result }]
       if (resp.result === 'wrong' && card) recordWrong(card)
       if (resp.progress) progress = resp.progress
+      // Combo-System
+      if (resp.result === 'correct') {
+        combo++
+        if (combo > comboPeak) comboPeak = combo
+        if (combo >= 3) { comboFlash = true; setTimeout(() => comboFlash = false, 800) }
+      } else {
+        combo = 0
+      }
+      // XP-Animation + Sound
+      if (resp.xp_earned && resp.xp_earned > 0) {
+        sessionXp += resp.xp_earned
+        xpFlashFlag = true; setTimeout(() => xpFlashFlag = false, 600)
+        if (resp.result === 'correct') {
+          playCoinSound($userSettings)
+          const id = Date.now()
+          xpFloats = [...xpFloats, { id, amount: resp.xp_earned }]
+          setTimeout(() => { xpFloats = xpFloats.filter(f => f.id !== id) }, 1200)
+        }
+      }
+      // Fehlersound bei falscher Antwort
+      if (resp.result === 'wrong') {
+        playErrorSound($userSettings)
+      }
       return resp
     } catch(e) {
       showToast(`Bewertung fehlgeschlagen: ${e.message}`, 'error')
@@ -185,10 +222,61 @@
   }
 
   async function finishSession() {
-    await apiPost(`/api/sessions/${sessionId}/end`, {}).catch(() => {})
+    const endResp = await apiPost(`/api/sessions/${sessionId}/end`, {}).catch(() => ({}))
     activeSession.set(null)
     await loadGlobal()
+    loadStreak()
+    loadXp()
+
+    // Completion-Bonus aus Backend-Antwort
+    completionBonus = endResp?.bonus || 0
+
+    // Counter-Animation: von 0 hochzaehlen
+    xpCountUp.set(0, { duration: 0 })
+    showCoinRain = false
+    showConfetti = false
+    showPerfectStar = false
+    showStreakFire = false
     phase = 'result'
+
+    const pct = totalCards > 0 ? Math.round(correct / totalCards * 100) : 0
+
+    // Spektakel-Kaskade mit Timing
+    setTimeout(() => {
+      xpCountUp.set(sessionXp + completionBonus)
+      // Bonus-Sound beim Hochzaehlen
+      playBonusSound($userSettings)
+    }, 300)
+
+    // Muenzenregen bei XP > 0
+    if (sessionXp > 0) {
+      setTimeout(() => {
+        showCoinRain = true
+        playCoinRainSound($userSettings)
+        setTimeout(() => showCoinRain = false, 3000)
+      }, 600)
+    }
+
+    // Confetti bei 100%
+    if (pct === 100 && totalCards >= 5) {
+      setTimeout(() => {
+        showConfetti = true
+        showPerfectStar = true
+        // Perfect-Sound bei mindestens 20 Karten fehlerfrei
+        if (totalCards >= 20) {
+          playPerfectSound($userSettings)
+        }
+        setTimeout(() => showConfetti = false, 4000)
+      }, 1200)
+    }
+
+    // Streak-Feuer bei Streak >= 5
+    if ($streakData.current >= 5) {
+      setTimeout(() => {
+        showStreakFire = true
+        setTimeout(() => showStreakFire = false, 3000)
+      }, 1800)
+    }
   }
 
   function endSession() { finishSession() }
@@ -197,7 +285,9 @@
     if (sessionId) apiPost(`/api/sessions/${sessionId}/end`, {}).catch(() => {})
     activeSession.set(null)
     phase = 'setup'; sessionId = null; card = null; results = []; wrongCards = []; showAnalysis = false
-    totalCards = 0; pendingSession = null
+    totalCards = 0; pendingSession = null; combo = 0; comboPeak = 0; sessionXp = 0; xpFloats = []
+    completionBonus = 0; xpCountUp.set(0, { duration: 0 })
+    showCoinRain = false; showConfetti = false; showPerfectStar = false; showStreakFire = false
     progress = { reviewed:0, correct:0, wrong:0, skipped:0, total:0, current_index:0 }
   }
 </script>
@@ -376,7 +466,15 @@
 <!-- LEARNING -->
 {:else if phase === 'learning' && card}
 
-  <SessionBar {card} {progress} {totalCards} {sessionMode} />
+  <SessionBar {card} {progress} {totalCards} {sessionMode} {combo} {comboFlash} xpEarned={sessionXp} xpFlash={xpFlashFlag} />
+
+  <!-- XP Float Animation -->
+  {#each xpFloats as fl (fl.id)}
+    <div class="xp-float-anim">
+      <span class="xp-coin-anim"></span>
+      <span>+{fl.amount}</span>
+    </div>
+  {/each}
 
   <!-- Card-Komponente je nach Modus, {#key} erzwingt Neu-Mount bei Kartenwechsel -->
   {#key card.card_id}
@@ -399,41 +497,133 @@
 
 <!-- RESULT -->
 {:else if phase === 'result'}
+  {@const pctVal = totalCards > 0 ? Math.round(correct/totalCards*100) : 0}
+
+  <!-- Muenzenregen-Overlay -->
+  {#if showCoinRain}
+    <div class="coin-rain" aria-hidden="true">
+      {#each Array(12) as _, i}
+        <div class="rain-coin" style="--delay:{i * 0.18}s;--x:{10 + Math.random() * 80}%;--rot:{Math.random() * 720}deg;--dur:{1.8 + Math.random() * 1.2}s"></div>
+      {/each}
+    </div>
+  {/if}
+
+  <!-- Confetti-Overlay bei 100% -->
+  {#if showConfetti}
+    <div class="confetti-wrap" aria-hidden="true">
+      {#each Array(40) as _, i}
+        <div class="confetti-piece" style="
+          --x:{5 + Math.random() * 90}%;
+          --delay:{Math.random() * 0.8}s;
+          --dur:{2 + Math.random() * 2}s;
+          --rot:{Math.random() * 720}deg;
+          --color:{['var(--ok)','var(--accent)','#FFD700','#ff6b35','#4FC3F7','#E040FB'][i % 6]};
+          --size:{4 + Math.random() * 6}px;
+        "></div>
+      {/each}
+    </div>
+  {/if}
+
   <div class="result-wrap">
-    <div class="page-hd" style="justify-content:center">
-      <h1 class="page-title"><i class="fa-solid fa-flag-checkered"></i> Abgeschlossen</h1>
+
+    <!-- Perfekt-Stern bei 100% -->
+    {#if showPerfectStar}
+      <div class="perfect-badge">
+        <i class="fa-solid fa-star"></i>
+        <span>Perfekt</span>
+      </div>
+    {/if}
+
+    <!-- Grosser Score-Ring -->
+    <div class="res-hero">
+      <div class="res-ring" class:ring-glow-ok={pctVal === 100} class:ring-glow-warn={pctVal < 50}>
+        <svg viewBox="0 0 100 100" width="160" height="160">
+          <circle cx="50" cy="50" r="42" fill="none" stroke="var(--bg3)" stroke-width="6"/>
+          <circle cx="50" cy="50" r="42" fill="none"
+            stroke="{pctVal >= 80 ? 'var(--ok)' : pctVal >= 50 ? 'var(--accent)' : 'var(--err)'}"
+            stroke-width="6"
+            stroke-dasharray="{(correct/Math.max(totalCards,1))*263.9} 263.9"
+            stroke-linecap="round" transform="rotate(-90 50 50)"
+            class="res-ring-fill"/>
+        </svg>
+        <div class="res-pct">{pctVal}<span class="res-pct-sign">%</span></div>
+      </div>
+      <div class="res-verdict">
+        {#if pctVal === 100}Makellos
+        {:else if pctVal >= 90}Ausgezeichnet
+        {:else if pctVal >= 80}Sehr gut
+        {:else if pctVal >= 60}Gut gemacht
+        {:else if pctVal >= 40}Solide Basis
+        {:else}Weiter üben{/if}
+      </div>
     </div>
-    <div class="result-card">
-    <div class="res-ring">
-      <svg viewBox="0 0 80 80" width="120" height="120">
-        <circle cx="40" cy="40" r="34" fill="none" stroke="var(--border)" stroke-width="7"/>
-        <circle cx="40" cy="40" r="34" fill="none" stroke="var(--accent)" stroke-width="7"
-          stroke-dasharray="{totalCards>0?(correct/totalCards)*213.6:0} 213.6"
-          stroke-dashoffset="53.4" stroke-linecap="round" transform="rotate(-90 40 40)"/>
-      </svg>
-      <div class="res-pct">{totalCards > 0 ? Math.round(correct/totalCards*100) : 0}%</div>
+
+    <!-- Stats-Zeile -->
+    <div class="res-stats">
+      <div class="rs ok">
+        <span class="rs-num">{correct}</span>
+        <span class="rs-label">richtig</span>
+      </div>
+      <div class="rs-sep"></div>
+      <div class="rs err">
+        <span class="rs-num">{wrong}</span>
+        <span class="rs-label">falsch</span>
+      </div>
+      <div class="rs-sep"></div>
+      <div class="rs muted">
+        <span class="rs-num">{skipped}</span>
+        <span class="rs-label">übersprungen</span>
+      </div>
+      {#if comboPeak >= 3}
+        <div class="rs-sep"></div>
+        <div class="rs combo">
+          <span class="rs-num">{comboPeak}x</span>
+          <span class="rs-label"><i class="fa-solid fa-bolt"></i> Combo</span>
+        </div>
+      {/if}
     </div>
-    <div class="res-details">
-      <div class="rd-item ok"><i class="fa-solid fa-circle-check"></i> <strong>{correct}</strong> richtig</div>
-      <div class="rd-item err"><i class="fa-solid fa-circle-xmark"></i> <strong>{wrong}</strong> falsch</div>
-      <div class="rd-item muted"><i class="fa-solid fa-forward"></i> <strong>{skipped}</strong> übersprungen</div>
+
+    <!-- Belohnungs-Zeile -->
+    <div class="res-rewards">
+      {#if sessionXp > 0 || completionBonus > 0}
+        <div class="rw-item silver">
+          <div class="rw-coin silver"></div>
+          <div class="rw-val">
+            <span class="rw-num">{Math.round($xpCountUp)}</span>
+            {#if completionBonus > 0}
+              <span class="rw-bonus">+{completionBonus}</span>
+            {/if}
+          </div>
+          <span class="rw-label">Silber</span>
+        </div>
+      {/if}
+      {#if $streakData.current > 0}
+        <div class="rw-item streak" class:streak-fire={showStreakFire}>
+          <div class="rw-icon"><i class="fa-solid fa-fire"></i></div>
+          <div class="rw-val">
+            <span class="rw-num">{$streakData.current}</span>
+          </div>
+          <span class="rw-label">{$streakData.current === 1 ? 'Tag' : 'Tage'}</span>
+        </div>
+      {/if}
     </div>
+
+    <!-- Aktionen -->
     <div class="res-actions">
       <button class="btn btn-primary btn-lg" onclick={reset}>
         <i class="fa-solid fa-rotate-right"></i> Neue Session
       </button>
-      <button class="btn btn-ghost btn-lg" onclick={reset}>
-        <i class="fa-solid fa-arrow-left"></i> Zurück
-      </button>
       {#if wrongCards.length > 0}
         <button class="btn btn-ghost btn-lg" onclick={() => showAnalysis = true}>
           <i class="fa-solid fa-magnifying-glass-chart" style="color:var(--ac2)"></i>
-          Fehler analysieren
-          <span class="res-wrong-badge">{wrongCards.length}</span>
+          {wrongCards.length} Fehler analysieren
         </button>
       {/if}
+      <button class="btn btn-ghost btn-sm" onclick={reset} style="margin-top:4px">
+        <i class="fa-solid fa-arrow-left"></i> Zurück zur Übersicht
+      </button>
     </div>
-  </div>
+
   </div>
 {/if}
 
@@ -498,15 +688,184 @@
 .limit-chip:hover { border-color:var(--accent);color:var(--text0); }
 
 /* -- Result -- */
-.result-wrap { display:flex;flex-direction:column;align-items:center;width:100%; }
-.result-card { background:var(--bg1);border:1px solid var(--border);border-radius:4px;padding:48px;display:flex;flex-direction:column;align-items:center;gap:24px;max-width:380px;width:100%; }
-.res-ring { position:relative;display:flex;align-items:center;justify-content:center; }
-.res-pct { position:absolute;font-size:26px;font-weight:800;color:var(--accent);letter-spacing:-.02em;font-family:'JetBrains Mono',monospace; }
-.res-details { display:flex;gap:20px; }
-.rd-item { display:flex;align-items:center;gap:7px;font-size:13px;font-weight:600; }
-.rd-item.ok { color:var(--ok); }
-.rd-item.err { color:var(--err); }
-.rd-item.muted { color:var(--text3); }
-.res-actions { display:flex;flex-direction:column;align-items:center;gap:10px;width:100%; }
-.res-wrong-badge { background:var(--err);color:#fff;font-size:11px;font-weight:700;padding:1px 7px;border-radius:4px;margin-left:4px; }
+.result-wrap {
+  display:flex;flex-direction:column;align-items:center;width:100%;
+  padding:40px 20px 60px;gap:32px;overflow:hidden;
+  animation:res-fade-in .6s ease both;
+  position:relative;
+}
+@keyframes res-fade-in {
+  0% { opacity:0;transform:translateY(20px); }
+  100% { opacity:1;transform:translateY(0); }
+}
+
+/* Hero: Ring + Verdict */
+.res-hero { display:flex;flex-direction:column;align-items:center;gap:14px; }
+.res-ring {
+  position:relative;display:flex;align-items:center;justify-content:center;
+  transition:filter .6s ease;
+}
+.res-ring.ring-glow-ok { filter:drop-shadow(0 0 16px rgba(52,199,106,.4)); }
+.res-ring.ring-glow-warn { filter:drop-shadow(0 0 12px rgba(232,84,84,.3)); }
+.res-ring-fill { transition:stroke-dasharray 1.5s ease; }
+.res-pct {
+  position:absolute;font-size:36px;font-weight:900;color:var(--text0);
+  font-family:'Orbitron',sans-serif;display:flex;align-items:baseline;
+}
+.res-pct-sign { font-size:18px;font-weight:700;color:var(--text2);margin-left:1px; }
+.res-verdict {
+  font-size:14px;font-weight:700;color:var(--text1);letter-spacing:.1em;
+  text-transform:uppercase;
+}
+
+/* Perfect Badge */
+.perfect-badge {
+  display:flex;align-items:center;gap:8px;
+  padding:6px 18px;border-radius:4px;
+  background:linear-gradient(135deg, rgba(255,215,0,.12), rgba(255,107,53,.08));
+  border:1px solid rgba(255,215,0,.3);
+  color:#FFD700;font-size:13px;font-weight:800;letter-spacing:.08em;
+  text-transform:uppercase;
+  animation:perfect-appear .8s ease 1.2s both;
+}
+.perfect-badge i { font-size:16px;animation:star-rotate 2s ease infinite; }
+@keyframes perfect-appear {
+  0% { opacity:0;transform:scale(0.5) translateY(10px); }
+  60% { opacity:1;transform:scale(1.1) translateY(-2px); }
+  100% { opacity:1;transform:scale(1) translateY(0); }
+}
+@keyframes star-rotate {
+  0%,100% { transform:rotate(0deg) scale(1); }
+  25% { transform:rotate(15deg) scale(1.15); }
+  75% { transform:rotate(-10deg) scale(1.05); }
+}
+
+/* Stats-Zeile */
+.res-stats { display:flex;align-items:center;gap:20px; }
+.rs { display:flex;flex-direction:column;align-items:center;gap:2px; }
+.rs-num { font-size:20px;font-weight:900;font-family:'Orbitron',sans-serif; }
+.rs-label { font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.06em; }
+.rs-label i { font-size:9px; }
+.rs.ok .rs-num { color:var(--ok); }
+.rs.err .rs-num { color:var(--err); }
+.rs.muted .rs-num { color:var(--text3); }
+.rs.combo .rs-num { color:#ffa500; }
+.rs-sep { width:1px;height:28px;background:var(--border); }
+
+/* Belohnungs-Zeile */
+.res-rewards {
+  display:flex;align-items:stretch;gap:0;
+  border:1px solid var(--border);border-radius:4px;overflow:hidden;
+}
+.rw-item {
+  display:flex;align-items:center;gap:10px;padding:14px 24px;
+  background:var(--bg1);transition:all .3s ease;
+}
+.rw-item + .rw-item { border-left:1px solid var(--border); }
+.rw-coin {
+  width:28px;height:28px;border-radius:50%;flex-shrink:0;
+  animation:coin-idle 3s ease-in-out infinite;
+}
+@keyframes coin-idle {
+  0%,100% { transform:scale(1); }
+  50% { transform:scale(1.05); }
+}
+.rw-coin.silver {
+  background:radial-gradient(circle at 35% 35%, #E8E8E8, #909090);
+  border:2px solid #A0A0A0;
+}
+.rw-icon { font-size:22px;color:#ff6b35; }
+.rw-val { display:flex;align-items:baseline;gap:4px; }
+.rw-num { font-size:26px;font-weight:900;font-family:'Orbitron',sans-serif;color:var(--text0); }
+.rw-item.silver .rw-num { color:#C0C0C0; }
+.rw-bonus {
+  font-size:14px;font-weight:800;color:var(--ok);font-family:'Orbitron',sans-serif;
+  animation:bonus-pop .6s ease 1s both;
+}
+@keyframes bonus-pop {
+  0%   { opacity:0;transform:scale(0.5); }
+  60%  { opacity:1;transform:scale(1.2); }
+  100% { opacity:1;transform:scale(1); }
+}
+.rw-label { font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.06em; }
+
+/* Streak-Feuer-Animation */
+.rw-item.streak-fire {
+  background:linear-gradient(135deg, rgba(255,107,53,.1), rgba(255,165,0,.05));
+  border-color:rgba(255,107,53,.3);
+}
+.rw-item.streak-fire .rw-icon {
+  animation:fire-pulse 0.6s ease infinite alternate;
+}
+@keyframes fire-pulse {
+  0% { transform:scale(1);filter:brightness(1); }
+  100% { transform:scale(1.2);filter:brightness(1.3); }
+}
+
+/* Aktionen */
+.res-actions { display:flex;flex-direction:column;align-items:center;gap:10px;width:100%;max-width:320px; }
+
+/* XP Float Animation (In-Session) */
+.xp-float-anim {
+  position:fixed;top:80px;right:40px;z-index:100;
+  display:flex;align-items:center;gap:6px;
+  font-size:16px;font-weight:800;color:#C0C0C0;
+  font-family:'Orbitron',sans-serif;
+  animation:xp-float-up 1.6s ease-out forwards;
+  pointer-events:none;
+}
+@keyframes xp-float-up {
+  0%   { opacity:1;transform:translateY(0) scale(1); }
+  60%  { opacity:1;transform:translateY(-30px) scale(1.2); }
+  100% { opacity:0;transform:translateY(-60px) scale(0.8); }
+}
+.xp-coin-anim {
+  display:inline-block;width:24px;height:24px;border-radius:50%;
+  background:radial-gradient(circle at 35% 35%, #E8E8E8, #909090);
+  border:2px solid #A0A0A0;box-shadow:0 0 8px rgba(192,192,192,0.4);
+  animation:coin-spin .8s ease-out;
+}
+@keyframes coin-spin {
+  0%   { transform:rotateY(0deg) scale(1); }
+  50%  { transform:rotateY(900deg) scale(1.2); }
+  100% { transform:rotateY(1800deg) scale(1); }
+}
+
+/* ===== Muenzenregen ===== */
+.coin-rain {
+  position:fixed;top:0;left:0;width:100%;height:100%;
+  pointer-events:none;z-index:200;overflow:hidden;
+}
+.rain-coin {
+  position:absolute;top:-30px;left:var(--x);
+  width:20px;height:20px;border-radius:50%;
+  background:radial-gradient(circle at 35% 35%, #E8E8E8, #909090);
+  border:2px solid #A0A0A0;
+  box-shadow:0 0 6px rgba(192,192,192,0.3);
+  animation:coin-fall var(--dur) ease-in var(--delay) forwards;
+}
+@keyframes coin-fall {
+  0%   { transform:translateY(0) rotate(0deg) scale(0.6);opacity:0; }
+  10%  { opacity:1;transform:translateY(10vh) rotate(90deg) scale(1); }
+  80%  { opacity:1; }
+  100% { transform:translateY(105vh) rotate(var(--rot)) scale(0.8);opacity:0; }
+}
+
+/* ===== Confetti ===== */
+.confetti-wrap {
+  position:fixed;top:0;left:0;width:100%;height:100%;
+  pointer-events:none;z-index:210;overflow:hidden;
+}
+.confetti-piece {
+  position:absolute;top:-10px;left:var(--x);
+  width:var(--size);height:calc(var(--size) * 1.6);
+  background:var(--color);border-radius:1px;
+  animation:confetti-fall var(--dur) ease-in var(--delay) forwards;
+}
+@keyframes confetti-fall {
+  0%   { transform:translateY(0) rotate(0deg) scale(0);opacity:0; }
+  8%   { opacity:1;transform:translateY(5vh) rotate(90deg) scale(1); }
+  70%  { opacity:1; }
+  100% { transform:translateY(110vh) rotate(var(--rot)) scale(0.5);opacity:0; }
+}
 </style>

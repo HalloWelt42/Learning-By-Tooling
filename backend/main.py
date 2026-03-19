@@ -23,7 +23,7 @@ from routes.ai import router as ai_router
 from routes.admin import router as admin_router
 from routes.import_export import router as import_export_router
 
-app = FastAPI(title="Learning-By-Tooling", version="0.4.0")
+app = FastAPI(title="Learning-By-Tooling", version="0.5.0")
 
 # CORS -- grosszuegig fuer die Entwicklungsphase
 app.add_middleware(

@@ -2,7 +2,9 @@
   import { onMount } from 'svelte'
   import { showToast, packages, authUser } from '../../stores/index.js'
   import { apiGet, apiPost, apiDelete } from '../../utils/api.js'
+  import Settings from './Settings.svelte'
 
+  let tab = $state('settings')  // 'settings' | 'users'
   let users = $state([])
   let showForm = $state(false)
   let form = $state({ email: '', password: '', display_name: '' })
@@ -74,10 +76,21 @@
   <div class="page-hd">
     <div>
       <h1 class="page-title"><i class="fa-solid fa-gear"></i> Verwaltung</h1>
-      <p class="page-sub">Benutzer und Systemeinstellungen</p>
     </div>
   </div>
 
+  <div class="admin-tabs">
+    <button class="admin-tab" class:active={tab === 'settings'} onclick={() => tab = 'settings'}>
+      <i class="fa-solid fa-sliders"></i> Einstellungen
+    </button>
+    <button class="admin-tab" class:active={tab === 'users'} onclick={() => tab = 'users'}>
+      <i class="fa-solid fa-users"></i> Benutzer
+    </button>
+  </div>
+
+  {#if tab === 'settings'}
+    <Settings embedded={true} />
+  {:else}
   <!-- User-Liste -->
   <div class="card-box" style="max-width:800px">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
@@ -148,9 +161,21 @@
       </div>
     {/if}
   </div>
+  {/if}
 </div>
 
 <style>
+  .admin-tabs {
+    display:flex;gap:4px;padding:0 20px 16px;
+  }
+  .admin-tab {
+    padding:8px 16px;font-size:12px;font-weight:600;border:1px solid var(--border);
+    border-radius:4px;background:transparent;color:var(--text2);cursor:pointer;
+    transition:all .12s;font-family:inherit;display:flex;align-items:center;gap:6px;
+  }
+  .admin-tab:hover { border-color:var(--text3);color:var(--text1); }
+  .admin-tab.active { border-color:var(--accent);color:var(--accent);background:var(--glow); }
+  .admin-tab i { font-size:11px; }
   .admin-form {
     display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:16px;
     padding:14px;background:var(--bg2);border:1px solid var(--border);border-radius:4px;

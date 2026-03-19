@@ -1,5 +1,6 @@
-"""routes/auth.py -- Login, Register, Me, Change-Password."""
+"""routes/auth.py -- Login, Register, Me, Change-Password, Settings."""
 
+import json
 from fastapi import APIRouter, HTTPException, Depends
 
 from db import get_db
@@ -62,3 +63,60 @@ def change_password(data: dict, user: dict = Depends(get_current_user)):
     conn.commit()
     conn.close()
     return {"ok": True}
+
+
+# -- Einstellungen -------------------------------------------------------------
+
+_SETTINGS_DEFAULTS = {
+    "sound_enabled": True,
+    "daily_goal": 100,
+    "preferred_mode": "standard",
+    "session_size": 10,
+}
+
+
+@router.get("/settings")
+def get_settings(user: dict = Depends(get_current_user)):
+    conn = get_db()
+    row = conn.execute("SELECT settings FROM users WHERE id=?", (user["id"],)).fetchone()
+    conn.close()
+    raw = {}
+    if row and row["settings"]:
+        try:
+            raw = json.loads(row["settings"])
+        except Exception:
+            pass
+    return {**_SETTINGS_DEFAULTS, **raw}
+
+
+@router.patch("/settings")
+def update_settings(data: dict, user: dict = Depends(get_current_user)):
+    conn = get_db()
+    row = conn.execute("SELECT settings FROM users WHERE id=?", (user["id"],)).fetchone()
+    current = {}
+    if row and row["settings"]:
+        try:
+            current = json.loads(row["settings"])
+        except Exception:
+            pass
+    # Nur erlaubte Keys akzeptieren
+    allowed = set(_SETTINGS_DEFAULTS.keys())
+    for k, v in data.items():
+        if k in allowed:
+            current[k] = v
+    conn.execute("UPDATE users SET settings=? WHERE id=?", (json.dumps(current), user["id"]))
+    conn.commit()
+    conn.close()
+    return {**_SETTINGS_DEFAULTS, **current}
+
+
+@router.patch("/display-name")
+def update_display_name(data: dict, user: dict = Depends(get_current_user)):
+    name = (data.get("display_name") or "").strip()
+    if not name:
+        raise HTTPException(400, "Name darf nicht leer sein")
+    conn = get_db()
+    conn.execute("UPDATE users SET display_name=? WHERE id=?", (name, user["id"]))
+    conn.commit()
+    conn.close()
+    return {"ok": True, "display_name": name}

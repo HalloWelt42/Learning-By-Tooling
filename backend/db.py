@@ -404,6 +404,27 @@ def _migrate(conn: sqlite3.Connection):
             except Exception:
                 pass
 
+    # user_xp: XP-System
+    if 'user_xp' not in existing_tables:
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS user_xp (
+                id          INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id     INTEGER NOT NULL UNIQUE,
+                xp_total    INTEGER DEFAULT 0,
+                xp_today    INTEGER DEFAULT 0,
+                last_xp_date TEXT,
+                FOREIGN KEY (user_id) REFERENCES users(id)
+            )
+        """)
+        conn.commit()
+
+    # users: settings JSON-Spalte (Gamification, Sound, Tagesziel etc.)
+    if 'users' in existing_tables:
+        user_cols2 = {r[1] for r in conn.execute("PRAGMA table_info(users)").fetchall()}
+        if 'settings' not in user_cols2:
+            conn.execute("ALTER TABLE users ADD COLUMN settings TEXT DEFAULT '{}'")
+            conn.commit()
+
     # Kategorie-Namen: Umlaute korrigieren (falls alte ASCII-Version in DB)
     umlaut_fixes = [
         ("GS", "Geschaeftsprozesse", "Geschaeftsprozesse und Anwendungsfaelle"),

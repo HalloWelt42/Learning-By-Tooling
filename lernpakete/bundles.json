@@ -1,0 +1,14 @@
+[
+  {
+    "id": "lernvault-handbuch",
+    "name": "LernVault Handbuch",
+    "version": "1.0",
+    "description": "Umfassendes Lernpaket ueber die App selbst: Architektur, Lernmodi, Gamification, XP-System, Deployment und Paketformat.",
+    "icon": "fa-graduation-cap",
+    "color": "#5b8def",
+    "files": {
+      "questions": "lernvault-handbuch-fragen.md",
+      "answers": "lernvault-handbuch-antworten.md"
+    }
+  }
+]
