@@ -57,21 +57,36 @@
     if (!$aiOnline) { showToast('LM Studio offline', 'warn'); return }
     const pkgId = $activePackageId || null
     if (!pkgId) { showToast('Paket auswählen', 'warn'); return }
-    mcPrepProgress = 1
-    mcPrepText = 'Starte Generierung...'
-    try {
-      const r = await apiPost('/api/mc/generate-batch', { package_id: pkgId, limit: 50 })
-      mcPrepProgress = 100
-      mcPrepText = `${r.generated} MC-Optionen generiert`
-      if (r.generated > 0) showToast(`${r.generated} MC-Optionen erstellt`, 'success')
-      else showToast('Alle MC-Optionen waren bereits im Cache', 'success')
-      // Status aktualisieren
-      mcStatus = await apiGet(`/api/mc/status/${pkgId}`).catch(() => null)
-    } catch(e) {
-      mcPrepProgress = 0
-      mcPrepText = ''
-      showToast('MC-Generierung fehlgeschlagen: ' + e.message, 'error')
+
+    // Karten-IDs holen die noch keine MC-Optionen haben
+    const status = await apiGet(`/api/mc/status/${pkgId}`).catch(() => null)
+    if (!status || status.missing === 0) {
+      showToast('Alle MC-Optionen sind bereits im Cache', 'success')
+      mcStatus = status
+      return
     }
+
+    // Karten einzeln generieren mit Live-Fortschritt
+    const cards = await apiGet(`/api/cards?package_id=${pkgId}&limit=200`).catch(() => [])
+    const total = status.missing
+    let done = 0
+    mcPrepProgress = 1
+    mcPrepText = `0 / ${total} Karten...`
+
+    for (const card of cards) {
+      try {
+        await apiGet(`/api/mc/${card.card_id}`)
+      } catch(e) { /* einzelne Fehler ignorieren */ }
+      done++
+      mcPrepProgress = Math.round(done / total * 100)
+      mcPrepText = `${done} / ${total} Karten...`
+      if (done >= total) break
+    }
+
+    mcPrepProgress = 100
+    mcPrepText = `${done} MC-Optionen generiert`
+    showToast(`${done} MC-Optionen erstellt`, 'success')
+    mcStatus = await apiGet(`/api/mc/status/${pkgId}`).catch(() => null)
   }
 
   // KI-Assistenz
