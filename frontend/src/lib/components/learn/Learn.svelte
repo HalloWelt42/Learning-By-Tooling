@@ -471,39 +471,38 @@
               <i class="fa-solid fa-circle-xmark"></i>
               LM Studio offline -- MC-Optionen können nicht generiert werden.
             </div>
+          {:else if !$activePackageId}
+            <div class="mc-status">
+              <i class="fa-solid fa-circle-info" style="color:var(--warn)"></i>
+              <span>Wähle ein Paket aus um MC-Optionen zu generieren.</span>
+            </div>
           {:else if mcPrepProgress > 0 && mcPrepProgress < 100}
             <div class="mc-status">
               <i class="fa-solid fa-brain aip-pulse" style="color:var(--accent)"></i>
-              <span>{mcPrepText}</span>
+              <span>KI erstellt Antwortoptionen: {mcPrepText}</span>
               <span class="mono" style="font-weight:800;color:var(--accent)">{mcPrepProgress}%</span>
             </div>
             <div style="height:4px;background:var(--bg3);border-radius:2px;overflow:hidden;margin-top:8px">
               <div style="height:100%;background:var(--accent);border-radius:2px;transition:width .3s;width:{mcPrepProgress}%"></div>
             </div>
-          {:else if mcPrepProgress >= 100}
+          {:else if mcStatus && mcStatus.missing === 0}
             <div class="mc-status ok">
               <i class="fa-solid fa-circle-check"></i>
-              MC-Optionen bereit. Session kann gestartet werden.
+              Alle {mcStatus.total} Karten haben MC-Optionen. Bereit.
             </div>
-          {:else}
+          {:else if mcStatus}
             <div class="mc-status">
               <i class="fa-solid fa-wand-magic-sparkles" style="color:var(--accent)"></i>
-              {#if mcStatus}
-                <span>{mcStatus.cached} von {mcStatus.total} Karten haben MC-Optionen</span>
-              {:else}
-                <span>KI generiert falsche Antwortoptionen pro Karte</span>
-              {/if}
+              <span>{mcStatus.cached} von {mcStatus.total} Karten haben MC-Optionen</span>
             </div>
-            {#if mcStatus && mcStatus.missing > 0}
-              <button class="btn btn-ghost btn-sm" style="margin-top:8px" onclick={prepareMcOptions}>
-                <i class="fa-solid fa-bolt"></i> {mcStatus.missing} fehlende generieren
-              </button>
-            {:else if mcStatus && mcStatus.missing === 0}
-              <div class="mc-status ok" style="margin-top:6px">
-                <i class="fa-solid fa-circle-check"></i>
-                Alle Karten bereit
-              </div>
-            {/if}
+            <button class="btn btn-ghost btn-sm" style="margin-top:8px" onclick={prepareMcOptions}>
+              <i class="fa-solid fa-bolt"></i> {mcStatus.missing} fehlende generieren
+            </button>
+          {:else}
+            <div class="mc-status">
+              <i class="fa-solid fa-spinner fa-spin"></i>
+              <span>Status wird geladen...</span>
+            </div>
           {/if}
         </div>
       {:else if mode === 'srs'}
