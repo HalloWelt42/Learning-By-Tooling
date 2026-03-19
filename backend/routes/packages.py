@@ -676,7 +676,11 @@ def export_package(pkg_id: int, token: str = Query(None), user: dict = Depends(g
 def uninstall_package(pkg_id: int, user: dict = Depends(get_current_user)):
 
     conn = get_db()
-    pkg = conn.execute("SELECT * FROM packages WHERE id=?", (pkg_id,)).fetchone()
+    try:
+        pkg = conn.execute("SELECT * FROM packages WHERE id=?", (pkg_id,)).fetchone()
+    except Exception:
+        conn.close()
+        raise HTTPException(500, "Datenbankfehler beim Lesen des Pakets")
     if not pkg:
         conn.close()
         raise HTTPException(404, "Paket nicht gefunden")
@@ -730,21 +734,38 @@ def uninstall_package(pkg_id: int, user: dict = Depends(get_current_user)):
     except Exception:
         stats["paths_deleted"] = 0
 
-    # 8. FTS-Index aktualisieren
+    # 8. MC-Optionen-Cache loeschen
+    try:
+        r = conn.execute("DELETE FROM mc_options WHERE package_id=?", (pkg_id,))
+        stats["mc_options_deleted"] = r.rowcount
+    except Exception:
+        stats["mc_options_deleted"] = 0
+
+    # 9. FTS-Index aktualisieren
     try:
         rebuild_fts(conn)
     except Exception:
         pass
 
-    # 9. Sessions entkoppeln (Statistik bleibt, Paket-Referenz wird entfernt)
-    conn.execute("UPDATE sessions SET package_id=NULL WHERE package_id=?", (pkg_id,))
+    # 10. Sessions entkoppeln (Statistik bleibt, Paket-Referenz wird entfernt)
+    try:
+        conn.execute("UPDATE sessions SET package_id=NULL WHERE package_id=?", (pkg_id,))
+    except Exception:
+        pass
 
-    # 10. User-Zuordnungen loeschen
-    conn.execute("DELETE FROM user_packages WHERE package_id=?", (pkg_id,))
+    # 11. User-Zuordnungen loeschen
+    try:
+        conn.execute("DELETE FROM user_packages WHERE package_id=?", (pkg_id,))
+    except Exception:
+        pass
 
-    # 11. Paket selbst loeschen
-    conn.execute("DELETE FROM packages WHERE id=?", (pkg_id,))
-    conn.commit()
+    # 13. Paket selbst loeschen
+    try:
+        conn.execute("DELETE FROM packages WHERE id=?", (pkg_id,))
+        conn.commit()
+    except Exception as e:
+        conn.close()
+        raise HTTPException(500, f"Fehler beim Löschen des Pakets: {str(e)}")
     conn.close()
 
     stats["package_name"] = pkg["name"]
