@@ -90,7 +90,7 @@
     if (!pkg) { showToast('Paket nicht gefunden', 'error'); return }
     installing = b.id
     try {
-      await apiDelete(`/api/packages/${pkg.id}`)
+      await apiDelete(`/api/packages/${pkg.id}/uninstall`)
       showToast(`${b.name} deinstalliert`, 'success')
       await loadGlobal()
       await loadBundles()
