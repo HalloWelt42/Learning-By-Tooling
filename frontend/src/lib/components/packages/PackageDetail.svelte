@@ -493,6 +493,30 @@
               {/each}
             </div>
 
+            {#if stats.srs_stacks}
+              {@const s = stats.srs_stacks}
+              {@const t = s.new + s.due + s.learning + s.solid + s.mastered}
+              <div class="card-box">
+                <div class="section-label">Lernstand (SRS)</div>
+                {#if t > 0}
+                  <div class="srs-bar">
+                    {#if s.mastered > 0}<div class="srs-seg srs-mastered" style="width:{s.mastered/t*100}%" title="Gemeistert: {s.mastered}"></div>{/if}
+                    {#if s.solid > 0}<div class="srs-seg srs-solid" style="width:{s.solid/t*100}%" title="Gefestigt: {s.solid}"></div>{/if}
+                    {#if s.learning > 0}<div class="srs-seg srs-learning" style="width:{s.learning/t*100}%" title="Lernphase: {s.learning}"></div>{/if}
+                    {#if s.due > 0}<div class="srs-seg srs-due" style="width:{s.due/t*100}%" title="Fällig: {s.due}"></div>{/if}
+                    {#if s.new > 0}<div class="srs-seg srs-new" style="width:{s.new/t*100}%" title="Neu: {s.new}"></div>{/if}
+                  </div>
+                {/if}
+                <div class="srs-legend">
+                  <span class="srs-item"><span class="srs-dot srs-mastered"></span> Gemeistert <strong>{s.mastered}</strong></span>
+                  <span class="srs-item"><span class="srs-dot srs-solid"></span> Gefestigt <strong>{s.solid}</strong></span>
+                  <span class="srs-item"><span class="srs-dot srs-learning"></span> Lernphase <strong>{s.learning}</strong></span>
+                  <span class="srs-item"><span class="srs-dot srs-due"></span> Fällig <strong>{s.due}</strong></span>
+                  <span class="srs-item"><span class="srs-dot srs-new"></span> Neu <strong>{s.new}</strong></span>
+                </div>
+              </div>
+            {/if}
+
             <div class="card-box">
               <div class="section-label">Dokumente</div>
               {#if documents.length===0}
@@ -1235,6 +1259,24 @@
 .cat-code { font-size: 9px; color: var(--text3); font-family: 'JetBrains Mono', monospace; letter-spacing: .06em; }
 .cat-row-r { display: flex; align-items: center; gap: 8px; width: 130px; }
 .cat-track { flex: 1; height: 4px; background: var(--bg3); border-radius: 2px; overflow: hidden; }
+
+/* SRS-Stapel */
+.srs-bar { display:flex;height:10px;border-radius:3px;overflow:hidden;margin-bottom:12px;gap:1px; }
+.srs-seg { min-width:3px;transition:width .3s; }
+.srs-mastered { background:#50a868; }
+.srs-solid { background:#4090d0; }
+.srs-learning { background:#d0a040; }
+.srs-due { background:#d06050; }
+.srs-new { background:var(--bg3); }
+.srs-legend { display:flex;flex-wrap:wrap;gap:10px;font-size:10px;color:var(--text2); }
+.srs-item { display:flex;align-items:center;gap:4px; }
+.srs-item strong { color:var(--text0);font-family:'JetBrains Mono',monospace; }
+.srs-dot { width:8px;height:8px;border-radius:2px; }
+.srs-dot.srs-mastered { background:#50a868; }
+.srs-dot.srs-solid { background:#4090d0; }
+.srs-dot.srs-learning { background:#d0a040; }
+.srs-dot.srs-due { background:#d06050; }
+.srs-dot.srs-new { background:var(--bg3); }
 .cat-fill { height: 100%; border-radius: 2px; transition: width .5s; }
 .cat-n { font-size: 11px; font-weight: 600; color: var(--text2); min-width: 22px; text-align: right; font-family: 'JetBrains Mono', monospace; }
 

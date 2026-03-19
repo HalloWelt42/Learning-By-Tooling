@@ -346,6 +346,27 @@ def get_package_stats(pkg_id: int, user: dict = Depends(get_current_user)):
         LEFT JOIN card_stats cs ON cs.card_id=c.card_id AND cs.user_id=?
         GROUP BY cat.code
     """, (pkg_id, uid)).fetchall()
+    # SRS-Stapel: Neu, Fällig, Lernphase (<7d), Gefestigt (7-30d), Gemeistert (>30d)
+    today = date.today().isoformat()
+    srs_rows = conn.execute("""
+        SELECT c.card_id, cs.interval_days, cs.due_date, cs.times_shown
+        FROM cards c
+        LEFT JOIN card_stats cs ON cs.card_id=c.card_id AND cs.user_id=?
+        WHERE c.package_id=? AND c.active=1
+    """, (uid, pkg_id)).fetchall()
+    stacks = {"new":0, "due":0, "learning":0, "solid":0, "mastered":0}
+    for r in srs_rows:
+        if not r["times_shown"] or r["times_shown"] == 0:
+            stacks["new"] += 1
+        elif r["due_date"] and r["due_date"] <= today:
+            stacks["due"] += 1
+        elif r["interval_days"] and r["interval_days"] > 30:
+            stacks["mastered"] += 1
+        elif r["interval_days"] and r["interval_days"] >= 7:
+            stacks["solid"] += 1
+        else:
+            stacks["learning"] += 1
+
     conn.close()
     return {
         "total_cards":    total,
@@ -355,6 +376,7 @@ def get_package_stats(pkg_id: int, user: dict = Depends(get_current_user)):
         "total_correct":  rev[1] or 0,
         "due_today":      due,
         "by_category":    [row_to_dict(r) for r in by_cat],
+        "srs_stacks":     stacks,
     }
 
 # -- Kategorien ----------------------------------------------------------------
