@@ -755,21 +755,10 @@
 
         <!-- KI-Assistenz (optional) -->
         <div class="ai-assist-row">
-          {#if $aiOnline}
-            <button class="btn btn-ghost btn-sm" onclick={getHint} disabled={hintLoading}>
-              <i class="fa-solid fa-lightbulb"></i> {hintLoading ? 'Lädt…' : 'Merkhilfe'}
-            </button>
-          {/if}
           <button class="btn btn-ghost btn-sm" onclick={getRelated} disabled={relatedLoading}>
             <i class="fa-solid fa-link"></i> {relatedLoading ? 'Suche…' : 'Verwandte Karten'}
           </button>
         </div>
-        {#if hintText}
-          <div class="ai-hint-box">
-            <i class="fa-solid fa-lightbulb" style="color:var(--warn)"></i>
-            <span class="markdown">{@html marked(hintText)}</span>
-          </div>
-        {/if}
         {#if relatedIds.length > 0}
           <div class="ai-related-box">
             <span style="font-size:10px;color:var(--text3)">Verwandte Karten:</span>
