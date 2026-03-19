@@ -292,6 +292,12 @@
     aiFeedback = null
   }
 
+  function recordWrong(c) {
+    if (c && !wrongCards.find(w => w.card_id === c.card_id)) {
+      wrongCards = [...wrongCards, c]
+    }
+  }
+
   async function submitReview(result) {
     if (result === 'wrong' && card) recordWrong(card)
     await apiPost('/api/reviews', {
