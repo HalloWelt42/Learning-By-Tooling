@@ -485,7 +485,7 @@
                   </div>
                   <div class="cat-row-r">
                     <div class="cat-track">
-                      <div class="cat-fill" style="width:{cat.shown>0?pct(cat.correct,cat.shown):0}%;background:{cat.color}"></div>
+                      <div class="cat-fill" style="width:{cat.shown>0?pct(cat.correct,cat.shown):0}%"></div>
                     </div>
                     <span class="cat-n">{cat.count}</span>
                   </div>
@@ -1277,7 +1277,7 @@
 .srs-dot.srs-learning { background:#d0a040; }
 .srs-dot.srs-due { background:#d06050; }
 .srs-dot.srs-new { background:var(--bg3); }
-.cat-fill { height: 100%; border-radius: 2px; transition: width .5s; }
+.cat-fill { height: 100%; border-radius: 2px; transition: width .5s; background: var(--accent); }
 .cat-n { font-size: 11px; font-weight: 600; color: var(--text2); min-width: 22px; text-align: right; font-family: 'JetBrains Mono', monospace; }
 
 .doc-row { display: flex; align-items: center; gap: 10px; padding: 8px 6px; border-radius: 4px; cursor: pointer; transition: background .12s; width: 100%; text-align: left; border: none; background: none; font-family: inherit; }
