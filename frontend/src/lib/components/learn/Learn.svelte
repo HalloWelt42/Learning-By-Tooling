@@ -508,7 +508,7 @@
       </div>
       <!-- Schnellstart -->
       <div style="margin-top:auto;padding-top:12px;border-top:1px solid var(--border)">
-        <div class="section-label" style="margin-bottom:8px">Session starten mit</div>
+        <div class="section-label" style="margin-bottom:8px">Session starten mit ... Karten</div>
         <div class="limit-row">
           {#each [5, 10, 20, 30, 50, 100].filter(n => n <= selectedCatCards) as n}
             <button class="limit-chip" onclick={() => { cardLimit = n; startSession() }}>
