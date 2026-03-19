@@ -1,8 +1,8 @@
 <script>
   import { authUser, showToast } from '../../stores/index.js'
 
-  let email = $state('admin@example.com')
-  let password = $state('admin')
+  let email = $state('')
+  let password = $state('')
   let loading = $state(false)
   let error = $state('')
 

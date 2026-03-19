@@ -22,6 +22,9 @@
 
   let interval = $state(null)
   let userBadges = $state([])
+  let showPwWarn = $state(false)
+  let pwForm = $state({ old: '', new1: '', new2: '' })
+  let pwChanging = $state(false)
 
   onMount(() => {
     // Auth-Expired Event abfangen
@@ -39,6 +42,7 @@
     if ($authUser) {
       loadGlobal()
       apiGet('/api/achievements').then(a => { userBadges = (a||[]).sort((x,y) => y.level - x.level) }).catch(() => {})
+      apiGet('/api/auth/me').then(me => { if (me?.default_password) showPwWarn = true }).catch(() => {})
       interval = setInterval(() => {
         loadGlobal()
         apiGet('/api/achievements').then(a => { userBadges = (a||[]).sort((x,y) => y.level - x.level) }).catch(() => {})
@@ -211,6 +215,30 @@
     </aside>
 
     <main class="main">
+      {#if showPwWarn}
+        <div class="pw-warn">
+          <div class="pw-warn-text">
+            <i class="fa-solid fa-triangle-exclamation"></i>
+            <span>Du nutzt noch das Standard-Passwort. Bitte ändere es.</span>
+          </div>
+          <div class="pw-warn-form">
+            <input type="password" class="input" placeholder="Altes Passwort" bind:value={pwForm.old} style="width:140px" />
+            <input type="password" class="input" placeholder="Neues Passwort" bind:value={pwForm.new1} style="width:140px" />
+            <input type="password" class="input" placeholder="Wiederholen" bind:value={pwForm.new2} style="width:140px" />
+            <button class="btn btn-primary btn-sm" disabled={pwChanging} onclick={async () => {
+              if (pwForm.new1 !== pwForm.new2) { showToast('Passwörter stimmen nicht überein', 'error'); return }
+              pwChanging = true
+              try {
+                await apiPost('/api/auth/change-password', { old_password: pwForm.old, new_password: pwForm.new1 })
+                showToast('Passwort geändert', 'success')
+                showPwWarn = false
+              } catch(e) { showToast(e.message, 'error') }
+              pwChanging = false
+            }}>{pwChanging ? 'Speichern...' : 'Ändern'}</button>
+            <button class="btn btn-ghost btn-sm" onclick={() => showPwWarn = false}>Später</button>
+          </div>
+        </div>
+      {/if}
       {#if $currentView === 'packages'}
         <Packages />
       {:else if $currentView === 'package' && activePkg}
@@ -292,6 +320,10 @@
 
   .sf { padding:8px 14px;border-top:1px solid var(--border);display:flex;flex-direction:column;gap:6px;margin-top:auto; }
   .sf-line { display:flex;align-items:center;gap:5px;font-size:10px;color:var(--text3); }
+
+  .pw-warn { background:color-mix(in srgb, var(--warn) 10%, var(--bg1));border-bottom:1px solid var(--warn);padding:12px 20px;display:flex;flex-direction:column;gap:8px; }
+  .pw-warn-text { display:flex;align-items:center;gap:8px;font-size:12px;font-weight:600;color:var(--warn); }
+  .pw-warn-form { display:flex;align-items:center;gap:6px;flex-wrap:wrap; }
   .sf-sep { color:var(--border); }
   .user-row { display:flex;align-items:center;gap:7px;font-size:11px;color:var(--text2); }
   .user-row > span:first-of-type { flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap; }
