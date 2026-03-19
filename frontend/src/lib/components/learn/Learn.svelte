@@ -214,27 +214,13 @@
       mcLoading = true
       try {
         const mc = await apiGet(`/api/mc/${card.card_id}`)
-        const wrongOpts = mc.options.map(t => ({text: t, correct: false}))
-        const correctText = card.answer.split('\n')[0].substring(0, 120)
-
-        // Variation: 70% normal (1 richtig, 3 falsch), 15% keine richtige, 15% "Alle oben" als richtige
-        const roll = Math.random()
-        let opts
-        if (roll < 0.15) {
-          // Keine richtige dabei -- 4 falsche, "Keine der Antworten" als 5. Option
-          opts = [...wrongOpts.slice(0, 4)]
-          opts.push({text: 'Keine der genannten Optionen', correct: true})
-        } else if (roll < 0.30) {
-          // Richtige + 2 falsche + "Alle oben sind falsch" (falsch)
-          opts = wrongOpts.slice(0, 2).map(o => ({...o}))
-          opts.push({text: correctText, correct: true})
-          opts.push({text: 'Keine der genannten Optionen', correct: false})
-        } else {
-          // Standard: 1 richtig, 3 falsch
-          opts = wrongOpts.slice(0, 3).map(o => ({...o}))
-          opts.push({text: correctText, correct: true})
-        }
-        // Mischen
+        const correctText = card.answer.split('\n')[0].substring(0, 150)
+        // Immer 4 Optionen: 1 richtig + 3 falsch, gemischt
+        const opts = [
+          {text: correctText, correct: true},
+          ...mc.options.slice(0, 3).map(t => ({text: t, correct: false}))
+        ]
+        // Mischen (Fisher-Yates)
         for (let j = opts.length - 1; j > 0; j--) {
           const k = Math.floor(Math.random() * (j + 1));
           [opts[j], opts[k]] = [opts[k], opts[j]]
@@ -242,7 +228,6 @@
         mcOptions = opts
       } catch(e) {
         mcOptions = []
-        showToast('MC-Optionen nicht verfügbar', 'warn')
       }
       mcLoading = false
     }
@@ -646,7 +631,7 @@
           <div style="text-align:center;padding:16px;color:var(--text3)">
             <i class="fa-solid fa-spinner fa-spin"></i> MC-Optionen werden geladen...
           </div>
-        {:else if mcOptions.length >= 4}
+        {:else if mcOptions.length === 4}
           <div class="mc-grid">
             {#each mcOptions as opt, i}
               <button
@@ -655,7 +640,19 @@
                 class:mc-correct={mcRevealed && opt.correct}
                 class:mc-wrong={mcRevealed && mcSelected === i && !opt.correct}
                 disabled={mcRevealed}
-                onclick={() => { mcSelected = i; mcRevealed = true; rate(opt.correct ? 'correct' : 'wrong') }}
+                onclick={async () => {
+                  mcSelected = i
+                  mcRevealed = true
+                  const result = opt.correct ? 'correct' : 'wrong'
+                  results = [...results, { card_id: card.card_id, result }]
+                  if (!opt.correct) recordWrong(card)
+                  await apiPost('/api/reviews', {
+                    session_id: session.session_id,
+                    card_id: card.card_id,
+                    result,
+                    time_ms: 0
+                  }).catch(() => {})
+                }}
               >
                 <span class="mc-letter">{['A','B','C','D'][i]}</span>
                 <span class="mc-text">{opt.text}</span>
