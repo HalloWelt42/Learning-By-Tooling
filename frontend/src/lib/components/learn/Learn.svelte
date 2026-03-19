@@ -628,8 +628,12 @@
       <!-- Multiple Choice -->
       {#if mode === 'mc' && !flipped}
         {#if mcLoading}
-          <div style="text-align:center;padding:16px;color:var(--text3)">
-            <i class="fa-solid fa-spinner fa-spin"></i> MC-Optionen werden geladen...
+          <div class="mc-loading">
+            <i class="fa-solid fa-brain aip-pulse" style="font-size:18px;color:var(--accent)"></i>
+            <div>
+              <div style="font-size:13px;font-weight:600;color:var(--text0)">Antwortoptionen werden erstellt</div>
+              <div style="font-size:11px;color:var(--text3);margin-top:2px">Die lokale KI generiert plausible Alternativen...</div>
+            </div>
           </div>
         {:else if mcOptions.length === 4}
           <div class="mc-grid">
@@ -969,6 +973,11 @@
 .mode-explain p { font-size:12px;color:var(--text2);line-height:1.6;margin-bottom:6px; }
 .mode-explain p:last-of-type { margin-bottom:0; }
 .mode-warn { color:var(--warn) !important;font-weight:600; }
+
+.mc-loading {
+  display:flex;align-items:center;gap:14px;padding:20px;
+  background:var(--bg2);border:1px solid var(--border);border-radius:4px;
+}
 
 /* ── MC Setup ─────────────────────────────────────── */
 .mc-setup-box { margin-top:12px;background:var(--bg2);border:1px solid var(--border);border-radius:4px;padding:12px; }
