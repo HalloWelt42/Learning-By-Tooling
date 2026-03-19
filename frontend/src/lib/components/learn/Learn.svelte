@@ -685,7 +685,7 @@
         {/if}
       {/if}
 
-      <!-- Aufdecken / Bewerten -->
+      <!-- Aufdecken-Button (vor dem Flip) -->
       {#if !flipped && mode !== 'mc'}
         {#if mode === 'write' && useAI && $aiOnline && userAnswer.trim()}
           <!-- Freitext: KI bewerten vor Aufdecken -->
@@ -724,8 +724,10 @@
           </button>
         {/if}
 
-      {:else if mode !== 'mc'}
-        <!-- Antwort aufgedeckt (nicht im MC-Modus) -->
+      {/if}
+
+      <!-- Antwort + Bewertung (nach dem Flip, nicht MC) -->
+      {#if flipped && mode !== 'mc'}
         <div class="fc-ans-lbl">
           <i class="fa-solid fa-square-check" style="color:var(--accent)"></i> Antwort
         </div>
