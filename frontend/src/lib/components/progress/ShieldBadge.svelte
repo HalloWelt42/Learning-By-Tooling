@@ -76,7 +76,16 @@
     }
   }
 
-  $effect(() => { if (shieldEl) readBaseBg() })
+  $effect(() => {
+    if (shieldEl) {
+      readBaseBg()
+      // Theme-Wechsel beobachten
+      const obs = new MutationObserver(() => readBaseBg())
+      const target = shieldEl.closest('[data-theme]')
+      if (target) obs.observe(target, { attributes: true, attributeFilter: ['data-theme'] })
+      return () => obs.disconnect()
+    }
+  })
 
   function mixColor(hex, alpha) {
     const r = parseInt(hex.slice(1,3),16)

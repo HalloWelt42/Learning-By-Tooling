@@ -38,6 +38,7 @@ def init_db():
         email          TEXT    NOT NULL UNIQUE,
         password_hash  TEXT    NOT NULL,
         display_name   TEXT    NOT NULL DEFAULT '',
+        is_admin       INTEGER NOT NULL DEFAULT 0,
         created_at     TEXT    DEFAULT (datetime('now'))
     );
 
@@ -279,6 +280,14 @@ def _migrate(conn: sqlite3.Connection):
             )
         """)
         conn.commit()
+
+    # users: is_admin Spalte ergänzen falls fehlt
+    if 'users' in existing_tables:
+        user_cols = {r[1] for r in conn.execute("PRAGMA table_info(users)").fetchall()}
+        if 'is_admin' not in user_cols:
+            conn.execute("ALTER TABLE users ADD COLUMN is_admin INTEGER NOT NULL DEFAULT 0")
+            conn.execute("UPDATE users SET is_admin=1 WHERE id=1")  # Erster User wird Admin
+            conn.commit()
 
     # cards: package_id Spalte ergänzen falls fehlt
     card_cols = {r[1] for r in conn.execute("PRAGMA table_info(cards)").fetchall()}

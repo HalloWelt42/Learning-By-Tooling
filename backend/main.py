@@ -185,6 +185,56 @@ def register(data: RegisterRequest):
 def me(user: dict = Depends(get_current_user)):
     return user
 
+# -- Admin ---------------------------------------------------------------
+
+@app.get("/api/admin/users")
+def admin_list_users(user: dict = Depends(get_current_user)):
+    conn = get_db()
+    rows = conn.execute("""
+        SELECT u.id, u.email, u.display_name, u.is_admin, u.created_at,
+            (SELECT COUNT(*) FROM sessions s WHERE s.user_id=u.id AND s.ended_at IS NOT NULL) as sessions,
+            (SELECT COUNT(*) FROM reviews r WHERE r.user_id=u.id) as reviews,
+            (SELECT COUNT(*) FROM user_packages up WHERE up.user_id=u.id) as packages
+        FROM users u ORDER BY u.created_at ASC
+    """).fetchall()
+    conn.close()
+    return [row_to_dict(r) for r in rows]
+
+@app.post("/api/admin/users")
+def admin_create_user(data: dict, user: dict = Depends(get_current_user)):
+    email = data.get("email", "").strip()
+    password = data.get("password", "")
+    display_name = data.get("display_name", "")
+    if not email or not password:
+        raise HTTPException(400, "E-Mail und Passwort erforderlich")
+    try:
+        new_user = create_user(email, password, display_name)
+    except Exception:
+        raise HTTPException(400, "E-Mail bereits registriert")
+    # Alle bestehenden Pakete dem neuen User zuweisen
+    conn = get_db()
+    conn.execute("""
+        INSERT OR IGNORE INTO user_packages (user_id, package_id, role)
+        SELECT ?, p.id, 'learner' FROM packages p
+    """, (new_user["id"],))
+    conn.commit()
+    conn.close()
+    return new_user
+
+@app.delete("/api/admin/users/{user_id}")
+def admin_delete_user(user_id: int, user: dict = Depends(get_current_user)):
+    if user_id == user["id"]:
+        raise HTTPException(400, "Du kannst dich nicht selbst entfernen")
+    conn = get_db()
+    conn.execute("DELETE FROM user_packages WHERE user_id=?", (user_id,))
+    conn.execute("DELETE FROM card_stats WHERE user_id=?", (user_id,))
+    conn.execute("DELETE FROM reviews WHERE user_id=?", (user_id,))
+    conn.execute("DELETE FROM sessions WHERE user_id=?", (user_id,))
+    conn.execute("DELETE FROM users WHERE id=?", (user_id,))
+    conn.commit()
+    conn.close()
+    return {"ok": True}
+
 # -- Health (öffentlich) -------------------------------------------------------
 
 @app.get("/api/health")

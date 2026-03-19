@@ -57,6 +57,8 @@ function parseHash() {
     view = 'progress'
   } else if (segments[0] === 'guide') {
     view = 'guide'
+  } else if (segments[0] === 'admin') {
+    view = 'admin'
   }
 
   return { view, params, query }

@@ -15,6 +15,7 @@
   import Progress      from './lib/components/progress/Progress.svelte'
   import Guide         from './lib/components/shared/Guide.svelte'
   import Search        from './lib/components/shared/Search.svelte'
+  import Admin         from './lib/components/shared/Admin.svelte'
   import ShieldBadge   from './lib/components/progress/ShieldBadge.svelte'
   import { route, initRouter, navigate } from './lib/utils/router.js'
   import { apiGet } from './lib/utils/api.js'
@@ -49,7 +50,7 @@
         if (r.view === 'package' && r.params?.pkg_id) {
           activePackageId.set(r.params.pkg_id)
           currentView.set('package')
-        } else if (['packages','learn','progress','guide','search'].includes(r.view)) {
+        } else if (['packages','learn','progress','guide','search','admin'].includes(r.view)) {
           currentView.set(r.view)
         }
       })
@@ -137,6 +138,12 @@
           <i class="fa-solid fa-map"></i>
           <span>Anleitung</span>
         </button>
+
+        <button class="nav-item" class:active={$currentView==='admin'}
+          onclick={() => navigate('/admin')}>
+          <i class="fa-solid fa-gear"></i>
+          <span>Verwaltung</span>
+        </button>
       </nav>
 
       {#if ($packages || []).length > 0}
@@ -216,6 +223,8 @@
         <Guide />
       {:else if $currentView === 'search'}
         <Search initQ={$route?.query?.q || ''} initPkg={$route?.query?.pkg || null} />
+      {:else if $currentView === 'admin'}
+        <Admin />
       {:else}
         <Packages />
       {/if}
