@@ -427,36 +427,30 @@
           tabindex="0"
           onkeydown={e => e.key==='Enter' && open(pkg)}
         >
-          <div class="pk-top">
-            <div class="pk-icon" style="background:{pkg.color}">
-              <i class="fa-solid {pkg.icon}"></i>
-            </div>
-            {#if pkg.draft_count > 0}
-              <span class="pk-badge warn">
-                <i class="fa-solid fa-pen-to-square"></i> {pkg.draft_count}
-              </span>
-            {/if}
+          <div class="pk-icon" style="background:{pkg.color}">
+            <i class="fa-solid {pkg.icon}"></i>
           </div>
-
           <div class="pk-name">{pkg.name}</div>
           {#if pkg.description}
             <div class="pk-desc">{pkg.description}</div>
           {/if}
 
-          <div class="pk-stats">
-            <span><i class="fa-solid fa-layer-group"></i> {pkg.card_count} Karten</span>
-            <span><i class="fa-solid fa-file-lines"></i> {pkg.doc_count} Dokumente</span>
-          </div>
-          <div class="pk-footer">
-            <button class="btn btn-ghost btn-sm" onclick={e => { e.stopPropagation(); open(pkg) }}>
-              <i class="fa-solid fa-arrow-right"></i> Öffnen
-            </button>
-            <button class="btn btn-ghost btn-sm" onclick={e => { e.stopPropagation(); exportPkg(pkg.id) }}>
-              <i class="fa-solid fa-file-export"></i> Export
-            </button>
-            <button class="btn-icon" style="margin-left:auto" onclick={e => { e.stopPropagation(); confirmPkg = pkg }}>
-              <i class="fa-solid fa-trash-can"></i>
-            </button>
+          <div class="pk-bottom">
+            <div class="pk-stats">
+              <span><i class="fa-solid fa-layer-group"></i> {pkg.card_count} Karten</span>
+              <span><i class="fa-solid fa-file-lines"></i> {pkg.doc_count} Dokumente</span>
+            </div>
+            <div class="pk-footer">
+              <button class="btn btn-ghost btn-sm" onclick={e => { e.stopPropagation(); open(pkg) }}>
+                <i class="fa-solid fa-arrow-right"></i> Öffnen
+              </button>
+              <button class="btn btn-ghost btn-sm" onclick={e => { e.stopPropagation(); exportPkg(pkg.id) }}>
+                <i class="fa-solid fa-file-export"></i> Export
+              </button>
+              <button class="btn-icon" style="margin-left:auto" onclick={e => { e.stopPropagation(); confirmPkg = pkg }}>
+                <i class="fa-solid fa-trash-can"></i>
+              </button>
+            </div>
           </div>
         </div>
       {/each}
@@ -556,7 +550,7 @@
   box-shadow:0 6px 24px color-mix(in srgb,var(--c) 15%,transparent);
   transform:translateY(-1px);
 }
-.pk-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:4px}
+.pk-bottom{margin-top:auto;display:flex;flex-direction:column;gap:8px;padding-top:10px;border-top:1px solid var(--border)}
 .pk-icon{
   width:44px;height:44px;border-radius: 4px;
   display:flex;align-items:center;justify-content:center;
