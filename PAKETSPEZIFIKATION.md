@@ -1,242 +1,246 @@
-# Learning-By-Tooling -- Paketspezifikation v1.0
+# Lernpakete erstellen -- Anleitung
 
 ---
 
-## 1. Zweck dieses Dokuments
+## Was ist ein Lernpaket?
 
-Dieses Dokument definiert verbindlich wie Lernpakete erstellt,
-benannt, versioniert und verwaltet werden müssen.
+Ein Lernpaket ist eine abgeschlossene Themenwelt. Es enthält:
+- **Lernkarten** (Frage + Antwort)
+- **Lernmaterial** (Texte, Bilder, PDFs) -- optional
+- **Lexikon-Einträge** -- optional
 
----
-
-## 2. Paket-ID
-
-Jedes Paket hat eine eindeutige, unveränderliche ID.
-
-### Regeln:
-- Nur Kleinbuchstaben, Zahlen und Bindestrich
-- Kein Leerzeichen, kein Unterstrich, kein Punkt
-- Format: `{thema}-{untertitel}` (ohne Versionsnummer)
-- Länge: 3-50 Zeichen
-- Einmal vergeben -> NIEMALS ändern
-
-### Korrekt:
-```
-python-grundlagen
-rest-api-kurs
-docker-basics
-```
-
-### Falsch:
-```
-Python_Grundlagen     <- Grossbuchstaben, Unterstrich
-python-grundlagen-v2  <- Versionsnummer in der ID
-python grundlagen     <- Leerzeichen
-python.grundlagen     <- Punkt
-```
+Du kannst Lernpakete selbst erstellen oder von anderen übernehmen.
 
 ---
 
-## 3. Dateinamen
+## So erstellst du ein Lernpaket
 
-### Pflichtschema:
-```
-{paket-id}-fragen.md
-{paket-id}-antworten.md
-```
+### Schritt 1: Thema festlegen
 
-### Korrekt:
-```
-python-grundlagen-fragen.md
-python-grundlagen-antworten.md
-```
+Überlege dir ein Thema und einen kurzen Namen.
+- Beispiel: "Python Grundlagen", "Erste-Hilfe-Kurs", "Projektmanagement"
 
-### Falsch:
-```
-fragen.md                         <- Kein Paket-Prefix
-python-fragen-v2.md               <- Versionsnummer im Dateinamen
-Python-Grundlagen-Fragen.md       <- Grossbuchstaben
-python_grundlagen_fragen.md       <- Unterstrich statt Bindestrich
-```
+### Schritt 2: Fragen und Antworten schreiben
+
+Du brauchst zwei Textdateien:
+- Eine Datei mit Fragen
+- Eine Datei mit Antworten
+
+Beide Dateien folgen einem einfachen Format (siehe unten).
+
+### Schritt 3: Als ZIP hochladen
+
+Packe beide Dateien in eine ZIP-Datei und lade sie in der App hoch.
+Die App erkennt automatisch was Fragen und was Antworten sind.
 
 ---
 
-## 4. ZIP-Dateiname
+## Das Karten-Format
 
-### Pflichtschema:
-```
-{paket-id}-v{major}.{minor}.zip
-```
+### Fragen-Datei
 
-### Korrekt:
-```
-python-grundlagen-v1.0.zip
-rest-api-kurs-v2.1.zip
-docker-basics-v1.3.zip
-```
+Jede Frage steht in einem eigenen Block:
 
----
-
-## 5. ZIP-Inhalt
-
-### Mindestinhalt:
-```
-{paket-id}-v{major}.{minor}.zip
-  |- {paket-id}-fragen.md        (Pflicht)
-  +- {paket-id}-antworten.md     (Pflicht)
-```
-
-### Optional erlaubt:
-```
-  +- README.md                   (Beschreibung des Pakets)
-```
-
-### VERBOTEN im ZIP:
-- Unterordner
-- Andere Dateitypen außer .md und .txt
-- Mehrere Fragen-Dateien
-- Mehrere Antworten-Dateien
-- bundles.json (gehört nicht in User-ZIPs)
-
----
-
-## 6. Karten-ID
-
-### Format:
-```
-K-{NNN}
-```
-
-Wobei {NNN} eine Zahl mit mindestens einer Stelle ist.
-Führende Nullen empfohlen für Sortierbarkeit.
-
-### Korrekt:
-```
-K-001   K-042   K-100   K-310
-```
-
-### Falsch:
-```
-K001        <- Bindestrich fehlt
-k-001       <- Kleinbuchstabe
-KARTE-001   <- Falscher Prefix
-001         <- Kein K-Prefix
-```
-
-### Eindeutigkeit:
-- Innerhalb eines Pakets muss jede K-ID eindeutig sein
-- Zwischen Paketen dürfen K-IDs übereinstimmen
-- Einmal vergeben -> NIEMALS recyceln
-- Neue Karten bekommen immer neue IDs
-
----
-
-## 7. Fragen-Format
-
-### Vollständiges Format:
 ````
 ```
-K-{NNN} | {KATEGORIE}
-{Fragetext -- beliebig mehrzeilig}
+K-001 | GB
+Was bedeutet API?
 ```
 ````
 
-### Regeln:
-- Exakt drei Backticks öffnen und schließen
-- Erste Zeile: K-ID, Pipe, Kategoriecode -- NICHTS sonst
-- Fragetext ab zweiter Zeile
-- Keine Leerzeile zwischen Kopfzeile und Fragetext
+Aufbau:
+- `K-001` -- Karten-Nummer (fortlaufend)
+- `GB` -- Kategorie (siehe Tabelle unten)
+- Danach der Fragetext (kann auch mehrere Zeilen lang sein)
 
----
+### Antworten-Datei
 
-## 8. Antworten-Format
+Jede Antwort verweist auf ihre Frage:
 
-### Vollständiges Format:
 ````
 ```
-A-{NNN} | {KATEGORIE} -> K-{NNN}
-{Antworttext -- beliebig mehrzeilig, Code erlaubt}
+A-001 | GB -> K-001
+API steht fuer Application Programming Interface.
+Es ist eine Schnittstelle über die Programme
+miteinander kommunizieren.
 ```
 ````
 
-### Regeln:
-- A-Nummer muss zur K-Nummer passen: A-042 gehört zu K-042
-- Kategorie muss identisch zur Frage sein
-- Antworttext darf Codeblocks, Listen, Tabellen enthalten
+Aufbau:
+- `A-001` -- Antwort-Nummer (gleiche Nummer wie die Frage)
+- `-> K-001` -- Verknüpfung zur Frage
+- Danach der Antworttext (beliebig lang)
 
 ---
 
-## 9. Kategorie-Codes
+## Kategorien
 
-### Erlaubte Codes (Standard-Installation):
-```
-GB   Grundbegriffe
-AK   Akteure
-GS   Geschaeftsprozesse
-AP   API
-HA   Hash
-OA   OAuth2
-TC   Test Cases
-MO   Mock
-KA   Kafka
-FE   Fehler
-DB   Datenmodell
-AL   Allgemein
-```
+Jede Karte gehört zu einer Kategorie. Du kannst aus diesen wählen:
 
-### Regeln:
-- Immer GROSSBUCHSTABEN
-- Immer genau 2 Zeichen
-- Nur aus der obigen Liste
-- Kein eigener Code erlaubt ohne vorherige Registrierung in db.py
+| Code | Name         | Wofür geeignet                              |
+|------|--------------|---------------------------------------------|
+| GB   | Grundlagen   | Definitionen, Konzepte, Fachbegriffe        |
+| TH   | Theorie      | Theoretisches Wissen, Zusammenhänge         |
+| PX   | Praxis       | Praktische Anwendung, Übungen               |
+| VF   | Verfahren    | Abläufe, Prozesse, Methoden                 |
+| PR   | Prüfung      | Prüfungsrelevante Fragen                    |
+| VT   | Vertiefung   | Weiterführende, schwierige Themen           |
+| AL   | Allgemein    | Alles was in keine andere Kategorie passt   |
+
+Wenn du unsicher bist, nimm einfach AL (Allgemein).
 
 ---
 
-## 10. bundles.json -- nur für serverseitige Pakete
+## Lernmaterial hinzufügen (optional)
 
-bundles.json gehört ausschließlich in den `lernpakete/`-Ordner
-der Server-Installation. Sie darf NICHT in User-ZIPs enthalten sein.
+Du kannst zusätzlich Lernmaterial in die ZIP-Datei packen:
 
-### Pflichtfelder pro Bundle:
-```json
-{
-  "id":           "mein-paket",
-  "name":         "Mein Paket",
-  "description":  "Beschreibung für den Nutzer",
-  "color":        "#2196F3",
-  "icon":         "fa-graduation-cap",
-  "version":      "1.0",
-  "fragen_file":  "mein-paket-fragen.md",
-  "antwort_file": "mein-paket-antworten.md"
-}
-```
+- **Texte** (.md, .txt) -- werden automatisch als Lernmaterial erkannt
+- **Bilder** (.png, .jpg) -- werden in der Medien-Ansicht angezeigt
+- **PDFs** (.pdf) -- werden als Download-Links bereitgestellt
+
+Das Material wird dem Paket zugeordnet und steht beim Lernen
+über den "Im Material nachlesen"-Link zur Verfügung.
 
 ---
 
-## 11. Vollständigkeitsprüfung
+## ZIP-Datei zusammenbauen
 
-Jede Frage MUSS eine Antwort haben. Jede Antwort MUSS eine Frage haben.
-
----
-
-## 12. Versionierung
-
-- Jede inhaltliche Änderung erhöht die Minor-Version: 1.0 -> 1.1
-- Jede Neustrukturierung erhöht Major: 1.x -> 2.0
-- IDs werden NIEMALS wiederverwendet
-
----
-
-## 13. Checkliste vor Einreichung
+So sieht eine fertige ZIP-Datei aus:
 
 ```
-[ ] Paket-ID: kleinbuchstaben-mit-bindestrich, keine Version in der ID
-[ ] Dateinamen: {paket-id}-fragen.md und {paket-id}-antworten.md
-[ ] ZIP-Name: {paket-id}-v{major}.{minor}.zip
-[ ] Karten-IDs: K-001 Format, keine Luecken, keine Duplikate
-[ ] Jede K-ID hat genau eine A-ID (gleiche Nummer)
-[ ] Kategoriecodes: Nur 2-stellige Grossbuchstaben aus der erlaubten Liste
-[ ] Validierungsskript ausgefuehrt: 0 fehlend, 0 verwaist
-[ ] Kein Unterordner im ZIP
-[ ] Keine bundles.json im ZIP
+mein-thema-v1.0.zip
+  |- mein-thema-fragen.md       (Pflicht)
+  |- mein-thema-antworten.md    (Pflicht)
+  |- einfuehrung.md             (optional -- Lernmaterial)
+  |- diagramm.png               (optional -- Bild)
+  |- zusammenfassung.pdf        (optional -- PDF)
+```
+
+### Namensregeln:
+- Kleinbuchstaben, Bindestrich statt Leerzeichen
+- Keine Sonderzeichen, keine Umlaute im Dateinamen
+- Versionsnummer im ZIP-Namen: v1.0, v1.1, v2.0 usw.
+
+---
+
+## Lernpaket mit KI erstellen (z.B. Claude, ChatGPT)
+
+Du kannst eine KI nutzen um schnell hochwertige Lernkarten zu erstellen.
+So geht es:
+
+### 1. Prompt für die Fragen
+
+Kopiere diesen Text und passe ihn an dein Thema an:
+
+```
+Erstelle 20 Lernkarten zum Thema "[DEIN THEMA]".
+
+Nutze dieses Format fuer jede Frage:
+
+---
+
+```                          (drei Backticks)
+K-001 | GB
+[Fragetext]
+```                          (drei Backticks)
+
+---
+
+Regeln:
+- Nummeriere fortlaufend: K-001, K-002, K-003 usw.
+- Nutze diese Kategorien: GB (Grundlagen), TH (Theorie),
+  PX (Praxis), VF (Verfahren), PR (Pruefung), AL (Allgemein)
+- Fragen sollen klar und eindeutig beantwortbar sein
+- Mische leichte und schwere Fragen
+- Keine Multiple-Choice -- offene Fragen
+```
+
+### 2. Prompt für die Antworten
+
+Wenn du die Fragen hast, nutze diesen Prompt:
+
+```
+Erstelle zu jeder der folgenden Fragen eine praezise Antwort.
+
+Nutze dieses Format:
+
+---
+
+```                          (drei Backticks)
+A-001 | GB -> K-001
+[Antworttext]
+```                          (drei Backticks)
+
+---
+
+Regeln:
+- A-Nummer = K-Nummer der zugehoerigen Frage
+- Antworten sollen knapp aber vollstaendig sein
+- Keine Einleitungen wie "Die Antwort lautet..."
+- Direkt zur Sache
+
+Hier sind die Fragen:
+
+[FRAGEN HIER EINFUEGEN]
+```
+
+### 3. Prompt für Lernmaterial
+
+Optional kannst du die KI auch bitten, ein Begleitdokument zu erstellen:
+
+```
+Schreibe einen kompakten Lehrtext zum Thema "[DEIN THEMA]".
+
+Regeln:
+- Maximal 2000 Woerter
+- Strukturiere mit Ueberschriften
+- Erklaere die wichtigsten Konzepte
+- Nutze Beispiele
+- Kein Markdown-Overkill, halte es lesbar
+- Der Text dient als Nachschlagewerk fuer die Lernkarten
+
+Speichere den Text als .md Datei.
+```
+
+### 4. Qualitaet pruefen
+
+Wichtig: Lies die generierten Inhalte durch!
+Die KI kann Fehler machen. Pruefe besonders:
+- Sind die Fakten korrekt?
+- Sind die Antworten eindeutig?
+- Gibt es Widersprueche zwischen Fragen und Antworten?
+- Ist die Schwierigkeit angemessen?
+
+### 5. ZIP bauen und hochladen
+
+Speichere die Dateien und packe sie als ZIP:
+- `mein-thema-fragen.md`
+- `mein-thema-antworten.md`
+- `mein-thema-lehrtext.md` (optional)
+
+Hochladen: In der App auf "Lernpakete" -> "Paket aus ZIP installieren".
+
+---
+
+## Tipps fuer gute Lernkarten
+
+1. **Eine Frage, ein Konzept** -- nicht mehrere Themen in eine Frage packen
+2. **Konkret fragen** -- "Was ist X?" statt "Erklaere X"
+3. **Schwierigkeit mischen** -- leichte Einstiegsfragen und anspruchsvolle Vertiefung
+4. **Praxisbezug** -- "Wann nutzt man X?" ist besser als "Definiere X"
+5. **Keine Ja/Nein-Fragen** -- die sind zu einfach zu raten
+6. **Antworten knapp halten** -- 1-5 Saetze, kein Roman
+
+---
+
+## Checkliste
+
+```
+[ ] Fragen-Datei: Jede Karte hat K-Nummer und Kategorie
+[ ] Antworten-Datei: Jede Antwort verweist auf ihre Frage (A-001 -> K-001)
+[ ] Jede Frage hat genau eine Antwort
+[ ] Keine doppelten Karten-Nummern
+[ ] ZIP-Datei erstellt mit allen Dateien
+[ ] Inhalte auf Korrektheit geprueft
 ```
