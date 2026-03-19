@@ -741,7 +741,7 @@
                             <span class="chunk-done"><i class="fa-solid fa-check"></i> verarbeitet</span>
                           {/if}
                         </div>
-                        <div class="chunk-text markdown">{@html marked(chunk.text.slice(0,300) + (chunk.text.length>300?'...':''))}</div>
+                        <div class="chunk-text markdown">{@html marked(chunk.text)}</div>
                       </div>
                     </div>
                   {/each}
@@ -863,7 +863,7 @@
                     <span class="cli-id">{c.card_id}</span>
                     <span class="{DC[c.difficulty]}"><i class="fa-solid {DI[c.difficulty]}"></i></span>
                   </div>
-                  <div class="cli-q">{c.question.slice(0,85)}{c.question.length>85?'...':''}</div>
+                  <div class="cli-q">{c.question}</div>
                   <div class="cli-cat" style="color:{$categories.find(x=>x.code===c.category_code)?.color||'var(--accent)'}">
                     {$categories.find(x=>x.code===c.category_code)?.name || c.category_code}
                   </div>
