@@ -394,8 +394,8 @@
       <div class="modes">
         {#each [
           ['standard','fa-layer-group','Karteikarte','Aufdecken und selbst bewerten'],
-          ['mc',      'fa-list-check', 'Multiple Choice','4 Optionen, 1 richtig (KI-generiert)'],
-          ['write',   'fa-keyboard',   'Freitext',   'Antwort eingeben, KI bewertet'],
+          ['mc',      'fa-list-check', 'Multiple Choice','Antwort aus mehreren Optionen wählen'],
+          ['write',   'fa-keyboard',   'Freitext',   'Antwort frei eintippen'],
           ['srs',     'fa-brain',      'Spaced Repetition','Schwache Karten öfter, starke seltener'],
         ] as [id,fa,lbl,desc]}
           <button class="mode-btn" class:active={mode===id} onclick={() => mode=id}>
@@ -407,12 +407,33 @@
           </button>
         {/each}
       </div>
-      {#if mode === 'write'}
-        <label class="check-row" style="margin-top:12px">
-          <input type="checkbox" bind:checked={useAI} disabled={!$aiOnline} />
-          <span>KI-Bewertung {$aiOnline ? 'aktivieren' : '(LM Studio offline)'}</span>
-        </label>
-      {/if}
+
+      <!-- Erklärung zum gewählten Modus -->
+      <div class="mode-explain">
+        {#if mode === 'standard'}
+          <div class="mode-explain-title"><i class="fa-solid fa-circle-info"></i> So funktioniert es</div>
+          <p>Du siehst die Frage und überlegst dir die Antwort. Dann deckst du auf und bewertest selbst: Richtig, Falsch oder Übersprungen. Keine KI nötig, funktioniert immer.</p>
+        {:else if mode === 'mc'}
+          <div class="mode-explain-title"><i class="fa-solid fa-circle-info"></i> So funktioniert es</div>
+          <p>Pro Frage werden dir mehrere Antwortmöglichkeiten angezeigt. Die falschen Optionen werden von einer lokalen KI (LM Studio) erzeugt, die auf deinem Rechner im Netzwerk läuft -- deine Daten verlassen nie das lokale Netz.</p>
+          <p>Die Optionen werden einmal generiert und 7 Tage zwischengespeichert. Danach werden sie auf Wunsch neu erstellt, damit es nicht langweilig wird.</p>
+          {#if !$aiOnline}
+            <p class="mode-warn"><i class="fa-solid fa-triangle-exclamation"></i> LM Studio ist gerade nicht erreichbar. Starte es, damit dieser Modus funktioniert.</p>
+          {/if}
+        {:else if mode === 'write'}
+          <div class="mode-explain-title"><i class="fa-solid fa-circle-info"></i> So funktioniert es</div>
+          <p>Du tippst deine Antwort frei ein. Optional kann die lokale KI (LM Studio) deine Antwort mit der Musterlösung vergleichen und dir Feedback geben: Wie nah du dran warst und was gefehlt hat.</p>
+          <p>Ohne KI funktioniert der Modus trotzdem -- du siehst dann einfach die richtige Antwort zum Vergleich.</p>
+          <label class="check-row" style="margin-top:8px">
+            <input type="checkbox" bind:checked={useAI} disabled={!$aiOnline} />
+            <span>KI-Bewertung {$aiOnline ? 'aktivieren' : '(LM Studio nicht erreichbar)'}</span>
+          </label>
+        {:else if mode === 'srs'}
+          <div class="mode-explain-title"><i class="fa-solid fa-circle-info"></i> So funktioniert es</div>
+          <p>Das System merkt sich wie gut du jede Karte kannst. Karten die du schlecht beantwortest kommen schon morgen wieder. Karten die du gut kennst erst in einer Woche oder später.</p>
+          <p>So lernst du effizient: Du verbringst die meiste Zeit mit dem was du noch nicht kannst, statt immer alles zu wiederholen.</p>
+        {/if}
+      </div>
       {#if mode === 'mc'}
         <div class="mc-setup-box">
           {#if !$aiOnline}
@@ -886,6 +907,13 @@
 .ai-explain { background:var(--bg2);border:1px solid color-mix(in srgb,var(--ac2) 40%,transparent);border-radius: 4px;padding:12px 16px;margin-bottom:14px; }
 .ae-header  { font-size:11px;font-weight:700;color:var(--ac2);letter-spacing:.07em;display:flex;align-items:center;gap:6px;margin-bottom:8px;text-transform:uppercase; }
 .ai-explain p { font-size:12px;color:var(--text1);line-height:1.65; }
+
+/* ── Modus-Erklärung ──────────────────────────────── */
+.mode-explain { margin-top:12px;padding:12px;background:var(--bg2);border:1px solid var(--border);border-radius:4px; }
+.mode-explain-title { font-size:11px;font-weight:700;color:var(--accent);display:flex;align-items:center;gap:6px;margin-bottom:8px; }
+.mode-explain p { font-size:12px;color:var(--text2);line-height:1.6;margin-bottom:6px; }
+.mode-explain p:last-of-type { margin-bottom:0; }
+.mode-warn { color:var(--warn) !important;font-weight:600; }
 
 /* ── MC Setup ─────────────────────────────────────── */
 .mc-setup-box { margin-top:12px;background:var(--bg2);border:1px solid var(--border);border-radius:4px;padding:12px; }
