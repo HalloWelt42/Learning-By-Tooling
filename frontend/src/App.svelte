@@ -3,7 +3,7 @@
   import {
     theme, currentView, activePackageId,
     loadGlobal, packages, globalStats, aiOnline,
-    toastStore, activeSession, authUser,
+    toastStore, activeSession, authUser, showToast,
     backendOnline, backendVersion,
   } from './lib/stores/index.js'
   import { VERSION } from './lib/utils/version.js'
