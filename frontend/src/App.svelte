@@ -23,6 +23,25 @@
   let interval = $state(null)
   let userBadges = $state([])
   let showPwWarn = $state(false)
+  let sessionTimer = $state(null)
+  let sessionElapsed = $state(0)
+
+  $effect(() => {
+    if ($activeSession) {
+      sessionElapsed = 0
+      sessionTimer = setInterval(() => sessionElapsed++, 1000)
+    } else {
+      clearInterval(sessionTimer)
+      sessionElapsed = 0
+    }
+    return () => clearInterval(sessionTimer)
+  })
+
+  function fmtTime(s) {
+    const m = Math.floor(s / 60)
+    const sec = s % 60
+    return `${m}:${sec.toString().padStart(2, '0')}`
+  }
   let pwForm = $state({ old: '', new1: '', new2: '' })
   let pwChanging = $state(false)
 
@@ -118,7 +137,10 @@
           <i class="fa-solid fa-play"></i>
           <span>Lernen</span>
           {#if $activeSession}
-            <span class="session-dot" title="Session aktiv"></span>
+            <span class="session-info">
+              <span class="session-dot"></span>
+              <span class="session-time mono">{fmtTime(sessionElapsed)}</span>
+            </span>
           {/if}
           {#if ($globalStats?.due_today ?? 0) > 0}
             <span class="nbadge due">{$globalStats.due_today}</span>
@@ -311,11 +333,9 @@
 
   .nc    { margin-left:auto;font-size:9px;color:var(--text3);font-family:'JetBrains Mono',monospace; }
   .nbadge { margin-left:auto;font-size:9px;font-weight:700;padding:1px 5px;border-radius: 2px; }
-  .session-dot {
-    width:7px;height:7px;border-radius:50%;background:var(--err);margin-left:auto;flex-shrink:0;
-    animation:dot-pulse 1.5s ease-in-out infinite;
-  }
-  @keyframes dot-pulse { 0%,100%{opacity:1;} 50%{opacity:.3;} }
+  .session-info { display:flex;align-items:center;gap:4px;margin-left:auto; }
+  .session-dot { width:6px;height:6px;border-radius:50%;background:var(--ok);flex-shrink:0; }
+  .session-time { font-size:9px;color:var(--text2); }
   .nbadge.due  { background:var(--accent);color:#fff; }
 
   .sf { padding:8px 14px;border-top:1px solid var(--border);display:flex;flex-direction:column;gap:6px;margin-top:auto; }
