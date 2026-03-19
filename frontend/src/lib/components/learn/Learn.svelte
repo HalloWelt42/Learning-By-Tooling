@@ -37,6 +37,12 @@
   let wrongCards     = $state([])
   let aiStep        = $state(0)     // which step is active in AiProcess
 
+  // Multiple Choice
+  let mcOptions     = $state([])    // [{text, correct}] -- 4 Optionen gemischt
+  let mcSelected    = $state(null)  // Index der gewählten Option
+  let mcLoading     = $state(false)
+  let mcRevealed    = $state(false)
+
   // KI-Assistenz
   let hintText      = $state('')
   let hintLoading   = $state(false)
@@ -133,6 +139,31 @@
     aiState       = 'idle'
     hintText      = ''
     relatedIds    = []
+    mcOptions     = []
+    mcSelected    = null
+    mcRevealed    = false
+    // MC-Optionen laden wenn MC-Modus
+    if (mode === 'mc' && card) {
+      mcLoading = true
+      try {
+        const mc = await apiGet(`/api/mc/${card.card_id}`)
+        // 3 falsche + 1 richtige mischen
+        const opts = mc.options.map(t => ({text: t, correct: false}))
+        // Richtige Antwort kürzen (erste Zeile oder max 120 Zeichen)
+        const correctText = card.answer.split('\n')[0].substring(0, 120)
+        opts.push({text: correctText, correct: true})
+        // Mischen
+        for (let j = opts.length - 1; j > 0; j--) {
+          const k = Math.floor(Math.random() * (j + 1));
+          [opts[j], opts[k]] = [opts[k], opts[j]]
+        }
+        mcOptions = opts
+      } catch(e) {
+        mcOptions = []
+        showToast('MC-Optionen nicht verfügbar', 'warn')
+      }
+      mcLoading = false
+    }
   }
 
   function flip() { flipped = true }
@@ -326,6 +357,7 @@
       <div class="modes">
         {#each [
           ['standard','fa-layer-group','Karteikarte','Aufdecken und selbst bewerten'],
+          ['mc',      'fa-list-check', 'Multiple Choice','4 Optionen, 1 richtig (KI-generiert)'],
           ['write',   'fa-keyboard',   'Freitext',   'Antwort eingeben, KI bewertet'],
           ['srs',     'fa-brain',      'Spaced Rep.','SM-2 -- fällige Karten zuerst'],
         ] as [id,fa,lbl,desc]}
@@ -344,7 +376,12 @@
           <span>KI-Bewertung {$aiOnline ? 'aktivieren' : '(LM Studio offline)'}</span>
         </label>
       {/if}
-      {#if mode === 'srs'}
+      {#if mode === 'mc'}
+        <div class="srs-info">
+          <i class="fa-solid fa-circle-info" style="color:var(--accent)"></i>
+          {$aiOnline ? 'KI generiert 3 falsche Optionen pro Karte. Cache: 7 Tage.' : 'LM Studio offline -- MC-Modus nicht verfügbar.'}
+        </div>
+      {:else if mode === 'srs'}
         <div class="srs-info">
           <i class="fa-solid fa-circle-info" style="color:var(--accent)"></i>
           SM-2 priorisiert fällige Karten. Deine Bewertung steuert den nächsten Termin.
@@ -460,8 +497,43 @@
         <textarea class="fc-input" placeholder="Deine Antwort…" bind:value={userAnswer} rows="4"></textarea>
       {/if}
 
+      <!-- Multiple Choice -->
+      {#if mode === 'mc' && !flipped}
+        {#if mcLoading}
+          <div style="text-align:center;padding:16px;color:var(--text3)">
+            <i class="fa-solid fa-spinner fa-spin"></i> MC-Optionen werden geladen...
+          </div>
+        {:else if mcOptions.length >= 4}
+          <div class="mc-grid">
+            {#each mcOptions as opt, i}
+              <button
+                class="mc-opt"
+                class:mc-selected={mcSelected === i}
+                class:mc-correct={mcRevealed && opt.correct}
+                class:mc-wrong={mcRevealed && mcSelected === i && !opt.correct}
+                disabled={mcRevealed}
+                onclick={() => { mcSelected = i; mcRevealed = true; rate(opt.correct ? 'correct' : 'wrong') }}
+              >
+                <span class="mc-letter">{['A','B','C','D'][i]}</span>
+                <span class="mc-text">{opt.text}</span>
+              </button>
+            {/each}
+          </div>
+          {#if mcRevealed}
+            <button class="btn btn-primary" style="margin-top:12px" onclick={() => { idx++; loadCard(idx) }}>
+              <i class="fa-solid fa-forward"></i> Weiter
+            </button>
+          {/if}
+        {:else}
+          <div style="font-size:11px;color:var(--text3);padding:8px">MC nicht verfügbar -- KI offline oder Fehler</div>
+          <button class="btn btn-primary flip-btn" onclick={flip}>
+            <i class="fa-solid fa-eye"></i> Antwort zeigen
+          </button>
+        {/if}
+      {/if}
+
       <!-- Aufdecken / Bewerten -->
-      {#if !flipped}
+      {#if !flipped && mode !== 'mc'}
         {#if mode === 'write' && useAI && $aiOnline && userAnswer.trim()}
           <!-- Freitext: KI bewerten vor Aufdecken -->
           {#if aiState === 'idle' && !aiFeedback}
@@ -751,6 +823,27 @@
 .ai-explain { background:var(--bg2);border:1px solid color-mix(in srgb,var(--ac2) 40%,transparent);border-radius: 4px;padding:12px 16px;margin-bottom:14px; }
 .ae-header  { font-size:11px;font-weight:700;color:var(--ac2);letter-spacing:.07em;display:flex;align-items:center;gap:6px;margin-bottom:8px;text-transform:uppercase; }
 .ai-explain p { font-size:12px;color:var(--text1);line-height:1.65; }
+
+/* ── Multiple Choice ──────────────────────────────── */
+.mc-grid { display:flex;flex-direction:column;gap:8px;margin-top:8px; }
+.mc-opt {
+  display:flex;align-items:flex-start;gap:10px;padding:12px 14px;border-radius:4px;
+  border:1px solid var(--border);background:transparent;text-align:left;cursor:pointer;
+  transition:all .15s;font-family:inherit;font-size:13px;color:var(--text1);line-height:1.4;
+}
+.mc-opt:hover:not(:disabled) { border-color:var(--accent);background:var(--glow); }
+.mc-opt:disabled { cursor:default; }
+.mc-selected { border-color:var(--accent); }
+.mc-correct { border-color:var(--ok) !important;background:color-mix(in srgb, var(--ok) 10%, transparent) !important; }
+.mc-correct .mc-letter { background:var(--ok);color:#fff; }
+.mc-wrong { border-color:var(--err) !important;background:color-mix(in srgb, var(--err) 10%, transparent) !important; }
+.mc-wrong .mc-letter { background:var(--err);color:#fff; }
+.mc-letter {
+  width:24px;height:24px;border-radius:3px;background:var(--bg3);color:var(--text2);
+  display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;flex-shrink:0;
+  font-family:'Orbitron',sans-serif;
+}
+.mc-text { flex:1; }
 
 /* ── KI-Assistenz ─────────────────────────────────── */
 .ai-assist-row { display:flex;gap:6px;margin:10px 0 6px;flex-wrap:wrap; }

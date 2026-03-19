@@ -215,6 +215,17 @@ def init_db():
         content='lexicon', content_rowid='id'
     );
 
+    -- KI-generierte Multiple-Choice-Optionen (Cache)
+    CREATE TABLE IF NOT EXISTS mc_options (
+        id         INTEGER PRIMARY KEY AUTOINCREMENT,
+        card_id    TEXT    NOT NULL,
+        package_id INTEGER,
+        options    TEXT    NOT NULL DEFAULT '[]',
+        created_at TEXT    DEFAULT (datetime('now')),
+        expires_at TEXT,
+        UNIQUE(card_id, package_id)
+    );
+
     -- Paket-Zuordnung pro Benutzer
     CREATE TABLE IF NOT EXISTS user_packages (
         id         INTEGER PRIMARY KEY AUTOINCREMENT,

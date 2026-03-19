@@ -236,6 +236,27 @@ async def analyze_mistakes(wrong_cards: list[dict], documents: list[dict]) -> li
         return []
 
 
+async def generate_mc_options(question: str, answer: str) -> list[str]:
+    """Generiert 3 plausible aber falsche MC-Optionen für eine Karte."""
+    system = (
+        "Du bist ein Prüfungsexperte. "
+        "Erstelle genau 3 falsche aber plausible Antwortoptionen fuer eine Multiple-Choice-Frage. "
+        "Die falschen Antworten muessen realistisch klingen aber eindeutig falsch sein. "
+        "Antworte NUR als JSON-Array mit genau 3 Strings. Kein Markdown. Keine Nummerierung. "
+        "Beispiel: [\"Falsche Option 1\", \"Falsche Option 2\", \"Falsche Option 3\"]"
+    )
+    user_msg = f"Frage: {question}\nRichtige Antwort: {answer}\n\nErstelle 3 falsche Optionen als JSON-Array:"
+    try:
+        raw = await _chat(user_msg, system=system, max_tokens=300)
+        cleaned = _strip_json(raw)
+        options = json.loads(cleaned)
+        if isinstance(options, list) and len(options) >= 3:
+            return [str(o).strip() for o in options[:3]]
+    except Exception:
+        pass
+    return []
+
+
 async def generate_hint(question: str, answer: str) -> str:
     """Erstellt eine Merkhilfe/Eselsbrücke für eine schwierige Karte."""
     system = (

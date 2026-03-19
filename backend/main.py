@@ -22,7 +22,7 @@ from services import (
     chunk_text, extract_text_from_file,
     generate_cards_from_chunk, evaluate_answer,
     explain_card, analyze_mistakes, ai_online as _ai_online, sm2_update,
-    generate_hint, summarize_topic, suggest_related,
+    generate_hint, summarize_topic, suggest_related, generate_mc_options,
 )
 from auth import (
     get_current_user, authenticate, create_user, create_token, seed_admin,
@@ -1385,6 +1385,80 @@ async def ai_related(data: dict, user: dict = Depends(get_current_user)):
     conn.close()
     related = await suggest_related(data.get("question",""), data.get("answer",""), all_cards, limit=data.get("limit",3))
     return {"related": related}
+
+@app.get("/api/mc/{card_id}")
+async def get_mc_options(card_id: str, user: dict = Depends(get_current_user)):
+    """Holt MC-Optionen aus Cache oder generiert neu."""
+    conn = get_db()
+    card = conn.execute("SELECT question, answer, package_id FROM cards WHERE card_id=? AND active=1", (card_id,)).fetchone()
+    if not card:
+        conn.close()
+        raise HTTPException(404, "Karte nicht gefunden")
+    # Cache prüfen
+    cached = conn.execute(
+        "SELECT options, expires_at FROM mc_options WHERE card_id=? AND package_id=?",
+        (card_id, card["package_id"])
+    ).fetchone()
+    today = date.today().isoformat()
+    if cached and (not cached["expires_at"] or cached["expires_at"] > today):
+        conn.close()
+        return {"card_id": card_id, "options": json.loads(cached["options"]), "cached": True}
+    # Neu generieren
+    if not await _ai_online():
+        conn.close()
+        raise HTTPException(503, "LM Studio nicht erreichbar -- MC-Optionen können nicht generiert werden")
+    options = await generate_mc_options(card["question"], card["answer"])
+    if not options or len(options) < 3:
+        conn.close()
+        raise HTTPException(500, "MC-Optionen konnten nicht generiert werden")
+    expires = (date.today() + timedelta(days=7)).isoformat()
+    conn.execute(
+        "INSERT OR REPLACE INTO mc_options (card_id, package_id, options, expires_at) VALUES (?,?,?,?)",
+        (card_id, card["package_id"], json.dumps(options), expires)
+    )
+    conn.commit()
+    conn.close()
+    return {"card_id": card_id, "options": options, "cached": False}
+
+@app.post("/api/mc/generate-batch")
+async def generate_mc_batch(data: dict, user: dict = Depends(get_current_user)):
+    """Generiert MC-Optionen für mehrere Karten eines Pakets (Batch)."""
+    if not await _ai_online():
+        raise HTTPException(503, "LM Studio nicht erreichbar")
+    pkg_id = data.get("package_id")
+    limit = data.get("limit", 20)
+    conn = get_db()
+    today = date.today().isoformat()
+    # Karten ohne gültigen Cache
+    cards = conn.execute("""
+        SELECT c.card_id, c.question, c.answer FROM cards c
+        LEFT JOIN mc_options mc ON mc.card_id=c.card_id AND mc.package_id=c.package_id
+            AND (mc.expires_at IS NULL OR mc.expires_at > ?)
+        WHERE c.package_id=? AND c.active=1 AND mc.id IS NULL
+        LIMIT ?
+    """, (today, pkg_id, limit)).fetchall()
+    generated = 0
+    for c in cards:
+        options = await generate_mc_options(c["question"], c["answer"])
+        if options and len(options) >= 3:
+            expires = (date.today() + timedelta(days=7)).isoformat()
+            conn.execute(
+                "INSERT OR REPLACE INTO mc_options (card_id, package_id, options, expires_at) VALUES (?,?,?,?)",
+                (c["card_id"], pkg_id, json.dumps(options), expires)
+            )
+            generated += 1
+    conn.commit()
+    conn.close()
+    return {"generated": generated, "total": len(cards)}
+
+@app.delete("/api/mc/cache/{package_id}")
+async def clear_mc_cache(package_id: int, user: dict = Depends(get_current_user)):
+    """Löscht den MC-Cache für ein Paket (erzwingt Neugenerierung)."""
+    conn = get_db()
+    r = conn.execute("DELETE FROM mc_options WHERE package_id=?", (package_id,))
+    conn.commit()
+    conn.close()
+    return {"deleted": r.rowcount}
 
 @app.get("/api/history")
 def get_history(limit: int = 30, user: dict = Depends(get_current_user)):
