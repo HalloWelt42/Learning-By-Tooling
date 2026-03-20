@@ -76,7 +76,7 @@
 
         {#if $activePackageId}
           <button class="btn btn-ghost btn-sm mat-link"
-            onclick={() => window.open(`/#/packages/${$activePackageId}?tab=material`, '_blank')}>
+            onclick={() => window.open(`/#/packages/${$activePackageId}?tab=documents`, '_blank')}>
             <i class="fa-solid fa-book-open"></i> Im Material nachlesen
           </button>
         {/if}

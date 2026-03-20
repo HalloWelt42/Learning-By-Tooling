@@ -49,7 +49,7 @@
 
   function openMaterial() {
     materialUsed = true
-    window.open(`/#/packages/${$activePackageId}?tab=material`, '_blank')
+    window.open(`/#/packages/${$activePackageId}?tab=documents`, '_blank')
   }
 
   // -- Setup State --

@@ -8,7 +8,6 @@
   import Paths from './Paths.svelte'
   import CardsTab from './CardsTab.svelte'
   import LexiconTab from './LexiconTab.svelte'
-  import MediaTab from './MediaTab.svelte'
   import ImportTab from './ImportTab.svelte'
   marked.setOptions({ breaks: true, gfm: true })
 
@@ -20,7 +19,6 @@
   let documents = $state([])
   let cards     = $state([])
   let drafts    = $state([])
-  let materialTexts = $state([])
 
   let searchQ       = $state('')
 
@@ -92,6 +90,8 @@
   }
 
   let confirmDeleteDoc  = $state(null)
+  let readingDocId      = $state(null)
+  let readingDocText    = $state('')
 
   onMount(() => {
     loadAll()
@@ -133,22 +133,11 @@
   async function loadDrafts()    { drafts    = await apiGet(`/api/packages/${pkg.id}/drafts`).catch(()=>[]) }
   async function loadCards()     { cards     = await apiGet(`/api/cards?package_id=${pkg.id}`).catch(()=>[]) }
 
-  async function loadMaterial() {
-    if (materialTexts.length > 0) return
-    const result = []
-    for (const doc of documents) {
-      try {
-        const data = await apiGet(`/api/documents/${doc.id}/chunks`)
-        const fullText = data.chunks.map(c => c.text).join('\n\n')
-        result.push({ id: doc.id, title: doc.title, filetype: doc.filetype, text: fullText })
-      } catch(e) { /* skip */ }
-    }
-    materialTexts = result
-  }
 
   // Daten für Sub-Komponenten laden wenn Tab wechselt
   $effect(() => {
     if (tab === 'paths') loadCards()
+    if (tab === 'documents') loadMedia()
   })
 
   // Karten-Funktionen sind jetzt in CardsTab.svelte
@@ -228,6 +217,15 @@
   }
 
   function toggleChunk(id) { const s=new Set(selectedChunks); s.has(id)?s.delete(id):s.add(id); selectedChunks=s }
+
+  async function toggleReading(doc) {
+    if (readingDocId === doc.id) { readingDocId = null; readingDocText = ''; return }
+    readingDocId = doc.id
+    try {
+      const data = await apiGet(`/api/documents/${doc.id}/chunks`)
+      readingDocText = data.chunks.map(c => c.text).join('\n\n')
+    } catch(e) { readingDocText = 'Fehler beim Laden' }
+  }
 
   // ── Entwürfe ─────────────────────────────────────────────────────────────
   async function approveDraft(d) {
@@ -320,11 +318,11 @@
           <div class="pds warn"><i class="fa-solid fa-brain"></i><span class="pds-val">{stats.due_today}</span><span class="pds-lbl">Fällig</span></div>
         {/if}
         {#if stats.pending_drafts>0}
-          <div class="pds accent clickable" onclick={()=>tab='documents'}>
+          <button class="pds accent clickable" onclick={()=>tab='documents'}>
             <i class="fa-solid fa-pen-to-square"></i>
             <span class="pds-val">{stats.pending_drafts}</span>
             <span class="pds-lbl">Entwürfe</span>
-          </div>
+          </button>
         {/if}
         <button class="btn btn-ghost" title="Paket als ZIP exportieren" onclick={exportPkg}>
           <i class="fa-solid fa-file-export"></i>
@@ -343,12 +341,10 @@
   <div class="pd-tabs">
     {#each [
       ['overview',  'fa-gauge',       'Übersicht',  0],
-      ['material',  'fa-book',        'Material',   0],
       ['documents', 'fa-file-lines',  'Dokumente',  pending.length],
       ['cards',     'fa-layer-group', 'Karten',     0],
       ['lexicon',   'fa-book-open',   'Lexikon',    0],
       ['paths',     'fa-route',       'Lernpfade',  0],
-      ['media',     'fa-images',      'Medien',     0],
       ['import',    'fa-file-import', 'Import',     0],
     ] as [id,fa,lbl,badge]}
       <button class="pd-tab" class:active={tab===id} onclick={()=>tab=id}>
@@ -361,33 +357,8 @@
   <!-- ── Tab-Inhalte ───────────────────────────────────────────────────────── -->
   <div class="pd-body">
 
-    <!-- MATERIAL (Lese-Ansicht) -->
-    {#if tab==='material'}
-      <div class="tab-page material-page">
-        {#if documents.length === 0}
-          <div class="empty-state">
-            <i class="fa-solid fa-book"></i>
-            <p>Noch kein Lernmaterial. Lade Dokumente im Tab "Dokumente" hoch.</p>
-          </div>
-        {:else}
-          {#await loadMaterial() then}
-            {#each materialTexts as doc}
-              <article class="material-doc">
-                <div class="material-doc-header">
-                  <i class="fa-solid fa-file-lines"></i>
-                  <h2>{doc.title}</h2>
-                </div>
-                <div class="material-content markdown">
-                  {@html marked(doc.text)}
-                </div>
-              </article>
-            {/each}
-          {/await}
-        {/if}
-      </div>
-
     <!-- ÜBERSICHT -->
-    {:else if tab==='overview'}
+    {#if tab==='overview'}
       <div class="tab-page">
         {#if stats && catCounts.length>0}
           <div class="overview-cols">
@@ -445,7 +416,7 @@
                       <div class="doc-row-title">{doc.title}</div>
                       <div class="doc-row-meta">{doc.chunk_count} Abschnitte</div>
                     </div>
-                    <button class="btn btn-ghost btn-sm" onclick={()=>{tab='documents';openDoc(doc);setTimeout(()=>{const el=document.querySelector('[class*="read"]');if(el)el.click()},200)}}>
+                    <button class="btn btn-ghost btn-sm" onclick={()=>{tab='documents';toggleReading(doc)}}>
                       <i class="fa-solid fa-book-open"></i> Lesen
                     </button>
                   </div>
@@ -478,7 +449,7 @@
           <div class="card-box upload-box">
             <div class="upload-hd">
               <span class="section-label" style="margin:0">Neues Dokument</span>
-              <button class="ib" onclick={()=>showUpload=false}><i class="fa-solid fa-xmark"></i></button>
+              <button class="ib" title="Schliessen" onclick={()=>showUpload=false}><i class="fa-solid fa-xmark"></i></button>
             </div>
             {#if uploadState!=='idle'}
               <div class="proc-banner" class:proc-uploading={uploadState==='uploading'} class:proc-done={uploadState==='done'} class:proc-error={uploadState==='error'}>
@@ -545,7 +516,10 @@
                     <div class="di-meta">{fmtSize(doc.filesize)} · {doc.chunk_count} Abschnitte</div>
                     {#if doc.card_count>0}<span class="di-badge">{doc.card_count} Entwürfe</span>{/if}
                   </div>
-                  <button class="ib sm err" onclick={e=>{e.stopPropagation();deleteDoc(doc)}}>
+                  <button class="ib sm" class:di-reading={readingDocId===doc.id} title="Material lesen" onclick={e=>{e.stopPropagation();toggleReading(doc)}}>
+                    <i class="fa-solid fa-book-open"></i>
+                  </button>
+                  <button class="ib sm err" title="Dokument löschen" onclick={e=>{e.stopPropagation();deleteDoc(doc)}}>
                     {#if confirmDeleteDoc === doc.id}
                       Wirklich?
                     {:else}
@@ -553,6 +527,17 @@
                     {/if}
                   </button>
                 </div>
+                {#if readingDocId === doc.id}
+                  <article class="material-doc material-inline">
+                    <div class="material-content markdown">
+                      {#if readingDocText}
+                        {@html marked(readingDocText)}
+                      {:else}
+                        <i class="fa-solid fa-spinner fa-spin"></i> Lade...
+                      {/if}
+                    </div>
+                  </article>
+                {/if}
               {/each}
             </div>
 
@@ -619,6 +604,7 @@
                       class:selected={selectedChunks.has(chunk.id)}
                       class:done={chunk.processed}
                       onclick={()=>toggleChunk(chunk.id)}
+                      onkeydown={e=>(e.key==="Enter"||e.key===" ")&&toggleChunk(chunk.id)}
                       role="button" tabindex="0">
                       <input type="checkbox" checked={selectedChunks.has(chunk.id)}
                         onchange={()=>toggleChunk(chunk.id)} onclick={e=>e.stopPropagation()}>
@@ -712,6 +698,29 @@
             {/each}
           </div>
         {/if}
+
+        <!-- Medien-Galerie -->
+        {#if media.length > 0}
+          <div class="media-section">
+            <div class="section-label"><i class="fa-solid fa-images"></i> Medien ({media.length})</div>
+            <div class="media-grid">
+              {#each media as m (m.name)}
+                {#if m.type === 'pdf'}
+                  <a href="{m.url}" target="_blank" class="media-item media-pdf">
+                    <i class="fa-solid fa-file-pdf"></i>
+                    <span class="media-name">{m.name}</span>
+                    <span class="media-size mono">{(m.size/1024).toFixed(0)} KB</span>
+                  </a>
+                {:else}
+                  <div class="media-item media-img">
+                    <img src="{m.url}" alt={m.name} loading="lazy" />
+                    <span class="media-name">{m.name}</span>
+                  </div>
+                {/if}
+              {/each}
+            </div>
+          </div>
+        {/if}
       </div>
 
     <!-- KARTEN -->
@@ -725,9 +734,6 @@
       <div class="tab-page">
         <Paths packageId={pkg.id} {documents} {cards} />
       </div>
-
-    {:else if tab==='media'}
-      <MediaTab {pkg} />
 
     {:else if tab==='import'}
       <ImportTab {pkg} />
@@ -886,16 +892,11 @@
   margin: 0 auto;
   width: 100%;
 }
-.material-page { max-width: 860px; }
 .material-doc { margin-bottom: 32px; }
-.material-doc-header {
-  display: flex; align-items: center; gap: 10px;
-  margin-bottom: 16px; padding-bottom: 10px;
-  border-bottom: 1px solid var(--border);
-}
-.material-doc-header i { color: var(--accent); font-size: 16px; }
-.material-doc-header h2 { font-size: 16px; font-weight: 700; color: var(--text0); margin: 0; }
-.material-content { font-size: 14px; color: var(--text1); line-height: 1.8; }
+.material-inline { margin: 0 0 6px; padding: 12px 14px; background: var(--bg1); border: 1px solid var(--border); border-radius: 4px; max-height: 500px; overflow-y: auto; }
+.material-content { font-size: 13px; color: var(--text1); line-height: 1.7; }
+.di-reading { color: var(--accent) !important; background: var(--glow) !important; }
+.media-section { margin-top: 24px; padding-top: 20px; border-top: 1px solid var(--border); }
 .tab-hd {
   display: flex;
   justify-content: space-between;
@@ -974,7 +975,6 @@
 
 /* ── Dokument-Layout ──────────────────────────────────────────────────────── */
 .docs-layout { display: grid; grid-template-columns: 260px 1fr; gap: 16px; margin-top: 16px; }
-.docs-list-col {}
 .doc-item { display: flex; align-items: center; gap: 10px; padding: 9px 10px; border-radius: 4px; cursor: pointer; border: 1px solid transparent; transition: all .12s; width: 100%; text-align: left; background: none; font-family: inherit; margin-bottom: 3px; }
 .doc-item:hover { background: var(--bg2); }
 .doc-item.selected { background: var(--glow); border-color: color-mix(in srgb, var(--accent) 40%, transparent); }
@@ -1106,9 +1106,6 @@
   gap: 5px;
   font-family: inherit;
 }
-.diff-btn[data-diff="1"].diff-active { border-color: var(--ok);   color: var(--ok);   background: color-mix(in srgb, var(--ok)   12%, transparent); }
-.diff-btn[data-diff="2"].diff-active { border-color: var(--warn); color: var(--warn); background: color-mix(in srgb, var(--warn) 12%, transparent); }
-.diff-btn[data-diff="3"].diff-active { border-color: var(--err);  color: var(--err);  background: color-mix(in srgb, var(--err)  12%, transparent); }
 
 .card-detail-actions { display: flex; gap: 6px; }
 .detail-section { margin-bottom: 16px; }
@@ -1150,7 +1147,7 @@
 /* ── Gemeinsame Form-Elemente ─────────────────────────────────────────────── */
 .field-label { display: flex; flex-direction: column; gap: 5px; font-size: 12px; font-weight: 600; color: var(--text2); }
 .checkbox-label { display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 12px; color: var(--text2); }
-.checkbox-label input, .cat-check-item input { width: auto; }
+.checkbox-label input { width: auto; }
 .range-input { width: 100%; accent-color: var(--accent); padding: 0; background: none; border: none; box-shadow: none; }
 .ib { width: 28px; height: 28px; border-radius: 4px; display: flex; align-items: center; justify-content: center; color: var(--text2); font-size: 12px; transition: all .15s; background: none; border: none; cursor: pointer; }
 .ib:hover { background: var(--bg2); color: var(--text0); }
