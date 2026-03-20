@@ -413,6 +413,12 @@ async def review_and_next(session_id: int, data: SessionReviewNext, user: dict =
             last_xp_date = ?
     """, (uid, xp_earned, xp_earned, today_str, xp_earned, today_str, xp_earned, xp_earned, today_str))
 
+    # XP in Session akkumulieren
+    conn.execute(
+        "UPDATE sessions SET xp_earned = COALESCE(xp_earned, 0) + ? WHERE id=? AND user_id=?",
+        (xp_earned, session_id, uid)
+    )
+
     # -- Session beenden falls fertig --
     done = next_idx >= len(card_order)
     if done:
@@ -540,17 +546,30 @@ async def analyze_learning_mistakes(data: MistakeAnalysisRequest, user: dict = D
 
 # -- History -------------------------------------------------------------------
 
+_HISTORY_MAX = 500
+
 @router.get("/api/history")
-def get_history(limit: int = 30, user: dict = Depends(get_current_user)):
+def get_history(limit: int = 100, user: dict = Depends(get_current_user)):
     uid = user["id"]
+    actual_limit = min(limit, _HISTORY_MAX)
     conn = get_db()
+
+    # Alte Sessions jenseits des Limits loeschen (Reviews bleiben fuer Statistik)
+    conn.execute("""
+        DELETE FROM sessions WHERE user_id=? AND ended_at IS NOT NULL AND id NOT IN (
+            SELECT id FROM sessions WHERE user_id=? AND ended_at IS NOT NULL
+            ORDER BY started_at DESC LIMIT ?
+        )
+    """, (uid, uid, _HISTORY_MAX))
+    conn.commit()
+
     rows = conn.execute("""
         SELECT s.*, p.name as package_name, p.color as package_color, p.icon as package_icon
         FROM sessions s
         LEFT JOIN packages p ON p.id=s.package_id
         WHERE s.ended_at IS NOT NULL AND s.user_id=?
         ORDER BY s.started_at DESC LIMIT ?
-    """, (uid, limit)).fetchall()
+    """, (uid, actual_limit)).fetchall()
     conn.close()
     return [row_to_dict(r) for r in rows]
 

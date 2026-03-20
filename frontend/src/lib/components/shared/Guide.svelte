@@ -2,10 +2,16 @@
   Guide.svelte -- In-App Workflow-Dokumentation
   Zeigt den kompletten Ablauf: Paket anlegen, Dokumente hochladen,
   Karten importieren, Lernen starten.
+  Tab "Belohnungen": Grafische Darstellung aller Gamification-Regeln.
 -->
 <script>
   import { marked } from 'marked'
   marked.setOptions({ breaks: true, gfm: true })
+
+  import {
+    BELT_COLORS, STAR_COLORS, ACHIEVEMENTS, XP_RULES, COIN_TIERS,
+    COMPLETION_BONUS, VERDICTS, COMBO, calcLevel, coinBreakdown,
+  } from '../../utils/gamification.js'
 
   let guideTab = $state('workflow')
   let activeStep = $state(0)
@@ -175,6 +181,9 @@
     <button class="guide-tab" class:active={guideTab === 'workflow'} onclick={() => guideTab = 'workflow'}>
       <i class="fa-solid fa-route"></i> Workflow
     </button>
+    <button class="guide-tab" class:active={guideTab === 'rewards'} onclick={() => guideTab = 'rewards'}>
+      <i class="fa-solid fa-trophy"></i> Belohnungen
+    </button>
     <button class="guide-tab" class:active={guideTab === 'pakete'} onclick={() => { guideTab = 'pakete'; loadSpec() }}>
       <i class="fa-solid fa-box-archive"></i> Pakete erstellen
     </button>
@@ -325,6 +334,314 @@ HTTP 200 mit {"status":"ok"}
       </div>
     {/if}
   {/each}
+
+  {:else if guideTab === 'rewards'}
+
+    <!-- Belohnungssysteme -->
+    <div class="rw-wrap">
+
+      <!-- XP-System -->
+      <section class="rw-section">
+        <div class="rw-section-head">
+          <i class="fa-solid fa-bolt" style="color:#FFD700"></i>
+          <h2>XP-System</h2>
+        </div>
+
+        <p class="rw-intro">Jede Interaktion bringt Erfahrungspunkte. Die Höhe hängt von Modus, Schwierigkeit und Tempo ab.</p>
+
+        <!-- Basis-XP Tabelle -->
+        <div class="rw-card">
+          <div class="rw-card-title">Basis-XP pro Antwort</div>
+          <div class="rw-table-wrap">
+            <table class="rw-table">
+              <thead>
+                <tr>
+                  <th>Modus</th>
+                  <th>Typ</th>
+                  <th>Richtig</th>
+                  <th>Falsch</th>
+                  <th>Skip</th>
+                </tr>
+              </thead>
+              <tbody>
+                {#each Object.entries(XP_RULES.modeFactor) as [mode, factor]}
+                  {@const isTest = XP_RULES.testModes.includes(mode)}
+                  <tr>
+                    <td class="mono">{XP_RULES.modeLabels[mode]}</td>
+                    <td><span class="rw-tag" class:rw-tag-test={isTest} class:rw-tag-learn={!isTest}>{isTest ? 'Test' : 'Lernen'}</span></td>
+                    <td class="mono rw-ok">{isTest ? XP_RULES.testBase.correct : XP_RULES.base.correct}</td>
+                    <td class="mono" class:rw-err={isTest}>{isTest ? XP_RULES.testBase.wrong : XP_RULES.base.wrong}</td>
+                    <td class="mono rw-dim">{isTest ? XP_RULES.testBase.skip : XP_RULES.base.skip}</td>
+                  </tr>
+                {/each}
+              </tbody>
+            </table>
+          </div>
+          <div class="rw-note">
+            <i class="fa-solid fa-lightbulb"></i>
+            Lernmodus belohnt Fleiß (richtig und falsch gleich). Testmodus belohnt nur Wissen.
+          </div>
+        </div>
+
+        <!-- XP-Formel -->
+        <div class="rw-card">
+          <div class="rw-card-title">XP-Formel (5 Faktoren)</div>
+          <div class="rw-formula">
+            <code>XP = floor(Basis x Schwierigkeit x Modus x Fortschritt x Combo) + Speed</code>
+          </div>
+
+          <div class="rw-factors">
+            <!-- Modusfaktor -->
+            <div class="rw-factor">
+              <div class="rw-factor-label"><i class="fa-solid fa-gamepad"></i> Modusfaktor</div>
+              <div class="rw-factor-items">
+                {#each Object.entries(XP_RULES.modeFactor) as [mode, factor]}
+                  <div class="rw-factor-row">
+                    <span class="rw-factor-name">{XP_RULES.modeLabels[mode]}</span>
+                    <span class="rw-factor-bar">
+                      <span class="rw-bar-fill" style="width:{factor/1.5*100}%;background:var(--accent)"></span>
+                    </span>
+                    <span class="mono rw-factor-val">{factor}x</span>
+                  </div>
+                {/each}
+              </div>
+            </div>
+
+            <!-- Kartenschwierigkeit -->
+            <div class="rw-factor">
+              <div class="rw-factor-label"><i class="fa-solid fa-signal"></i> Kartenschwierigkeit</div>
+              <div class="rw-factor-items">
+                {#each Object.entries(XP_RULES.cardDifficulty) as [diff, factor]}
+                  <div class="rw-factor-row">
+                    <span class="rw-factor-name">{XP_RULES.cardDifficultyLabels[diff]}</span>
+                    <span class="rw-factor-bar">
+                      <span class="rw-bar-fill" style="width:{factor/1.4*100}%;background:var(--ok)"></span>
+                    </span>
+                    <span class="mono rw-factor-val">{factor}x</span>
+                  </div>
+                {/each}
+              </div>
+            </div>
+
+            <!-- Fortschrittsfaktor -->
+            <div class="rw-factor">
+              <div class="rw-factor-label"><i class="fa-solid fa-clock-rotate-left"></i> Fortschrittsfaktor</div>
+              <div class="rw-factor-items">
+                {#each XP_RULES.progressFactor as pf}
+                  <div class="rw-factor-row">
+                    <span class="rw-factor-name">{pf.label}</span>
+                    <span class="rw-factor-bar">
+                      <span class="rw-bar-fill" style="width:{pf.factor/1.5*100}%;background:var(--warn)"></span>
+                    </span>
+                    <span class="mono rw-factor-val">{pf.factor}x</span>
+                  </div>
+                {/each}
+              </div>
+            </div>
+          </div>
+
+          <!-- Speed + Anti-Gaming -->
+          <div class="rw-inline-rules">
+            <div class="rw-rule">
+              <i class="fa-solid fa-gauge-high" style="color:var(--ok)"></i>
+              <span>Speed-Bonus: <strong class="mono">+{XP_RULES.speedBonusXp} XP</strong> bei korrekter Antwort in {XP_RULES.speedBonusMinMs/1000}-{XP_RULES.speedBonusMaxMs/1000}s</span>
+            </div>
+            <div class="rw-rule">
+              <i class="fa-solid fa-shield-halved" style="color:var(--err)"></i>
+              <span>Anti-Gaming: Unter {XP_RULES.minTimeMs/1000}s = 0 XP (Durchklick-Schutz)</span>
+            </div>
+            <div class="rw-rule">
+              <i class="fa-solid fa-fire" style="color:#ff6b35"></i>
+              <span>Combo: +{XP_RULES.streakMultPerStep * 100}% pro richtige Antwort in Folge (max {XP_RULES.streakMultMax}x)</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Waehrung -->
+      <section class="rw-section">
+        <div class="rw-section-head">
+          <i class="fa-solid fa-coins" style="color:#FFD700"></i>
+          <h2>Währung</h2>
+        </div>
+
+        <p class="rw-intro">XP werden automatisch in Münzen umgerechnet. Die Anzeige erfolgt in Silber, Gold und Diamant.</p>
+
+        <div class="rw-coins">
+          {#each COIN_TIERS as tier}
+            <div class="rw-coin-card">
+              <div class="rw-coin-icon" class:rw-coin-diamond={tier.shape === 'pentagon'} style="--coin-c:{tier.color}"></div>
+              <div class="rw-coin-info">
+                <div class="rw-coin-name">{tier.name}</div>
+                <div class="rw-coin-val mono">{tier.value.toLocaleString('de-DE')} XP</div>
+              </div>
+            </div>
+          {/each}
+        </div>
+
+        <div class="rw-note">
+          <i class="fa-solid fa-circle-info"></i>
+          Beispiel: 2.345 XP = 2 Gold + 345 Silber
+        </div>
+      </section>
+
+      <!-- Completion-Bonus -->
+      <section class="rw-section">
+        <div class="rw-section-head">
+          <i class="fa-solid fa-gift" style="color:var(--ok)"></i>
+          <h2>Session-Bonus</h2>
+        </div>
+
+        <div class="rw-card">
+          {#each COMPLETION_BONUS as cb}
+            <div class="rw-bonus-row">
+              <span class="rw-bonus-cond">{cb.label}</span>
+              <span class="rw-bonus-val mono">+{cb.bonus} Silber</span>
+            </div>
+          {/each}
+        </div>
+      </section>
+
+      <!-- Combo -->
+      <section class="rw-section">
+        <div class="rw-section-head">
+          <i class="fa-solid fa-fire" style="color:#ff6b35"></i>
+          <h2>Combo-System</h2>
+        </div>
+
+        <p class="rw-intro">Richtige Antworten in Folge bauen eine Combo auf. Ein Fehler setzt den Zähler zurück.</p>
+
+        <div class="rw-card">
+          <div class="rw-combo-vis">
+            {#each COMBO.milestones as m, i}
+              <div class="rw-combo-step">
+                <div class="rw-combo-num mono">{m}x</div>
+                <div class="rw-combo-bar" style="width:{m/COMBO.milestones[COMBO.milestones.length-1]*100}%;background:color-mix(in srgb, #ff6b35 {20 + i * 20}%, var(--bg3))"></div>
+              </div>
+            {/each}
+          </div>
+          <div class="rw-note">
+            <i class="fa-solid fa-eye"></i>
+            Combo-Anzeige erscheint ab {COMBO.minDisplay} richtigen Antworten in Folge
+          </div>
+        </div>
+      </section>
+
+      <!-- Verdicts -->
+      <section class="rw-section">
+        <div class="rw-section-head">
+          <i class="fa-solid fa-star-half-stroke" style="color:var(--accent)"></i>
+          <h2>Session-Bewertung</h2>
+        </div>
+
+        <div class="rw-card">
+          <div class="rw-verdict-list">
+            {#each VERDICTS as v}
+              <div class="rw-verdict-row">
+                <span class="rw-verdict-pct mono" style="color:{v.color}">{v.min}%+</span>
+                <span class="rw-verdict-bar">
+                  <span class="rw-bar-fill" style="width:{v.min}%;background:{v.color}"></span>
+                </span>
+                <span class="rw-verdict-text" style="color:{v.color}">{v.text}</span>
+              </div>
+            {/each}
+          </div>
+        </div>
+      </section>
+
+      <!-- Abzeichen -->
+      <section class="rw-section">
+        <div class="rw-section-head">
+          <i class="fa-solid fa-shield-halved" style="color:var(--accent)"></i>
+          <h2>Abzeichen</h2>
+        </div>
+
+        <p class="rw-intro">{ACHIEVEMENTS.length} Abzeichen mit je {ACHIEVEMENTS[0]?.thresholds.length || 30} Stufen. Pro Gürtelfarbe gibt es 3 Sterne (Bronze, Silber, Gold).</p>
+
+        <!-- Guertelfarben -->
+        <div class="rw-card">
+          <div class="rw-card-title">Gürtelfarben (10 Stufen)</div>
+          <div class="rw-belt-grid">
+            {#each BELT_COLORS as belt, i}
+              <div class="rw-belt-item">
+                <div class="rw-belt-dot" style="background:{belt.hex}"></div>
+                <div class="rw-belt-info">
+                  <span class="rw-belt-name">{belt.name}</span>
+                  <span class="rw-belt-range mono">Lv {i*3+1}-{i*3+3}</span>
+                </div>
+              </div>
+            {/each}
+          </div>
+          <div class="rw-star-legend">
+            {#each ['Bronze', 'Silber', 'Gold'] as name, i}
+              <span class="rw-star-item">
+                <i class="fa-solid fa-star" style="color:{STAR_COLORS[i]};font-size:10px"></i> {name}
+              </span>
+            {/each}
+            <span class="rw-star-note">= 3 Sterne pro Farbe</span>
+          </div>
+        </div>
+
+        <!-- Abzeichen-Liste mit Schwellenwerten -->
+        <div class="rw-ach-list">
+          {#each ACHIEVEMENTS as ach}
+            <div class="rw-ach-card">
+              <div class="rw-ach-head">
+                <div class="rw-ach-icon"><i class="fa-solid {ach.icon}"></i></div>
+                <div>
+                  <div class="rw-ach-name">{ach.name}</div>
+                  <div class="rw-ach-desc">{ach.desc}</div>
+                </div>
+              </div>
+              <div class="rw-ach-levels">
+                {#each [0, 1, 2, 3, 4, 5, 6, 7, 8, 9] as ci}
+                  {@const belt = BELT_COLORS[ci]}
+                  <div class="rw-ach-tier">
+                    <div class="rw-ach-tier-dot" style="background:{belt.hex}" title="{belt.name}"></div>
+                    <div class="rw-ach-tier-vals mono">
+                      {#each [0, 1, 2] as si}
+                        {@const lvIdx = ci * 3 + si}
+                        {#if lvIdx < ach.thresholds.length}
+                          <span class="rw-ach-tv" title="Stufe {lvIdx+1}: {belt.name} {'★'.repeat(si+1)}">
+                            {ach.thresholds[lvIdx].toLocaleString('de-DE')}
+                          </span>
+                        {/if}
+                      {/each}
+                    </div>
+                  </div>
+                {/each}
+              </div>
+            </div>
+          {/each}
+        </div>
+      </section>
+
+      <!-- Streak -->
+      <section class="rw-section">
+        <div class="rw-section-head">
+          <i class="fa-solid fa-calendar-check" style="color:#ff6b35"></i>
+          <h2>Tagessträhne</h2>
+        </div>
+
+        <div class="rw-card">
+          <div class="rw-streak-rules">
+            <div class="rw-rule">
+              <i class="fa-solid fa-check" style="color:var(--ok)"></i>
+              <span>Mindestens 1 Session pro Tag hält die Strähne am Leben</span>
+            </div>
+            <div class="rw-rule">
+              <i class="fa-solid fa-xmark" style="color:var(--err)"></i>
+              <span>Ein Tag ohne Session setzt die aktuelle Strähne auf 0</span>
+            </div>
+            <div class="rw-rule">
+              <i class="fa-solid fa-trophy" style="color:#FFD700"></i>
+              <span>Der Rekord (längste Strähne) bleibt gespeichert</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+    </div>
 
   {:else}
     <!-- Pakete erstellen -->
@@ -592,4 +909,192 @@ HTTP 200 mit {"status":"ok"}
 .cat-ref-name { font-size: 11px; color: var(--text2); }
 
 .text-ok { color: var(--ok); }
+
+/* ── Belohnungen-Tab ─────────────────────────────────────────────────── */
+.rw-wrap { max-width: 760px; display: flex; flex-direction: column; gap: 32px; padding-top: 8px; }
+
+.rw-section { display: flex; flex-direction: column; gap: 12px; }
+.rw-section-head {
+  display: flex; align-items: center; gap: 10px;
+  padding-bottom: 8px; border-bottom: 1px solid var(--border);
+}
+.rw-section-head h2 { font-size: 16px; font-weight: 700; color: var(--text0); margin: 0; }
+.rw-section-head i { font-size: 14px; }
+.rw-intro { font-size: 13px; color: var(--text2); line-height: 1.6; margin: 0; }
+
+.rw-card {
+  background: var(--bg1); border-radius: 4px; padding: 16px;
+  box-shadow: 0 1px 3px var(--shadow);
+  display: flex; flex-direction: column; gap: 12px;
+}
+.rw-card-title {
+  font-size: 12px; font-weight: 700; color: var(--text2);
+  text-transform: uppercase; letter-spacing: .06em;
+}
+
+/* Tabellen */
+.rw-table-wrap { overflow-x: auto; }
+.rw-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+.rw-table th {
+  text-align: left; padding: 6px 10px; font-size: 10px; font-weight: 700;
+  color: var(--text3); text-transform: uppercase; letter-spacing: .06em;
+  border-bottom: 1px solid var(--border);
+}
+.rw-table td { padding: 6px 10px; border-bottom: 1px solid var(--bdr2); color: var(--text1); }
+.rw-table tr:last-child td { border-bottom: none; }
+.rw-ok { color: var(--ok); font-weight: 600; }
+.rw-err { color: var(--err); }
+.rw-dim { color: var(--text3); }
+
+.rw-tag {
+  font-size: 9px; font-weight: 700; padding: 2px 6px; border-radius: 3px;
+  text-transform: uppercase; letter-spacing: .06em;
+}
+.rw-tag-learn { color: var(--accent); background: var(--glow); }
+.rw-tag-test { color: var(--warn); background: color-mix(in srgb, var(--warn) 12%, transparent); }
+
+/* Hinweis-Box */
+.rw-note {
+  display: flex; align-items: flex-start; gap: 8px;
+  font-size: 12px; color: var(--text2); line-height: 1.5;
+  padding: 10px 12px; background: var(--bg2); border-radius: 4px;
+}
+.rw-note i { color: var(--warn); flex-shrink: 0; margin-top: 1px; font-size: 11px; }
+
+/* Formel */
+.rw-formula {
+  padding: 12px; background: var(--bg2); border-radius: 4px; text-align: center;
+}
+.rw-formula code {
+  font-family: 'JetBrains Mono', monospace; font-size: 12px; font-weight: 600;
+  color: var(--accent);
+}
+
+/* Faktoren */
+.rw-factors { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px; }
+.rw-factor { display: flex; flex-direction: column; gap: 6px; }
+.rw-factor-label {
+  font-size: 11px; font-weight: 700; color: var(--text2);
+  display: flex; align-items: center; gap: 6px;
+}
+.rw-factor-label i { font-size: 10px; }
+.rw-factor-items { display: flex; flex-direction: column; gap: 4px; }
+.rw-factor-row {
+  display: grid; grid-template-columns: 100px 1fr 40px;
+  align-items: center; gap: 8px;
+}
+.rw-factor-name { font-size: 11px; color: var(--text1); }
+.rw-factor-bar {
+  height: 4px; background: var(--bg3); border-radius: 2px; overflow: hidden;
+}
+.rw-bar-fill { height: 100%; border-radius: 2px; transition: width .3s; }
+.rw-factor-val { font-size: 11px; font-weight: 600; color: var(--text1); text-align: right; }
+
+/* Inline-Regeln */
+.rw-inline-rules { display: flex; flex-direction: column; gap: 6px; }
+.rw-rule {
+  display: flex; align-items: flex-start; gap: 8px;
+  font-size: 12px; color: var(--text1); line-height: 1.5;
+}
+.rw-rule i { flex-shrink: 0; margin-top: 2px; font-size: 11px; }
+
+/* Muenzen */
+.rw-coins { display: flex; gap: 12px; flex-wrap: wrap; }
+.rw-coin-card {
+  display: flex; align-items: center; gap: 12px;
+  padding: 12px 16px; background: var(--bg1); border-radius: 4px;
+  box-shadow: 0 1px 3px var(--shadow); flex: 1; min-width: 140px;
+}
+.rw-coin-icon {
+  width: 32px; height: 32px; border-radius: 50%; flex-shrink: 0;
+  background: radial-gradient(circle at 35% 35%, color-mix(in srgb, var(--coin-c) 80%, #fff), var(--coin-c));
+  border: 2px solid var(--coin-c);
+}
+.rw-coin-icon.rw-coin-diamond {
+  border-radius: 0;
+  clip-path: polygon(50% 0%, 100% 38%, 82% 100%, 18% 100%, 0% 38%);
+}
+.rw-coin-name { font-size: 13px; font-weight: 700; color: var(--text0); }
+.rw-coin-val { font-size: 11px; color: var(--text2); }
+
+/* Bonus */
+.rw-bonus-row {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 8px 0; border-bottom: 1px solid var(--bdr2);
+}
+.rw-bonus-row:last-child { border-bottom: none; }
+.rw-bonus-cond { font-size: 12px; color: var(--text1); }
+.rw-bonus-val { font-size: 12px; font-weight: 700; color: var(--ok); }
+
+/* Combo */
+.rw-combo-vis { display: flex; flex-direction: column; gap: 6px; }
+.rw-combo-step { display: flex; align-items: center; gap: 10px; }
+.rw-combo-num { font-size: 12px; font-weight: 700; color: var(--text1); width: 30px; text-align: right; }
+.rw-combo-bar { height: 6px; border-radius: 3px; min-width: 20px; }
+
+/* Verdicts */
+.rw-verdict-list { display: flex; flex-direction: column; gap: 6px; }
+.rw-verdict-row {
+  display: grid; grid-template-columns: 50px 1fr 120px;
+  align-items: center; gap: 10px;
+}
+.rw-verdict-pct { font-size: 12px; font-weight: 700; text-align: right; }
+.rw-verdict-bar {
+  height: 4px; background: var(--bg3); border-radius: 2px; overflow: hidden;
+}
+.rw-verdict-text { font-size: 12px; font-weight: 600; }
+
+/* Guertelfarben */
+.rw-belt-grid {
+  display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px;
+}
+.rw-belt-item {
+  display: flex; align-items: center; gap: 8px; padding: 6px 8px;
+  background: var(--bg2); border-radius: 4px;
+}
+.rw-belt-dot { width: 16px; height: 16px; border-radius: 3px; flex-shrink: 0; }
+.rw-belt-name { font-size: 11px; font-weight: 600; color: var(--text1); }
+.rw-belt-range { font-size: 9px; color: var(--text3); }
+.rw-belt-info { display: flex; flex-direction: column; gap: 1px; }
+
+.rw-star-legend {
+  display: flex; align-items: center; gap: 12px;
+  font-size: 11px; color: var(--text2);
+}
+.rw-star-item { display: flex; align-items: center; gap: 3px; }
+.rw-star-note { color: var(--text3); }
+
+/* Abzeichen-Liste */
+.rw-ach-list { display: flex; flex-direction: column; gap: 10px; }
+.rw-ach-card {
+  background: var(--bg1); border-radius: 4px; padding: 14px 16px;
+  box-shadow: 0 1px 3px var(--shadow);
+  display: flex; flex-direction: column; gap: 10px;
+}
+.rw-ach-head { display: flex; align-items: center; gap: 10px; }
+.rw-ach-icon {
+  width: 32px; height: 32px; border-radius: 4px;
+  background: var(--bg3); display: flex; align-items: center; justify-content: center;
+  color: var(--accent); font-size: 14px; flex-shrink: 0;
+}
+.rw-ach-name { font-size: 13px; font-weight: 700; color: var(--text0); }
+.rw-ach-desc { font-size: 11px; color: var(--text2); }
+
+.rw-ach-levels {
+  display: flex; gap: 2px; flex-wrap: wrap;
+}
+.rw-ach-tier {
+  display: flex; align-items: center; gap: 4px;
+  padding: 3px 6px; background: var(--bg2); border-radius: 3px;
+}
+.rw-ach-tier-dot { width: 8px; height: 8px; border-radius: 2px; flex-shrink: 0; }
+.rw-ach-tier-vals { display: flex; gap: 4px; }
+.rw-ach-tv {
+  font-size: 9px; color: var(--text2); cursor: default;
+  padding: 0 2px;
+}
+.rw-ach-tv:not(:last-child)::after { content: '/'; color: var(--text3); margin-left: 4px; }
+
+/* Streak */
+.rw-streak-rules { display: flex; flex-direction: column; gap: 8px; }
 </style>

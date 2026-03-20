@@ -425,6 +425,13 @@ def _migrate(conn: sqlite3.Connection):
             conn.execute("ALTER TABLE cards ADD COLUMN source TEXT DEFAULT 'manual'")
             conn.commit()
 
+    # sessions: xp_earned (XP pro Session aggregiert)
+    if 'sessions' in existing_tables:
+        sess_cols2 = {r[1] for r in conn.execute("PRAGMA table_info(sessions)").fetchall()}
+        if 'xp_earned' not in sess_cols2:
+            conn.execute("ALTER TABLE sessions ADD COLUMN xp_earned INTEGER DEFAULT 0")
+            conn.commit()
+
     # users: settings JSON-Spalte (Gamification, Sound, Tagesziel etc.)
     if 'users' in existing_tables:
         user_cols2 = {r[1] for r in conn.execute("PRAGMA table_info(users)").fetchall()}

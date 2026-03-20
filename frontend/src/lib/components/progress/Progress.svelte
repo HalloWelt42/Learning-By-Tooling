@@ -6,6 +6,7 @@
   import { onMount } from 'svelte'
   import { showToast, streakData, xpData, loadStreak, loadXp } from '../../stores/index.js'
   import { apiGet } from '../../utils/api.js'
+  import { coinBreakdown } from '../../utils/gamification.js'
   import ShieldBadge from './ShieldBadge.svelte'
 
   let tab          = $state('overview')
@@ -17,16 +18,17 @@
   })
 
   async function loadAch()  { achievements = await apiGet('/api/achievements').catch(() => []) }
-  async function loadHist() { history      = await apiGet('/api/history').catch(() => []) }
+  async function loadHist() { history      = await apiGet('/api/history?limit=500').catch(() => []) }
 
   let totalLevels = $derived(achievements.reduce((s, a) => s + a.level, 0))
   let maxLevel    = $derived(achievements.length * 30)
   let topBadges   = $derived(achievements.filter(a => a.level > 0).sort((a, b) => b.level - a.level).slice(0, 6))
 
-  // XP-Aufschluesselung
-  let diamonds = $derived(Math.floor(($xpData.xp_total || 0) / 1000000))
-  let gold     = $derived(Math.floor((($xpData.xp_total || 0) % 1000000) / 1000))
-  let silver   = $derived(($xpData.xp_total || 0) % 1000)
+  // XP-Aufschluesselung (zentral aus gamification.js)
+  let coins    = $derived(coinBreakdown($xpData.xp_total))
+  let diamonds = $derived(coins[0].count)
+  let gold     = $derived(coins[1].count)
+  let silver   = $derived(coins[2].count)
 
   function fmtDate(iso) {
     if (!iso) return '-'
@@ -217,27 +219,54 @@
       {#if history.length === 0}
         <div class="empty-state"><i class="fa-solid fa-clock-rotate-left"></i><p>Noch keine abgeschlossenen Sessions</p></div>
       {:else}
-        <div class="hist-table">
-          <div class="hist-head">
-            <span class="hist-col-date">Datum</span>
-            <span class="hist-col-mode">Modus</span>
-            <span class="hist-col-bar">Fortschritt</span>
-            <span class="hist-col-pct">%</span>
-            <span class="hist-col-score">Ergebnis</span>
-          </div>
+        <div class="hist-list">
           {#each history as s (s.id)}
-            <div class="hist-row">
-              <span class="hist-col-date mono">{fmtDate(s.started_at)}</span>
-              <span class="hist-col-mode hist-mode-tag">{s.mode}</span>
-              <span class="hist-col-bar">
-                <span class="prog-track"><span class="prog-fill" style="width:{pct(s.correct,s.total_cards)}%"></span></span>
-              </span>
-              <span class="hist-col-pct mono">{pct(s.correct,s.total_cards)}%</span>
-              <span class="hist-col-score mono">
-                <i class="fa-solid fa-check" style="color:var(--ok)"></i> {s.correct||0}<span style="color:var(--text3)">/{s.total_cards}</span>
-              </span>
+            {@const p = pct(s.correct, s.total_cards)}
+            {@const ringColor = p >= 80 ? 'var(--ok)' : p >= 50 ? 'var(--accent)' : p >= 30 ? 'var(--warn)' : 'var(--err)'}
+            <div class="hist-card">
+              <!-- Farbkreis -->
+              <div class="hist-ring">
+                <svg viewBox="0 0 36 36" class="hist-ring-svg">
+                  <circle cx="18" cy="18" r="15.9" fill="none" stroke="var(--bg3)" stroke-width="3" />
+                  <circle cx="18" cy="18" r="15.9" fill="none" stroke={ringColor} stroke-width="3"
+                    stroke-dasharray="{p}, 100"
+                    stroke-linecap="round"
+                    transform="rotate(-90 18 18)" />
+                </svg>
+                <span class="hist-ring-pct mono" style="color:{ringColor}">{p}</span>
+              </div>
+
+              <!-- Inhalt -->
+              <div class="hist-body">
+                <div class="hist-top">
+                  {#if s.package_name}
+                    <span class="hist-pkg" style="color:{s.package_color || 'var(--text1)'}">
+                      <i class="fa-solid {s.package_icon || 'fa-box'}"></i> {s.package_name}
+                    </span>
+                  {:else}
+                    <span class="hist-pkg" style="color:var(--text2)">
+                      <i class="fa-solid fa-layer-group"></i> Alle Pakete
+                    </span>
+                  {/if}
+                  <span class="hist-date mono">{fmtDate(s.started_at)}</span>
+                </div>
+                <div class="hist-bottom">
+                  <span class="hist-mode">{s.mode}</span>
+                  <span class="hist-score mono">
+                    <i class="fa-solid fa-check" style="color:var(--ok)"></i> {s.correct || 0}/{s.total_cards}
+                  </span>
+                  {#if s.xp_earned > 0}
+                    <span class="hist-xp mono">
+                      <i class="fa-solid fa-bolt" style="color:#FFD700"></i> {s.xp_earned} XP
+                    </span>
+                  {/if}
+                </div>
+              </div>
             </div>
           {/each}
+        </div>
+        <div class="hist-footer mono">
+          {history.length} von max. 500 Sessions
         </div>
       {/if}
     {/if}
@@ -442,21 +471,40 @@
 .ach-prog-wrap .prog-track { height: 4px; }
 
 /* ── Verlauf ──────────────────────────────────────────────────────────── */
-.hist-table { max-width: 760px; display: flex; flex-direction: column; }
-.hist-head, .hist-row { display: grid; grid-template-columns: 130px 80px 1fr 52px 80px; align-items: center; }
-.hist-head {
-  font-size: 10px; font-weight: 700; color: var(--text3);
-  text-transform: uppercase; letter-spacing: .06em;
-  border-bottom: 1px solid var(--border);
+.hist-list { max-width: 760px; display: flex; flex-direction: column; gap: 6px; }
+.hist-card {
+  display: flex; align-items: center; gap: 14px;
+  padding: 10px 14px; background: var(--bg1); border-radius: 4px;
+  box-shadow: 0 1px 3px var(--shadow);
 }
-.hist-row { border-bottom: 1px solid var(--bdr2); }
-.hist-row:last-child { border-bottom: none; }
-.hist-head span, .hist-row span { padding: 8px 12px; }
-.hist-col-date { font-size: 10px; color: var(--text2); }
-.hist-col-mode { font-size: 10px; }
-.hist-mode-tag { text-transform: uppercase; letter-spacing: .06em; font-weight: 700; color: var(--text3); font-size: 9px; }
-.hist-col-pct { font-size: 12px; font-weight: 700; color: var(--text1); text-align: right; }
-.hist-col-score { font-size: 12px; font-weight: 600; text-align: right; color: var(--text2); }
-.hist-col-bar .prog-track { display: block; }
-.hist-col-bar .prog-fill { display: block; }
+
+/* Farbkreis */
+.hist-ring { position: relative; width: 44px; height: 44px; flex-shrink: 0; }
+.hist-ring-svg { width: 100%; height: 100%; }
+.hist-ring-pct {
+  position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+  font-size: 11px; font-weight: 700;
+}
+
+/* Inhalt */
+.hist-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+.hist-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.hist-pkg { font-size: 12px; font-weight: 600; display: flex; align-items: center; gap: 5px; }
+.hist-pkg i { font-size: 10px; }
+.hist-date { font-size: 10px; color: var(--text3); flex-shrink: 0; }
+
+.hist-bottom { display: flex; align-items: center; gap: 12px; }
+.hist-mode {
+  font-size: 9px; font-weight: 700; color: var(--text3);
+  text-transform: uppercase; letter-spacing: .06em;
+}
+.hist-score { font-size: 11px; color: var(--text2); }
+.hist-score i { font-size: 9px; }
+.hist-xp { font-size: 11px; color: #FFD700; font-weight: 600; }
+.hist-xp i { font-size: 9px; }
+
+.hist-footer {
+  font-size: 10px; color: var(--text3); text-align: center;
+  padding: 12px 0 4px; border-top: 1px solid var(--bdr2); margin-top: 8px;
+}
 </style>
