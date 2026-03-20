@@ -18,6 +18,19 @@ from services import (
 router = APIRouter(tags=["ai"])
 
 
+def _load_user_settings(user_id: int) -> dict:
+    """Lädt User-Settings aus der DB (mit ai_* Feldern)."""
+    conn = get_db()
+    row = conn.execute("SELECT settings FROM users WHERE id=?", (user_id,)).fetchone()
+    conn.close()
+    if row and row["settings"]:
+        try:
+            return json.loads(row["settings"])
+        except Exception:
+            pass
+    return {}
+
+
 @router.get("/api/ai/status")
 async def ai_status():
     return {"online": await _ai_online()}
@@ -47,9 +60,11 @@ async def ai_explain(body: dict, user: dict = Depends(get_current_user)):
     except Exception:
         pass
     conn.close()
+    settings = _load_user_settings(user["id"])
     result = await explain_card(
         card["question"], card["answer"],
-        doc_context=doc_ctx, package_name=pkg_name
+        doc_context=doc_ctx, package_name=pkg_name,
+        settings=settings
     )
     return {"explanation": result or ""}
 
@@ -59,7 +74,9 @@ async def ai_hint(data: dict, user: dict = Depends(get_current_user)):
     """Erstellt eine Merkhilfe fuer eine Karte. Braucht LM Studio."""
     if not await _ai_online():
         raise HTTPException(503, "LM Studio nicht erreichbar")
-    result = await generate_hint(data.get("question",""), data.get("answer",""))
+    settings = _load_user_settings(user["id"])
+    result = await generate_hint(data.get("question",""), data.get("answer",""),
+                                 settings=settings)
     if not result:
         raise HTTPException(500, "Merkhilfe konnte nicht generiert werden")
     return {"hint": result}
@@ -74,7 +91,8 @@ async def ai_summarize(data: dict, user: dict = Depends(get_current_user)):
     topic = data.get("topic", "")
     if not cards:
         raise HTTPException(400, "Keine Karten übergeben")
-    result = await summarize_topic(cards, topic)
+    settings = _load_user_settings(user["id"])
+    result = await summarize_topic(cards, topic, settings=settings)
     return {"summary": result}
 
 
@@ -137,7 +155,8 @@ async def generate_mc_batch(data: dict, user: dict = Depends(get_current_user)):
     """, (today, pkg_id, limit)).fetchall()
     generated = 0
     for c in cards:
-        options = await generate_mc_options(c["question"], c["answer"])
+        settings = _load_user_settings(user["id"])
+        options = await generate_mc_options(c["question"], c["answer"], settings=settings)
         if options and len(options) >= 3:
             expires = (date.today() + timedelta(days=7)).isoformat()
             conn.execute(

@@ -69,8 +69,8 @@
             </div>
           </div>
           <div class="ach-prog-wrap">
-            <div class="ach-prog-bar">
-              <div class="ach-prog-fill" style="width:{Math.min(a.level / 30 * 100, 100)}%;background:{a.color?.hex || 'var(--accent)'}"></div>
+            <div class="prog-track">
+              <div class="prog-fill" style="width:{Math.min(a.level / 30 * 100, 100)}%;background:{a.color?.hex || 'var(--accent)'}"></div>
             </div>
           </div>
         </div>
@@ -82,23 +82,25 @@
     {#if history.length === 0}
       <div class="empty-state"><i class="fa-solid fa-clock-rotate-left"></i><p>Noch keine abgeschlossenen Sessions</p></div>
     {:else}
-      <div style="display:flex;flex-direction:column;gap:8px;max-width:760px">
+      <div class="hist-table">
+        <div class="hist-head">
+          <span class="hist-col-date">Datum</span>
+          <span class="hist-col-mode">Modus</span>
+          <span class="hist-col-bar">Fortschritt</span>
+          <span class="hist-col-pct">%</span>
+          <span class="hist-col-score">Ergebnis</span>
+        </div>
         {#each history as s (s.id)}
-          <div class="hist-item">
-            <div>
-              <div class="mono" style="font-size:10px;color:var(--text2)">{fmtDate(s.started_at)}</div>
-              <div style="font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:.08em;margin-top:1px">{s.mode}</div>
-            </div>
-            <div style="flex:1;display:flex;align-items:center;gap:10px">
-              <div style="flex:1;height:5px;background:var(--bg3);border-radius: 3px;overflow:hidden">
-                <div style="height:100%;background:var(--ok);border-radius: 3px;width:{pct(s.correct,s.total_cards)}%"></div>
-              </div>
-              <span class="mono" style="font-size:12px;font-weight:800;color:var(--text0);min-width:38px;text-align:right">{pct(s.correct,s.total_cards)}%</span>
-            </div>
-            <div style="display:flex;gap:6px;font-size:12px;font-weight:700;font-family:'JetBrains Mono',monospace">
-              <span style="color:var(--ok)"><i class="fa-solid fa-check"></i> {s.correct||0}</span>
-              <span style="color:var(--text2)">/{s.total_cards}</span>
-            </div>
+          <div class="hist-row">
+            <span class="hist-col-date mono">{fmtDate(s.started_at)}</span>
+            <span class="hist-col-mode hist-mode-tag">{s.mode}</span>
+            <span class="hist-col-bar">
+              <span class="prog-track"><span class="prog-fill" style="width:{pct(s.correct,s.total_cards)}%"></span></span>
+            </span>
+            <span class="hist-col-pct mono">{pct(s.correct,s.total_cards)}%</span>
+            <span class="hist-col-score mono">
+              <i class="fa-solid fa-check" style="color:var(--ok)"></i> {s.correct||0}<span style="color:var(--text3)">/{s.total_cards}</span>
+            </span>
           </div>
         {/each}
       </div>
@@ -125,8 +127,19 @@
   .ach-lvl  { font-size:10px;color:var(--text2); }
   .ach-next { font-size:10px;color:var(--text3); }
   .ach-prog-wrap { width:80px;flex-shrink:0; }
-  .ach-prog-bar { height:4px;background:var(--bg3);border-radius:2px; }
-  .ach-prog-fill { height:100%;border-radius:2px;transition:width .3s; }
+  .ach-prog-wrap .prog-track { height:4px; }
 
-  .hist-item { background:var(--bg1);border:1px solid var(--border);border-radius: 4px;padding:13px 18px;display:flex;align-items:center;gap:18px; }
+  .hist-table { max-width:760px;display:flex;flex-direction:column;gap:0; }
+  .hist-head, .hist-row { display:grid;grid-template-columns:130px 80px 1fr 52px 80px;align-items:center;gap:0;padding:0; }
+  .hist-head { font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;border-bottom:1px solid var(--border); }
+  .hist-row { border-bottom:1px solid var(--bdr2); }
+  .hist-row:last-child { border-bottom:none; }
+  .hist-head span, .hist-row span { padding:8px 12px; }
+  .hist-col-date { font-size:10px;color:var(--text2); }
+  .hist-col-mode { font-size:10px; }
+  .hist-mode-tag { text-transform:uppercase;letter-spacing:.06em;font-weight:700;color:var(--text3);font-size:9px; }
+  .hist-col-pct { font-size:12px;font-weight:700;color:var(--text1);text-align:right; }
+  .hist-col-score { font-size:12px;font-weight:600;text-align:right;color:var(--text2); }
+  .hist-col-bar .prog-track { display:block; }
+  .hist-col-bar .prog-fill { display:block; }
 </style>

@@ -5,12 +5,35 @@ Kein eigenes Wissen, kein Halluzinieren.
 """
 
 import re, json, httpx
+from typing import Any
 
 LM_BASE = "http://192.168.178.45:1234"
 LM_URL  = f"{LM_BASE}/v1/chat/completions"
 _MODEL  = None
 _CLIENT = None
 MAX_CTX = 80_000
+
+# KI-Defaults (überschreibbar via User-Settings)
+AI_DEFAULTS = {
+    "temperature":           0.3,
+    "temperature_creative":  0.6,
+    "temperature_cardgen":   0.4,
+    "max_tokens_explain":    250,
+    "max_tokens_evaluate":   400,
+    "max_tokens_mc":         300,
+    "max_tokens_hint":       150,
+    "max_tokens_summarize":  400,
+    "max_tokens_cardgen":    400,
+    "cards_per_chunk":       3,
+    "cardgen_retries":       3,
+}
+
+
+def get_ai_setting(settings: dict | None, key: str) -> Any:
+    """Holt einen AI-Setting-Wert aus User-Settings oder Default."""
+    if settings and f"ai_{key}" in settings:
+        return settings[f"ai_{key}"]
+    return AI_DEFAULTS.get(key, AI_DEFAULTS.get("temperature", 0.3))
 
 
 def _get_client() -> httpx.AsyncClient:
@@ -104,7 +127,8 @@ def _strip_json(raw: str) -> str:
 
 
 async def explain_card(question: str, answer: str,
-                       doc_context: str = "", package_name: str = "") -> str:
+                       doc_context: str = "", package_name: str = "",
+                       settings: dict | None = None) -> str:
     ctx = doc_context[:MAX_CTX]
     if ctx:
         system = (
@@ -119,12 +143,16 @@ async def explain_card(question: str, answer: str,
         f"Erklaere diese Lernkarte sachlich, maximal 4 Saetze.\n\n"
         f"Frage: {question}\nAntwort: {answer}"
     )
-    return await _chat(user, system, max_tokens=250, temperature=0.3, timeout=20.0) \
+    return await _chat(user, system,
+                       max_tokens=get_ai_setting(settings, "max_tokens_explain"),
+                       temperature=get_ai_setting(settings, "temperature"),
+                       timeout=20.0) \
            or "LM Studio nicht erreichbar."
 
 
 async def evaluate_answer(question: str, correct_answer: str,
-                          user_answer: str, doc_context: str = "") -> dict:
+                          user_answer: str, doc_context: str = "",
+                          settings: dict | None = None) -> dict:
     # Leere oder nur Whitespace-Antwort sofort als falsch bewerten
     if not user_answer or not user_answer.strip():
         return {"score": 0.0, "correct": False,
@@ -163,7 +191,9 @@ async def evaluate_answer(question: str, correct_answer: str,
             },
         },
     }
-    result = await _chat(user, system, max_tokens=400, temperature=0.1,
+    result = await _chat(user, system,
+                         max_tokens=get_ai_setting(settings, "max_tokens_evaluate"),
+                         temperature=0.1,
                          timeout=20.0, response_format=eval_format)
     if not result:
         return {"score": 0.5, "correct": None, "feedback": "Bewertung nicht verfuegbar."}
@@ -178,35 +208,79 @@ async def evaluate_answer(question: str, correct_answer: str,
         return {"score": 0.5, "correct": None, "feedback": "Auswertung fehlgeschlagen."}
 
 
-async def generate_cards_from_chunk(chunk: str, category: str = "GB",
-                                    count: int = 3, package_name: str = "",
-                                    full_doc_context: str = "") -> list[dict]:
-    ctx    = f"\nGesamtdokument:\n{full_doc_context[:5000]}" if full_doc_context else ""
+async def _generate_single_card(chunk: str, card_num: int, total: int,
+                                category: str, package_name: str,
+                                full_doc_context: str, base_temp: float = 0.4,
+                                settings: dict | None = None) -> dict | None:
+    """Generiert eine einzelne Karte mit bis zu 3 Versuchen und variierender Temperatur."""
+    ctx = f"\nGesamtdokument:\n{full_doc_context[:5000]}" if full_doc_context else ""
     system = f'Lernkarten-Generator für "{package_name or "unbekannt"}". Nur Fakten aus dem Text. Antwort: ausschließlich JSON.{ctx}'
 
-    user = (
-        f"Erstelle genau {count} Lernkarten aus diesem Text:\n---\n{chunk[:2000]}\n---\n"
-        f"Regeln: Verstaendnis testen, selbsterklaerende Antworten.\n"
-        f"difficulty: 1=leicht 2=mittel 3=schwer\n"
-        f'Antwort NUR als JSON-Array:\n'
-        f'[{{"question":"...","answer":"...","hint":"...oder null","difficulty":2}}]'
-    )
-    result = await _chat(user, system, max_tokens=1000, temperature=0.4, timeout=40.0)
-    if not result:
-        return []
-    try:
-        cards = json.loads(_strip_json(result))
-        return [
-            {"category_code": category,
-             "question":      c["question"].strip(),
-             "answer":        c["answer"].strip(),
-             "hint":          c.get("hint") or None,
-             "difficulty":    int(c.get("difficulty", 2))}
-            for c in (cards if isinstance(cards, list) else [])
-            if isinstance(c, dict) and c.get("question") and c.get("answer")
-        ]
-    except Exception:
-        return []
+    card_format = {
+        "type": "json_schema",
+        "json_schema": {
+            "name": "card",
+            "strict": True,
+            "schema": {
+                "type": "object",
+                "properties": {
+                    "question":   {"type": "string"},
+                    "answer":     {"type": "string"},
+                    "hint":       {"type": "string"},
+                    "difficulty": {"type": "integer"},
+                },
+                "required": ["question", "answer", "hint", "difficulty"],
+                "additionalProperties": False,
+            },
+        },
+    }
+
+    temps = [base_temp, base_temp + 0.15, base_temp - 0.1]
+    for attempt, temp in enumerate(temps):
+        temp = max(0.1, min(1.0, temp))
+        user = (
+            f"Erstelle Lernkarte {card_num} von {total} aus diesem Text:\n---\n{chunk[:2000]}\n---\n"
+            f"Regeln: Verstaendnis testen, selbsterklaerende Antworten.\n"
+            f"difficulty: 1=leicht 2=mittel 3=schwer. hint: kurzer Hinweis oder leerer String.\n"
+            f"Erstelle genau EINE Karte als JSON-Objekt."
+        )
+        result = await _chat(user, system,
+                             max_tokens=get_ai_setting(settings, "max_tokens_cardgen"),
+                             temperature=temp,
+                             timeout=30.0, response_format=card_format)
+        if not result:
+            continue
+        try:
+            c = json.loads(_strip_json(result))
+            if isinstance(c, dict) and c.get("question", "").strip() and c.get("answer", "").strip():
+                return {
+                    "category_code": category,
+                    "question":      c["question"].strip(),
+                    "answer":        c["answer"].strip(),
+                    "hint":          c.get("hint", "").strip() or None,
+                    "difficulty":    max(1, min(3, int(c.get("difficulty", 2)))),
+                }
+        except Exception:
+            continue
+    return None
+
+
+async def generate_cards_from_chunk(chunk: str, category: str = "GB",
+                                    count: int = 3, package_name: str = "",
+                                    full_doc_context: str = "",
+                                    base_temp: float = 0.4,
+                                    settings: dict | None = None) -> list[dict]:
+    """Generiert Karten einzeln mit Retry statt als Batch."""
+    cards = []
+    retries = get_ai_setting(settings, "cardgen_retries")
+    for i in range(count):
+        card = await _generate_single_card(
+            chunk, i + 1, count, category, package_name,
+            full_doc_context, base_temp, settings,
+        )
+        if card:
+            cards.append(card)
+    return cards
 
 
 async def analyze_mistakes(wrong_cards: list[dict], documents: list[dict]) -> list[dict]:
@@ -287,7 +361,8 @@ async def analyze_mistakes(wrong_cards: list[dict], documents: list[dict]) -> li
         return []
 
 
-async def generate_mc_options(question: str, answer: str) -> list[str]:
+async def generate_mc_options(question: str, answer: str,
+                              settings: dict | None = None) -> list[str]:
     """Generiert 3 plausible aber falsche MC-Optionen für eine Karte."""
     if not question or not answer or not question.strip() or not answer.strip():
         return []
@@ -313,7 +388,8 @@ async def generate_mc_options(question: str, answer: str) -> list[str]:
         },
     }
     try:
-        raw = await _chat(user_msg, system=system, max_tokens=300,
+        raw = await _chat(user_msg, system=system,
+                          max_tokens=get_ai_setting(settings, "max_tokens_mc"),
                           response_format=mc_format)
         cleaned = _strip_json(raw)
         parsed = json.loads(cleaned)
@@ -325,7 +401,8 @@ async def generate_mc_options(question: str, answer: str) -> list[str]:
     return []
 
 
-async def generate_hint(question: str, answer: str) -> str:
+async def generate_hint(question: str, answer: str,
+                        settings: dict | None = None) -> str:
     """Erstellt eine Merkhilfe/Eselsbrücke für eine schwierige Karte."""
     system = (
         RULES + " "
@@ -334,12 +411,14 @@ async def generate_hint(question: str, answer: str) -> str:
     )
     user_msg = f"Frage: {question}\nAntwort: {answer}\n\nMerkhilfe:"
     try:
-        return await _chat(user_msg, system=system, max_tokens=150)
+        return await _chat(user_msg, system=system,
+                           max_tokens=get_ai_setting(settings, "max_tokens_hint"))
     except Exception:
         return ""
 
 
-async def summarize_topic(cards: list[dict], topic: str = "") -> str:
+async def summarize_topic(cards: list[dict], topic: str = "",
+                          settings: dict | None = None) -> str:
     """Fasst eine Gruppe von Karten zu einer kompakten Zusammenfassung zusammen."""
     card_texts = "\n".join(f"- {c['question']} -> {c['answer']}" for c in cards[:20])
     system = (
@@ -349,7 +428,8 @@ async def summarize_topic(cards: list[dict], topic: str = "") -> str:
     )
     user_msg = f"Thema: {topic}\n\nKarten:\n{card_texts}\n\nZusammenfassung:"
     try:
-        return await _chat(user_msg, system=system, max_tokens=400)
+        return await _chat(user_msg, system=system,
+                           max_tokens=get_ai_setting(settings, "max_tokens_summarize"))
     except Exception:
         return ""
 

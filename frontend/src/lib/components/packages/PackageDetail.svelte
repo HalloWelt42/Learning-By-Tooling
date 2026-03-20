@@ -397,21 +397,14 @@
               <div class="section-label">Karten nach Kategorie</div>
               {#each catCounts as cat}
                 <div class="cat-row">
-                  <div class="cat-row-l">
-                    <div class="cat-icon-box" style="background:color-mix(in srgb,{cat.color} 15%,transparent)">
-                      <i class="fa-solid {cat.icon}" style="color:{cat.color}"></i>
-                    </div>
-                    <div>
-                      <div class="cat-name">{cat.name}</div>
-                      <div class="cat-code">{cat.code}</div>
-                    </div>
+                  <div class="cat-icon-box" style="background:color-mix(in srgb,{cat.color} 15%,transparent)">
+                    <i class="fa-solid {cat.icon}" style="color:{cat.color}"></i>
                   </div>
-                  <div class="cat-row-r">
-                    <div class="cat-track">
-                      <div class="cat-fill" style="width:{cat.shown>0?pct(cat.correct,cat.shown):0}%"></div>
-                    </div>
-                    <span class="cat-n">{cat.count}</span>
+                  <span class="cat-name">{cat.name}</span>
+                  <div class="prog-track">
+                    <div class="prog-fill" style="width:{cat.shown>0?pct(cat.correct,cat.shown):0}%"></div>
                   </div>
+                  <span class="cat-n">{cat.count}</span>
                 </div>
               {/each}
             </div>
@@ -663,8 +656,8 @@
           <div class="drafts-section">
             <div class="drafts-hd">
               <div class="section-label drafts-title">
-                <i class="fa-solid fa-list-check"></i>
-                Entwürfe prüfen ({pending.length})
+                <i class="fa-solid fa-wand-magic-sparkles"></i>
+                KI-Entwürfe prüfen ({pending.length})
               </div>
               <button class="btn btn-ok btn-sm" onclick={approveAll}>
                 <i class="fa-solid fa-check-double"></i> Alle freigeben
@@ -920,15 +913,12 @@
   grid-template-columns: 1fr 1fr;
   gap: 16px;
 }
-.cat-row { display: flex; align-items: center; justify-content: space-between; padding: 7px 6px; border-radius: 4px; transition: background .12s; }
+.cat-row { display: grid; grid-template-columns: 28px 1fr minmax(80px,140px) 32px; align-items: center; gap: 10px; padding: 7px 6px; border-radius: 4px; transition: background .12s; }
 .cat-row:hover { background: var(--bg2); }
-.cat-row-l { display: flex; align-items: center; gap: 10px; }
 .cat-icon-box { width: 28px; height: 28px; border-radius: 4px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
 .cat-icon-box i { font-size: 12px; }
 .cat-name { font-size: 12px; font-weight: 600; color: var(--text1); }
-.cat-code { font-size: 9px; color: var(--text3); font-family: 'JetBrains Mono', monospace; letter-spacing: .06em; }
-.cat-row-r { display: flex; align-items: center; gap: 8px; width: 130px; }
-.cat-track { flex: 1; height: 4px; background: var(--bg3); border-radius: 2px; overflow: hidden; }
+.cat-n { font-size: 12px; font-weight: 700; color: var(--text1); font-family: 'JetBrains Mono', monospace; text-align: right; }
 
 /* SRS-Stapel */
 .srs-bar { display:flex;height:10px;border-radius:3px;overflow:hidden;margin-bottom:12px;gap:1px; }
@@ -947,7 +937,6 @@
 .srs-dot.srs-learning { background:#d0a040; }
 .srs-dot.srs-due { background:#d06050; }
 .srs-dot.srs-new { background:var(--bg3); }
-.cat-fill { height: 100%; border-radius: 2px; transition: width .5s; background: var(--accent); }
 .cat-n { font-size: 11px; font-weight: 600; color: var(--text2); min-width: 22px; text-align: right; font-family: 'JetBrains Mono', monospace; }
 
 .doc-row { display: flex; align-items: center; gap: 10px; padding: 8px 6px; border-radius: 4px; cursor: pointer; transition: background .12s; width: 100%; text-align: left; border: none; background: none; font-family: inherit; }

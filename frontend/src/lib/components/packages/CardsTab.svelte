@@ -106,6 +106,7 @@
             onclick={()=>{selectedCard=c;aiText='';aiState='idle';showCardForm=false}}>
             <div class="cli-top">
               <span class="cli-id">{c.card_id}</span>
+              {#if c.source === 'ai'}<span class="cli-ai-badge" title="KI-generiert"><i class="fa-solid fa-wand-magic-sparkles"></i></span>{/if}
               <span class="{DC[c.difficulty]}"><i class="fa-solid {DI[c.difficulty]}"></i></span>
             </div>
             <div class="cli-q">{c.question}</div>
@@ -169,6 +170,7 @@
       <div class="card-detail-wrap">
         <div class="form-hd">
           <span class="cli-id">{selectedCard.card_id}</span>
+          {#if selectedCard.source === 'ai'}<span class="source-badge source-ai"><i class="fa-solid fa-wand-magic-sparkles"></i> KI-generiert</span>{:else}<span class="source-badge source-manual"><i class="fa-solid fa-pen-nib"></i> Manuell</span>{/if}
           <div class="card-detail-actions">
             <button class="ib" onclick={()=>openEdit(selectedCard)} title="Bearbeiten">
               <i class="fa-solid fa-pen"></i>
@@ -253,6 +255,18 @@
 .d1 { color: var(--ok); }
 .d2 { color: var(--warn); }
 .d3 { color: var(--err); }
+
+/* KI-Badge in Kartenliste */
+.cli-ai-badge { font-size: 8px; color: var(--ac2); opacity: 0.7; }
+
+/* Source-Badge im Detail */
+.source-badge {
+  font-size: 9px; font-weight: 600; padding: 2px 7px;
+  border-radius: 2px; letter-spacing: .03em;
+}
+.source-badge i { font-size: 8px; margin-right: 2px; }
+.source-ai { color: var(--ac2); background: color-mix(in srgb, var(--ac2) 12%, transparent); }
+.source-manual { color: var(--text3); background: var(--bg3); }
 
 /* ── Detail-Spalte ────────────────────────────────────────── */
 .cards-detail-col { overflow-y: auto; background: var(--bg0); }

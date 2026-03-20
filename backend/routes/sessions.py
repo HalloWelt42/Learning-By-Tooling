@@ -15,6 +15,19 @@ from services import evaluate_answer, sm2_update
 router = APIRouter(tags=["sessions"])
 
 
+def _load_user_settings(user_id: int) -> dict:
+    """Lädt User-Settings aus der DB (mit ai_* Feldern)."""
+    conn = get_db()
+    row = conn.execute("SELECT settings FROM users WHERE id=?", (user_id,)).fetchone()
+    conn.close()
+    if row and row["settings"]:
+        try:
+            return json.loads(row["settings"])
+        except Exception:
+            pass
+    return {}
+
+
 @router.post("/api/sessions")
 def start_session(data: SessionCreate, user: dict = Depends(get_current_user)):
     uid = user["id"]
@@ -257,9 +270,10 @@ async def review_and_next(session_id: int, data: SessionReviewNext, user: dict =
             eval_ctx = "\n\n".join(r["text"] for r in doc_rows if r["text"])
         except Exception:
             pass
+        settings = _load_user_settings(uid)
         ev = await evaluate_answer(
             card["question"], card["answer"], data.user_answer,
-            doc_context=eval_ctx
+            doc_context=eval_ctx, settings=settings
         )
         ai_score = ev["score"]; ai_feedback = ev["feedback"]
         if data.result == "unknown":
@@ -441,9 +455,10 @@ async def submit_review(data: ReviewSubmit, user: dict = Depends(get_current_use
                 eval_ctx = "\n\n".join(r["text"] for r in doc_rows if r["text"])
             except Exception:
                 pass
+            settings = _load_user_settings(uid)
             ev = await evaluate_answer(
                 card["question"], card["answer"], data.user_answer,
-                doc_context=eval_ctx
+                doc_context=eval_ctx, settings=settings
             )
             ai_score = ev["score"]; ai_feedback = ev["feedback"]
             if data.result == "unknown":

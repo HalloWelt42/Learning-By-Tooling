@@ -418,6 +418,13 @@ def _migrate(conn: sqlite3.Connection):
         """)
         conn.commit()
 
+    # cards: source-Spalte (manual/ai) fuer KI-Kennzeichnung
+    if 'cards' in existing_tables:
+        card_cols2 = {r[1] for r in conn.execute("PRAGMA table_info(cards)").fetchall()}
+        if 'source' not in card_cols2:
+            conn.execute("ALTER TABLE cards ADD COLUMN source TEXT DEFAULT 'manual'")
+            conn.commit()
+
     # users: settings JSON-Spalte (Gamification, Sound, Tagesziel etc.)
     if 'users' in existing_tables:
         user_cols2 = {r[1] for r in conn.execute("PRAGMA table_info(users)").fetchall()}

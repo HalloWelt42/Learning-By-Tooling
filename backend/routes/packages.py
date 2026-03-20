@@ -342,7 +342,7 @@ def get_chunks(doc_id: int, user: dict = Depends(get_current_user)):
 
 @router.post("/api/documents/{doc_id}/generate")
 async def generate_from_doc(doc_id: int, body: dict, user: dict = Depends(get_current_user)):
-    from services import generate_cards_from_chunk
+    from services import generate_cards_from_chunk, get_ai_setting
     chunk_ids       = body.get("chunk_ids")
     category        = body.get("category", "AL")
     cards_per_chunk = int(body.get("cards_per_chunk", 3))
@@ -351,6 +351,17 @@ async def generate_from_doc(doc_id: int, body: dict, user: dict = Depends(get_cu
     if not doc:
         conn.close(); raise HTTPException(404)
     pkg_id = doc["package_id"]
+    # User-Settings laden
+    settings = {}
+    try:
+        srow = conn.execute("SELECT settings FROM users WHERE id=?", (user["id"],)).fetchone()
+        if srow and srow["settings"]:
+            settings = json.loads(srow["settings"])
+    except Exception:
+        pass
+    # cards_per_chunk aus Settings falls nicht explizit gesetzt
+    if cards_per_chunk == 3:
+        cards_per_chunk = get_ai_setting(settings, "cards_per_chunk")
     if chunk_ids:
         pl = ",".join("?" * len(chunk_ids))
         chunks = conn.execute(
@@ -362,6 +373,7 @@ async def generate_from_doc(doc_id: int, body: dict, user: dict = Depends(get_cu
             "SELECT * FROM document_chunks WHERE document_id=? AND processed=0", (doc_id,)
         ).fetchall()
     created = errors = 0
+    base_temp = get_ai_setting(settings, "temperature_cardgen")
     for chunk in chunks:
         pkg_nm = ""
         try:
@@ -371,7 +383,8 @@ async def generate_from_doc(doc_id: int, body: dict, user: dict = Depends(get_cu
             pass
         cards = await generate_cards_from_chunk(
             chunk["text"], category, cards_per_chunk,
-            package_name=pkg_nm
+            package_name=pkg_nm, base_temp=base_temp,
+            settings=settings
         )
         for c in cards:
             try:
@@ -434,8 +447,8 @@ def handle_draft(draft_id: int, data: DraftAction, user: dict = Depends(get_curr
         package_id    = data.package_id    or draft["package_id"]
         card_id = next_card_id(conn)
         conn.execute(
-            "INSERT INTO cards (card_id,package_id,category_code,question,answer,hint,difficulty) VALUES (?,?,?,?,?,?,?)",
-            (card_id, package_id, category_code, question, answer, hint, difficulty)
+            "INSERT INTO cards (card_id,package_id,category_code,question,answer,hint,difficulty,source) VALUES (?,?,?,?,?,?,?,?)",
+            (card_id, package_id, category_code, question, answer, hint, difficulty, 'ai')
         )
         rebuild_fts(conn)
         conn.execute("UPDATE card_drafts SET status='approved' WHERE id=?", (draft_id,))

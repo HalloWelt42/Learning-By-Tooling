@@ -80,7 +80,7 @@
 .lb-info   { display:flex;align-items:center;gap:10px;min-width:130px; }
 .lb-cat    { font-size:11px;font-weight:600;letter-spacing:.06em; }
 .lb-track  { flex:1;height:4px;background:var(--bg3);border-radius:2px;overflow:hidden; }
-.lb-fill   { height:100%;background:var(--accent);border-radius:2px;transition:width .4s ease; }
+.lb-fill   { height:100%;background:var(--text3);opacity:0.7;border-radius:2px;transition:width .4s ease; }
 .lb-score  { display:flex;gap:10px; }
 .ls        { font-size:11px;font-weight:700;font-family:'Orbitron',sans-serif;display:flex;align-items:center;gap:4px; }
 .ls.ok  { color:var(--ok); }

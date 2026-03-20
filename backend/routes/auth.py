@@ -72,6 +72,18 @@ _SETTINGS_DEFAULTS = {
     "daily_goal": 100,
     "preferred_mode": "standard",
     "session_size": 10,
+    # KI-Einstellungen
+    "ai_temperature": 0.3,
+    "ai_temperature_creative": 0.6,
+    "ai_temperature_cardgen": 0.4,
+    "ai_max_tokens_explain": 250,
+    "ai_max_tokens_evaluate": 400,
+    "ai_max_tokens_mc": 300,
+    "ai_max_tokens_hint": 150,
+    "ai_max_tokens_summarize": 400,
+    "ai_max_tokens_cardgen": 400,
+    "ai_cards_per_chunk": 3,
+    "ai_cardgen_retries": 3,
 }
 
 
@@ -108,6 +120,31 @@ def update_settings(data: dict, user: dict = Depends(get_current_user)):
     conn.commit()
     conn.close()
     return {**_SETTINGS_DEFAULTS, **current}
+
+
+@router.post("/settings/reset-ai")
+def reset_ai_settings(user: dict = Depends(get_current_user)):
+    """Setzt alle KI-Einstellungen auf Standardwerte zurück."""
+    conn = get_db()
+    row = conn.execute("SELECT settings FROM users WHERE id=?", (user["id"],)).fetchone()
+    current = {}
+    if row and row["settings"]:
+        try:
+            current = json.loads(row["settings"])
+        except Exception:
+            pass
+    # Alle ai_* Keys entfernen
+    current = {k: v for k, v in current.items() if not k.startswith("ai_")}
+    conn.execute("UPDATE users SET settings=? WHERE id=?", (json.dumps(current), user["id"]))
+    conn.commit()
+    conn.close()
+    return {**_SETTINGS_DEFAULTS, **current}
+
+
+@router.get("/settings/defaults")
+def get_settings_defaults():
+    """Gibt die Standard-Einstellungen zurück (ohne Auth, für UI-Reset-Anzeige)."""
+    return _SETTINGS_DEFAULTS
 
 
 @router.patch("/display-name")

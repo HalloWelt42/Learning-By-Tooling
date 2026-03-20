@@ -197,8 +197,8 @@
 
             {#if unlocked}
               <div class="ch-progress">
-                <div class="ch-prog-bar">
-                  <div class="ch-prog-fill" style="width:{Math.round(chapter.progress * 100)}%"></div>
+                <div class="prog-track">
+                  <div class="prog-fill" style="width:{Math.round(chapter.progress * 100)}%"></div>
                 </div>
                 <span class="ch-prog-text">{chapter.mastered}/{chapter.total_cards} Karten gemeistert</span>
               </div>
@@ -289,8 +289,7 @@
   .ch-title { font-size: 14px; font-weight: 700; color: var(--text0); }
   .ch-desc { font-size: 12px; color: var(--text2); margin-top: 2px; }
   .ch-progress { margin-bottom: 10px; }
-  .ch-prog-bar { height: 4px; background: var(--bg3); border-radius: 2px; margin-bottom: 4px; }
-  .ch-prog-fill { height: 100%; background: var(--accent); border-radius: 2px; transition: width .3s; }
+  .ch-progress .prog-track { margin-bottom: 4px; }
   .ch-prog-text { font-size: 10px; color: var(--text3); font-family: 'JetBrains Mono', monospace; }
   .ch-actions { display: flex; gap: 8px; flex-wrap: wrap; }
 

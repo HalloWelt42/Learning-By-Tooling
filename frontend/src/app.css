@@ -533,6 +533,10 @@ input[type="range"]::-webkit-slider-thumb {
   gap: 6px;
 }
 
+/* ── Progress Bars (global, einheitlich) ──────────────────────────────────── */
+.prog-track { height: 4px; background: var(--bg3); border-radius: 2px; overflow: hidden; }
+.prog-fill  { height: 100%; border-radius: 2px; background: var(--text3); opacity: 0.7; transition: width .3s; }
+
 /* ── Toast ────────────────────────────────────────────────────────────────── */
 .toast-wrap {
   position: fixed;
