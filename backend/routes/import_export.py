@@ -42,7 +42,7 @@ def list_bundles(user: dict = Depends(get_current_user)):
             text = fragen_file.read_text()
             cats: dict[str, int] = {}
             count = 0
-            for m in re.finditer(r"^##\s+K-\d+\s*\|\s*(\w+)", text, re.MULTILINE):
+            for m in re.finditer(r"^K-\d+\s*\|\s*(\w+)", text, re.MULTILINE):
                 count += 1
                 code = m.group(1).upper()
                 cats[code] = cats.get(code, 0) + 1
