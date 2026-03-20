@@ -62,3 +62,11 @@
     </button>
   </div>
 </div>
+
+<style>
+.import-box { max-width: 920px; }
+.import-desc { font-size: 13px; color: var(--text2); margin-bottom: 16px; line-height: 1.6; }
+.import-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 14px; }
+.import-ta { font-family: 'JetBrains Mono', monospace !important; font-size: 11px !important; }
+.import-result { display: flex; align-items: center; gap: 16px; padding: 10px 14px; background: var(--bg2); border-radius: 4px; margin-bottom: 12px; font-size: 13px; font-weight: 600; }
+</style>

@@ -19,9 +19,14 @@ router = APIRouter(tags=["sessions"])
 def start_session(data: SessionCreate, user: dict = Depends(get_current_user)):
     uid = user["id"]
     conn = get_db()
+    # Offene Sessions des Users beenden bevor neue gestartet wird
+    conn.execute(
+        "UPDATE sessions SET ended_at=? WHERE user_id=? AND ended_at IS NULL",
+        (datetime.now().isoformat(), uid)
+    )
     if data.srs_mode:
         q = """
-            SELECT c.card_id FROM cards c
+            SELECT c.id FROM cards c
             LEFT JOIN card_stats cs ON cs.card_id=c.card_id AND cs.user_id=?
             WHERE c.active=1 AND (cs.due_date IS NULL OR cs.due_date <= ?)
         """
@@ -31,7 +36,7 @@ def start_session(data: SessionCreate, user: dict = Depends(get_current_user)):
         q += " ORDER BY COALESCE(cs.due_date,'1970-01-01') ASC, RANDOM() LIMIT ?"
         p.append(data.card_limit)
     else:
-        q = "SELECT card_id FROM cards WHERE active=1"
+        q = "SELECT id FROM cards WHERE active=1"
         p = []
         if data.package_id is not None:
             q += " AND package_id=?"; p.append(data.package_id)
@@ -41,16 +46,16 @@ def start_session(data: SessionCreate, user: dict = Depends(get_current_user)):
         q += " ORDER BY RANDOM() LIMIT ?"; p.append(data.card_limit)
 
     rows    = conn.execute(q, p).fetchall()
-    card_ids = [r["card_id"] for r in rows]
+    card_db_ids = [r["id"] for r in rows]
     pkg_id_val = data.package_id if data.package_id else None
     conn.execute(
         "INSERT INTO sessions (user_id,mode,package_id,category_filter,total_cards,card_order,current_index) VALUES (?,?,?,?,?,?,0)",
-        (uid, data.mode, pkg_id_val, json.dumps(data.category_filter), len(card_ids), json.dumps(card_ids))
+        (uid, data.mode, pkg_id_val, json.dumps(data.category_filter), len(card_db_ids), json.dumps(card_db_ids))
     )
     session_id = conn.execute("SELECT last_insert_rowid()").fetchone()[0]
     conn.commit()
     conn.close()
-    return {"session_id": session_id, "card_ids": card_ids, "total": len(card_ids)}
+    return {"session_id": session_id, "total": len(card_db_ids)}
 
 
 @router.get("/api/sessions/active")
@@ -154,9 +159,9 @@ def end_session(session_id: int, user: dict = Depends(get_current_user)):
 
 # -- Strikte Session-Steuerung ------------------------------------------------
 
-def _load_card_data(conn, card_id: str) -> Optional[dict]:
-    """Laedt eine Karte als dict oder None."""
-    row = conn.execute("SELECT * FROM cards WHERE card_id=?", (card_id,)).fetchone()
+def _load_card_data(conn, card_db_id: int) -> Optional[dict]:
+    """Laedt eine Karte anhand der DB-ID (global eindeutig)."""
+    row = conn.execute("SELECT * FROM cards WHERE id=?", (card_db_id,)).fetchone()
     return row_to_dict(row) if row else None
 
 
@@ -235,8 +240,9 @@ async def review_and_next(session_id: int, data: SessionReviewNext, user: dict =
         conn.close()
         raise HTTPException(400, "Keine Karten mehr in dieser Session")
 
-    current_card_id = card_order[idx]
-    card = conn.execute("SELECT * FROM cards WHERE card_id=?", (current_card_id,)).fetchone()
+    current_db_id = card_order[idx]
+    card = conn.execute("SELECT * FROM cards WHERE id=?", (current_db_id,)).fetchone()
+    current_card_id = card["card_id"] if card else str(current_db_id)
 
     # -- KI-Bewertung (Freitext mit KI) --
     ai_score = ai_feedback = None
@@ -328,10 +334,7 @@ async def review_and_next(session_id: int, data: SessionReviewNext, user: dict =
         base_xp = 10 if result in ("correct", "wrong") else 1  # Skip = 1
 
         # 2a) Karten-Schwierigkeit (aus der Karten-Definition: 1=Leicht, 2=Mittel, 3=Schwer)
-        card_row = conn.execute(
-            "SELECT difficulty FROM cards WHERE card_id=?", (current_card_id,)
-        ).fetchone()
-        card_difficulty = card_row["difficulty"] if card_row and card_row["difficulty"] else 2
+        card_difficulty = card["difficulty"] if card and card["difficulty"] else 2
         # Leicht=0.7x, Mittel=1.0x, Schwer=1.4x
         card_diff_mult = {1: 0.7, 2: 1.0, 3: 1.4}.get(card_difficulty, 1.0)
 

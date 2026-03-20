@@ -94,10 +94,13 @@ async def ai_related(data: dict, user: dict = Depends(get_current_user)):
 
 
 @router.get("/api/mc/{card_id}")
-async def get_mc_options_cached(card_id: str, user: dict = Depends(get_current_user)):
+async def get_mc_options_cached(card_id: str, package_id: Optional[int] = None, user: dict = Depends(get_current_user)):
     """Holt MC-Optionen aus Cache oder generiert neu."""
     conn = get_db()
-    card = conn.execute("SELECT question, answer, package_id FROM cards WHERE card_id=? AND active=1", (card_id,)).fetchone()
+    if package_id is not None:
+        card = conn.execute("SELECT question, answer, package_id FROM cards WHERE card_id=? AND package_id=? AND active=1", (card_id, package_id)).fetchone()
+    else:
+        card = conn.execute("SELECT question, answer, package_id FROM cards WHERE card_id=? AND active=1", (card_id,)).fetchone()
     if not card:
         conn.close()
         raise HTTPException(404, "Karte nicht gefunden")

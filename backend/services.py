@@ -9,7 +9,20 @@ import re, json, httpx
 LM_BASE = "http://192.168.178.45:1234"
 LM_URL  = f"{LM_BASE}/v1/chat/completions"
 _MODEL  = None
+_CLIENT = None
 MAX_CTX = 80_000
+
+
+def _get_client() -> httpx.AsyncClient:
+    """Globaler httpx-Client mit Connection Pooling (kein TCP-Handshake pro Request)."""
+    global _CLIENT
+    if _CLIENT is None:
+        _CLIENT = httpx.AsyncClient(
+            base_url=LM_BASE,
+            timeout=httpx.Timeout(connect=5.0, read=120.0, write=10.0, pool=10.0),
+            limits=httpx.Limits(max_keepalive_connections=5, max_connections=10),
+        )
+    return _CLIENT
 
 RULES = (
     "Schreibe auf Deutsch. "
@@ -25,13 +38,13 @@ async def get_model() -> str:
     if _MODEL:
         return _MODEL
     try:
-        async with httpx.AsyncClient(timeout=4.0) as c:
-            r = await c.get(f"{LM_BASE}/v1/models")
-            if r.status_code == 200:
-                models = r.json().get("data", [])
-                if models:
-                    _MODEL = models[0]["id"]
-                    return _MODEL
+        c = _get_client()
+        r = await c.get("/v1/models")
+        if r.status_code == 200:
+            models = r.json().get("data", [])
+            if models:
+                _MODEL = models[0]["id"]
+                return _MODEL
     except Exception:
         pass
     return "local-model"
@@ -40,34 +53,44 @@ async def get_model() -> str:
 async def ai_online() -> bool:
     global _MODEL
     try:
-        async with httpx.AsyncClient(timeout=4.0) as c:
-            r = await c.get(f"{LM_BASE}/v1/models")
-            if r.status_code != 200:
-                return False
-            models = r.json().get("data", [])
-            if not models:
-                return False
-            _MODEL = models[0]["id"]
-            return True
+        c = _get_client()
+        r = await c.get("/v1/models")
+        if r.status_code != 200:
+            return False
+        models = r.json().get("data", [])
+        if not models:
+            return False
+        _MODEL = models[0]["id"]
+        return True
     except Exception:
         return False
 
 
 async def _chat(user: str, system: str = "", max_tokens: int = 500,
-                temperature: float = 0.3, timeout: float = 30.0) -> str | None:
+                temperature: float = 0.3, timeout: float = 30.0,
+                response_format: dict | None = None) -> str | None:
     model = await get_model()
     msgs  = []
     if system:
         msgs.append({"role": "system", "content": system})
-    msgs.append({"role": "user", "content": user})
+    # Qwen3 Thinking-Modus deaktivieren fuer schnellere strukturierte Antworten
+    msgs.append({"role": "user", "content": f"/no_think\n{user}"})
+    payload = {
+        "model": model, "messages": msgs,
+        "max_tokens": max_tokens, "temperature": temperature,
+        "min_p": 0.05,
+    }
+    if response_format:
+        payload["response_format"] = response_format
     try:
-        async with httpx.AsyncClient(timeout=timeout) as c:
-            r = await c.post(LM_URL, json={
-                "model": model, "messages": msgs,
-                "max_tokens": max_tokens, "temperature": temperature,
-            })
-            if r.status_code == 200:
-                return r.json()["choices"][0]["message"]["content"].strip()
+        c = _get_client()
+        r = await c.post("/v1/chat/completions", json=payload,
+                         timeout=timeout)
+        if r.status_code == 200:
+            text = r.json()["choices"][0]["message"]["content"].strip()
+            # Qwen3 kann /no_think als <think>\n</think> zurueckgeben
+            text = re.sub(r'^<think>\s*</think>\s*', '', text)
+            return text
     except Exception:
         pass
     return None
@@ -96,12 +119,17 @@ async def explain_card(question: str, answer: str,
         f"Erklaere diese Lernkarte sachlich, maximal 4 Saetze.\n\n"
         f"Frage: {question}\nAntwort: {answer}"
     )
-    return await _chat(user, system, max_tokens=400, temperature=0.3, timeout=20.0) \
+    return await _chat(user, system, max_tokens=250, temperature=0.3, timeout=20.0) \
            or "LM Studio nicht erreichbar."
 
 
 async def evaluate_answer(question: str, correct_answer: str,
                           user_answer: str, doc_context: str = "") -> dict:
+    # Leere oder nur Whitespace-Antwort sofort als falsch bewerten
+    if not user_answer or not user_answer.strip():
+        return {"score": 0.0, "correct": False,
+                "feedback": f"Keine Antwort gegeben. Richtig wäre: {correct_answer[:200]}"}
+
     ctx      = doc_context[:20_000]
     ctx_hint = f"\nKontext aus Lernmaterial:\n{ctx}" if ctx else ""
     system   = f"Lernkarten-Korrektor. Antworte NUR mit JSON.{ctx_hint}"
@@ -118,7 +146,25 @@ async def evaluate_answer(question: str, correct_answer: str,
         f"  Kein 'Leider', kein 'Gerne', kein Lob-Gelaber.\n"
         f'Antworte NUR mit: {{"score": 0.0, "correct": false, "feedback": "..."}}'
     )
-    result = await _chat(user, system, max_tokens=400, temperature=0.1, timeout=20.0)
+    eval_format = {
+        "type": "json_schema",
+        "json_schema": {
+            "name": "evaluation",
+            "strict": True,
+            "schema": {
+                "type": "object",
+                "properties": {
+                    "score":    {"type": "number"},
+                    "correct":  {"type": "boolean"},
+                    "feedback": {"type": "string"},
+                },
+                "required": ["score", "correct", "feedback"],
+                "additionalProperties": False,
+            },
+        },
+    }
+    result = await _chat(user, system, max_tokens=400, temperature=0.1,
+                         timeout=20.0, response_format=eval_format)
     if not result:
         return {"score": 0.5, "correct": None, "feedback": "Bewertung nicht verfuegbar."}
     try:
@@ -243,6 +289,8 @@ async def analyze_mistakes(wrong_cards: list[dict], documents: list[dict]) -> li
 
 async def generate_mc_options(question: str, answer: str) -> list[str]:
     """Generiert 3 plausible aber falsche MC-Optionen für eine Karte."""
+    if not question or not answer or not question.strip() or not answer.strip():
+        return []
     system = (
         "Du bist ein Prüfungsexperte. "
         "Erstelle genau 3 falsche aber plausible Antwortoptionen fuer eine Multiple-Choice-Frage. "
@@ -251,10 +299,25 @@ async def generate_mc_options(question: str, answer: str) -> list[str]:
         "Beispiel: [\"Falsche Option 1\", \"Falsche Option 2\", \"Falsche Option 3\"]"
     )
     user_msg = f"Frage: {question}\nRichtige Antwort: {answer}\n\nErstelle 3 falsche Optionen als JSON-Array:"
+    mc_format = {
+        "type": "json_schema",
+        "json_schema": {
+            "name": "mc_options",
+            "strict": True,
+            "schema": {
+                "type": "object",
+                "properties": {"options": {"type": "array", "items": {"type": "string"}}},
+                "required": ["options"],
+                "additionalProperties": False,
+            },
+        },
+    }
     try:
-        raw = await _chat(user_msg, system=system, max_tokens=300)
+        raw = await _chat(user_msg, system=system, max_tokens=300,
+                          response_format=mc_format)
         cleaned = _strip_json(raw)
-        options = json.loads(cleaned)
+        parsed = json.loads(cleaned)
+        options = parsed.get("options", parsed) if isinstance(parsed, dict) else parsed
         if isinstance(options, list) and len(options) >= 3:
             return [str(o).strip() for o in options[:3]]
     except Exception:
@@ -281,12 +344,12 @@ async def summarize_topic(cards: list[dict], topic: str = "") -> str:
     card_texts = "\n".join(f"- {c['question']} -> {c['answer']}" for c in cards[:20])
     system = (
         RULES + " "
-        "Fasse die folgenden Lernkarten zu einer kompakten Zusammenfassung zusammen. "
-        "Strukturiere nach Themenblöcken. Maximal 300 Wörter."
+        "Fasse die Lernkarten kompakt zusammen. "
+        "Themenblöcke mit Fettdruck-Überschriften. Maximal 200 Wörter. Keine Einleitung."
     )
     user_msg = f"Thema: {topic}\n\nKarten:\n{card_texts}\n\nZusammenfassung:"
     try:
-        return await _chat(user_msg, system=system, max_tokens=600)
+        return await _chat(user_msg, system=system, max_tokens=400)
     except Exception:
         return ""
 

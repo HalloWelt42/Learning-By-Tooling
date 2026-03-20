@@ -226,3 +226,59 @@
     {/if}
   </div>
 </div>
+
+<style>
+/* ── Karten Split Layout ──────────────────────────────────── */
+.cards-panel-layout { flex: 1; display: grid; grid-template-columns: 320px 1fr; overflow: hidden; }
+.cards-list-col { border-right: 1px solid var(--border); display: flex; flex-direction: column; background: var(--bg1); overflow: hidden; }
+.cl-header { padding: 14px 14px 10px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--border); flex-shrink: 0; }
+.cl-title { font-size: 13px; font-weight: 700; color: var(--text0); display: flex; align-items: center; gap: 6px; }
+.cl-title i { font-size: 13px; }
+.cnt-badge { font-size: 10px; background: var(--bg3); color: var(--text2); border-radius: 4px; padding: 1px 6px; font-family: 'JetBrains Mono', monospace; }
+.cl-filters { padding: 10px 12px; display: flex; flex-direction: column; gap: 7px; border-bottom: 1px solid var(--border); flex-shrink: 0; }
+.search-wrap { position: relative; }
+.search-icon { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); font-size: 11px; color: var(--text3); pointer-events: none; }
+.search-inp { padding-left: 30px !important; }
+.cl-list { flex: 1; overflow-y: auto; padding: 6px; }
+.list-loading { padding: 24px; text-align: center; color: var(--accent); font-size: 18px; }
+.list-empty { padding: 20px; text-align: center; color: var(--text3); font-size: 12px; }
+.cl-item { display: block; width: 100%; padding: 9px 10px; border-radius: 4px; text-align: left; cursor: pointer; transition: background .12s; border: 1px solid var(--border); margin-bottom: 4px; background: var(--bg1); font-family: inherit; }
+.cl-item:hover { background: var(--bg2); border-color: var(--text3); }
+.cl-item.selected { background: var(--bg2); border-color: var(--accent); }
+.cl-item.inactive { opacity: .4; }
+.cli-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 3px; }
+.cli-id { font-size: 9px; color: var(--text3); font-family: 'JetBrains Mono', monospace; letter-spacing: .06em; }
+.cli-q { font-size: 11px; color: var(--text1); line-height: 1.4; margin-bottom: 3px; }
+.cli-cat { font-size: 9px; font-weight: 600; }
+.d1 { color: var(--ok); }
+.d2 { color: var(--warn); }
+.d3 { color: var(--err); }
+
+/* ── Detail-Spalte ────────────────────────────────────────── */
+.cards-detail-col { overflow-y: auto; background: var(--bg0); }
+.card-form-wrap, .card-detail-wrap { padding: 22px; max-width: 700px; }
+.card-detail-actions { display: flex; gap: 6px; }
+.detail-section { margin-bottom: 16px; }
+.detail-q { font-size: 15px; font-weight: 600; color: var(--text0); background: var(--bg2); border-radius: 4px; padding: 12px 14px; line-height: 1.5; }
+.detail-hint { font-size: 12px; color: var(--text2); background: var(--bg2); border-radius: 4px; padding: 8px 12px; display: flex; align-items: center; gap: 6px; }
+.detail-hint i { flex-shrink: 0; }
+.detail-ans { font-size: 12px; color: var(--text1); background: var(--bg1); border: 1px solid var(--border); border-radius: 4px; padding: 12px 14px; line-height: 1.65; }
+.detail-ai { font-size: 13px; color: var(--text1); background: var(--bg2); border: 1px solid color-mix(in srgb, var(--ac2) 35%, transparent); border-radius: 4px; padding: 12px 14px; line-height: 1.6; }
+.ai-load-indicator { display: flex; align-items: center; gap: 12px; padding: 10px 14px; background: var(--glow); border: 1px solid color-mix(in srgb, var(--accent) 30%, transparent); border-radius: 4px; margin-top: 4px; }
+.ai-load-indicator > i { color: var(--accent); flex-shrink: 0; }
+.ai-load-text { font-size: 12px; color: var(--accent); margin-bottom: 4px; }
+.ai-bar { height: 2px; background: var(--bg3); border-radius: 1px; overflow: hidden; }
+.ai-bar-fill { height: 100%; background: var(--accent); animation: scan 1.8s ease-in-out infinite; }
+@keyframes scan { 0% { transform: translateX(-100%); } 100% { transform: translateX(400%); } }
+
+/* ── Schwierigkeit ────────────────────────────────────────── */
+.diff-btns { display: flex; gap: 8px; }
+.diff-btn {
+  padding: 5px 13px; border-radius: 4px; font-size: 11px; font-weight: 600;
+  border: 1px solid var(--border); background: transparent; color: var(--text2);
+  cursor: pointer; transition: all .15s; display: flex; align-items: center; gap: 5px; font-family: inherit;
+}
+.diff-btn[data-diff="1"].diff-active { border-color: var(--ok); color: var(--ok); background: color-mix(in srgb, var(--ok) 12%, transparent); }
+.diff-btn[data-diff="2"].diff-active { border-color: var(--warn); color: var(--warn); background: color-mix(in srgb, var(--warn) 12%, transparent); }
+.diff-btn[data-diff="3"].diff-active { border-color: var(--err); color: var(--err); background: color-mix(in srgb, var(--err) 12%, transparent); }
+</style>

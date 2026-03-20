@@ -22,7 +22,7 @@
   async function init() {
     mcLoading = true
     try {
-      const mc = await apiGet(`/api/mc/${card.card_id}`)
+      const mc = await apiGet(`/api/mc/${card.card_id}?package_id=${card.package_id}`)
       const correctText = card.answer.split('\n')[0].substring(0, 150)
       const opts = [
         { text: correctText, correct: true },

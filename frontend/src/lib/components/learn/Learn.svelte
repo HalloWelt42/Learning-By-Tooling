@@ -136,6 +136,8 @@
   // -- Session starten --
   async function startSession() {
     try {
+      // Offene Session beenden bevor neue startet
+      await apiDelete('/api/sessions/active').catch(() => {})
       const data = await apiPost('/api/sessions', {
         mode, package_id: $activePackageId || null,
         category_filter: catFilter, card_limit: cardLimit,
@@ -144,6 +146,7 @@
       if (data.total === 0) { showToast('Keine Karten -- Filter anpassen', 'warn'); return }
       sessionId = data.session_id
       sessionMode = mode
+      combo = 0; comboPeak = 0; sessionXp = 0; xpFloats = []
       totalCards = data.total
       activeSession.set(data)
       results = []; wrongCards = []
@@ -161,6 +164,7 @@
       const resp = await apiGet(`/api/sessions/${sessionId}/current-card`)
       if (resp.done) { await finishSession(); return }
       card = resp.card
+      if (resp.mode) sessionMode = resp.mode
       if (resp.progress) progress = resp.progress
     } catch(e) {
       showToast('Karte konnte nicht geladen werden', 'error')

@@ -82,3 +82,11 @@
     {/each}
   {/if}
 </div>
+
+<style>
+.lex-group { margin-bottom: 20px; }
+.lex-letter { font-size: 11px; font-weight: 700; letter-spacing: .12em; color: var(--accent); font-family: 'JetBrains Mono', monospace; padding-bottom: 8px; border-bottom: 1px solid var(--border); margin-bottom: 8px; }
+.lex-entry { margin-bottom: 8px; }
+.lex-term { font-size: 16px; font-weight: 700; color: var(--text0); margin-bottom: 8px; }
+.lex-def { font-size: 13px; color: var(--text1); line-height: 1.7; white-space: pre-wrap; }
+</style>

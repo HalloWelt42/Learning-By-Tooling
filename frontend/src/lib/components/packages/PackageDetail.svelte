@@ -19,8 +19,6 @@
   let documents = $state([])
   let cards     = $state([])
   let drafts    = $state([])
-  let lexicon   = $state([])
-  let paths     = $state([])
   let materialTexts = $state([])
 
   let searchQ       = $state('')
@@ -92,10 +90,7 @@
     }
   }
 
-  // confirmDeleteCard entfernt (jetzt in CardsTab)
   let confirmDeleteDoc  = $state(null)
-
-  // Import-State entfernt (jetzt in ImportTab)
 
   onMount(() => {
     loadAll()
@@ -135,16 +130,7 @@
   async function loadStats()     { stats     = await apiGet(`/api/packages/${pkg.id}/stats`).catch(()=>null) }
   async function loadDocuments() { documents = await apiGet(`/api/packages/${pkg.id}/documents`).catch(()=>[]) }
   async function loadDrafts()    { drafts    = await apiGet(`/api/packages/${pkg.id}/drafts`).catch(()=>[]) }
-  async function loadCards()     {
-    loadingCards = true
-    const p = new URLSearchParams({ package_id: pkg.id })
-    if (searchQ)   p.set('search',   searchQ)
-    if (filterCat) p.set('category', filterCat)
-    cards = await apiGet(`/api/cards?${p}`).catch(()=>[])
-    loadingCards = false
-  }
-  async function loadLexicon() { lexicon = await apiGet(`/api/packages/${pkg.id}/lexicon`).catch(()=>[]) }
-  async function loadPaths()   { paths   = await apiGet(`/api/packages/${pkg.id}/paths`).catch(()=>[]) }
+  async function loadCards()     { cards     = await apiGet(`/api/cards?package_id=${pkg.id}`).catch(()=>[]) }
 
   async function loadMaterial() {
     if (materialTexts.length > 0) return
@@ -159,53 +145,12 @@
     materialTexts = result
   }
 
+  // Daten für Sub-Komponenten laden wenn Tab wechselt
   $effect(() => {
-    if (tab === 'cards')   loadCards()
-    if (tab === 'lexicon') loadLexicon()
-    if (tab === 'paths')   loadPaths()
+    if (tab === 'paths') loadCards()
   })
 
-  let st
-  function onSearch() { clearTimeout(st); st = setTimeout(loadCards, 280) }
-  $effect(() => { filterCat; searchQ; if(tab==='cards') loadCards() })
-
-  // ── Karten ──────────────────────────────────────────────────────────────
-  function openCreate() {
-    editCard = null
-    cardForm = { card_id:'', package_id:pkg.id, category_code:$categories[0]?.code||'AL', question:'', answer:'', hint:'', difficulty:2 }
-    selectedCard = null
-    showCardForm = true
-  }
-  function openEdit(c) { editCard=c; cardForm={...c,hint:c.hint||''}; showCardForm=true }
-
-  async function saveCard() {
-    if (!cardForm.question || !cardForm.answer) { showToast('Frage und Antwort Pflicht','error'); return }
-    try {
-      if (editCard) { await apiPut(`/api/cards/${editCard.card_id}`, cardForm); showToast('Gespeichert','success') }
-      else          { await apiPost('/api/cards', {...cardForm, package_id:pkg.id}); showToast('Erstellt','success') }
-      showCardForm=false; selectedCard=null
-      await loadCards(); await loadStats(); await loadGlobal()
-    } catch(e) { showToast(e.message,'error') }
-  }
-
-  async function deleteCard(c) {
-    if (confirmDeleteCard !== c.card_id) {
-      confirmDeleteCard = c.card_id
-      setTimeout(() => confirmDeleteCard = null, 3000)
-      return
-    }
-    confirmDeleteCard = null
-    await apiDelete(`/api/cards/${c.card_id}`)
-    if (selectedCard?.card_id===c.card_id) selectedCard=null
-    await loadCards(); await loadStats(); await loadGlobal()
-    showToast('Gelöscht','info')
-  }
-
-  async function getAI(c) {
-    aiState='loading'; aiText=''
-    try { const d=await apiPost('/api/ai/explain',{card_id:c.card_id}); aiText=d.explanation; aiState='done' }
-    catch { aiText='LM Studio nicht erreichbar.'; aiState='error' }
-  }
+  // Karten-Funktionen sind jetzt in CardsTab.svelte
 
   // ── Upload & KI ──────────────────────────────────────────────────────────
   async function handleUpload() {
@@ -302,33 +247,7 @@
     showToast(`${pending.length} Karten freigegeben`,'success')
   }
 
-  // ── Lexikon ───────────────────────────────────────────────────────────────
-  async function saveLex() {
-    if (!lexForm.term||!lexForm.definition) { showToast('Begriff und Definition Pflicht','error'); return }
-    await apiPost('/api/lexicon',{...lexForm,package_id:pkg.id})
-    showToast('Gespeichert','success'); showLexForm=false; lexForm={term:'',definition:'',category_code:''}
-    await loadLexicon()
-  }
-
-  // ── Lernpfade ─────────────────────────────────────────────────────────────
-  async function savePath() {
-    if (!pathForm.name) { showToast('Name Pflicht','error'); return }
-    await apiPost('/api/paths',{...pathForm,package_id:pkg.id})
-    showToast('Lernpfad erstellt','success'); showPathForm=false; pathForm={name:'',description:'',category_codes:[]}
-    await loadPaths()
-  }
-
-  // ── Import ────────────────────────────────────────────────────────────────
-  async function doImport() {
-    if (!importFragen||!importAntwt) { showToast('Beide Texte einfügen','error'); return }
-    importing=true
-    try {
-      importResult = await apiPost('/api/import/markdown',{fragen:importFragen,antworten:importAntwt,package_id:pkg.id})
-      showToast(`${importResult.created} Karten importiert`,'success')
-      await loadCards(); await loadStats(); await loadGlobal()
-    } catch(e) { showToast(e.message,'error') }
-    importing=false
-  }
+  // Lexikon, Lernpfade, Import sind jetzt in eigenen Komponenten
 
   // ── Helpers ───────────────────────────────────────────────────────────────
   const DL = ['','Leicht','Mittel','Schwer']
@@ -342,15 +261,6 @@
 
   let pending = $derived(drafts.filter(d=>d.status==='pending'))
   let catCounts = $derived((stats?.by_category||[]).filter(c=>c.count>0))
-  let lexGrouped = $derived.by(() => {
-    const g = {}
-    for (const e of lexicon) {
-      const l = (e.term[0]||'#').toUpperCase()
-      if (!g[l]) g[l]=[]
-      g[l].push(e)
-    }
-    return Object.entries(g).sort(([a],[b])=>a.localeCompare(b))
-  })
 </script>
 
 <div class="pd-wrap">
@@ -936,7 +846,10 @@
   border-bottom: 1px solid var(--border);
   padding: 0 16px;
   flex-shrink: 0;
+  overflow-x: auto;
+  scrollbar-width: none;
 }
+.pd-tabs::-webkit-scrollbar { display: none; }
 .pd-tab {
   padding: 10px 14px;
   font-size: 12px;
@@ -978,6 +891,9 @@
   flex: 1;
   overflow-y: auto;
   padding: 24px;
+  max-width: 1200px;
+  margin: 0 auto;
+  width: 100%;
 }
 .material-page { max-width: 860px; }
 .material-doc { margin-bottom: 32px; }

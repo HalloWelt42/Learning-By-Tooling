@@ -49,8 +49,9 @@ def install_bundle(bundle_id: str, user: dict = Depends(get_current_user)):
     if not bundle:
         raise HTTPException(404, f"Bundle '{bundle_id}' nicht gefunden")
 
-    fragen_file  = BUNDLES_PATH / bundle["fragen_file"]
-    antwort_file = BUNDLES_PATH / bundle["antwort_file"]
+    files = bundle.get("files", {})
+    fragen_file  = BUNDLES_PATH / (files.get("questions") or bundle.get("fragen_file", ""))
+    antwort_file = BUNDLES_PATH / (files.get("answers") or bundle.get("antwort_file", ""))
 
     if not fragen_file.exists() or not antwort_file.exists():
         raise HTTPException(500, "Bundle-Dateien fehlen auf dem Server")

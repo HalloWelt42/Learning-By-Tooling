@@ -10,5 +10,17 @@
       "questions": "lernvault-handbuch-fragen.md",
       "answers": "lernvault-handbuch-antworten.md"
     }
+  },
+  {
+    "id": "testpaket",
+    "name": "Plattform-Testpaket",
+    "version": "1.0",
+    "description": "10 Karten zum Pruefen ob Import und Lernmodus funktionieren.",
+    "icon": "fa-flask",
+    "color": "#ff9800",
+    "files": {
+      "questions": "testpaket-fragen.md",
+      "answers": "testpaket-antworten.md"
+    }
   }
 ]

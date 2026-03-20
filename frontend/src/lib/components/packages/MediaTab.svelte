@@ -12,6 +12,7 @@
   }
 </script>
 
+<div class="tab-page">
 {#if media.length === 0}
   <div class="empty-state"><i class="fa-solid fa-images"></i><p>Keine Medien vorhanden. Bilder werden beim ZIP-Import automatisch erkannt.</p></div>
 {:else}
@@ -32,3 +33,14 @@
     {/each}
   </div>
 {/if}
+</div>
+
+<style>
+.media-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 12px; }
+.media-item { background: var(--bg1); border: 1px solid var(--border); border-radius: 4px; overflow: hidden; display: flex; flex-direction: column; }
+.media-img img { width: 100%; height: 120px; object-fit: cover; display: block; }
+.media-pdf { padding: 20px; align-items: center; text-decoration: none; color: var(--text1); gap: 6px; text-align: center; }
+.media-pdf i { font-size: 28px; color: var(--err); }
+.media-name { font-size: 10px; color: var(--text2); padding: 6px 8px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.media-size { font-size: 9px; color: var(--text3); }
+</style>

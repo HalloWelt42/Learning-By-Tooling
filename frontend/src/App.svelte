@@ -131,7 +131,6 @@
         <div class="brand-icon"><i class="fa-solid fa-graduation-cap"></i></div>
         <div>
           <div class="brand-name">Learning-By-Tooling</div>
-          <div class="brand-ver">v{VERSION}</div>
         </div>
       </div>
 
@@ -223,6 +222,12 @@
           <i class="fa-solid fa-gear"></i>
           <span>Verwaltung</span>
         </button>
+
+        <button class="nav-item" class:active={showScratchPad}
+          onclick={() => showScratchPad = !showScratchPad}>
+          <i class="fa-solid fa-clipboard-list"></i>
+          <span>Notizen</span>
+        </button>
       </nav>
 
       {#if ($packages || []).length > 0}
@@ -251,14 +256,6 @@
       {/if}
 
       <div class="sf">
-        <div class="sf-line">
-          <div class="status-dot" class:online={$backendOnline}></div>
-          <span>API</span>
-          <div class="status-dot" class:online={$aiOnline}></div>
-          <span>LM</span>
-          <span class="sf-sep">|</span>
-          <span class="mono">v{VERSION}</span>
-        </div>
         <div class="theme-row">
           {#each [
             {id:'dark',     icon:'fa-moon'},
@@ -279,22 +276,20 @@
             </button>
           {/each}
         </div>
-        <div class="util-row">
-          <button
-            class="util-btn"
-            class:active={showScratchPad}
-            title="Spickzettel"
-            onclick={() => showScratchPad = !showScratchPad}
-          >
-            <i class="fa-solid fa-note-sticky"></i>
-          </button>
-        </div>
         <div class="user-row">
           <i class="fa-solid fa-user"></i>
           <span>{$authUser.display_name || $authUser.email}</span>
           <button class="logout-btn" title="Abmelden" onclick={() => authUser.logout()}>
             <i class="fa-solid fa-right-from-bracket"></i>
           </button>
+        </div>
+        <div class="sf-line">
+          <div class="status-dot" class:online={$backendOnline}></div>
+          <span>API</span>
+          <div class="status-dot" class:online={$aiOnline}></div>
+          <span>LM</span>
+          <span class="sf-sep">|</span>
+          <span class="mono">v{VERSION}</span>
         </div>
       </div>
     </aside>
