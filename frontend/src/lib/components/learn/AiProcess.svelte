@@ -157,14 +157,14 @@
 <style>
   .aip {
     background: var(--bg2);
-    border: 1px solid var(--border);
     border-radius: 4px;
     padding: 16px;
-    transition: border-color .3s;
+    transition: box-shadow .3s;
+    box-shadow: 0 1px 3px var(--shadow);
   }
-  .aip.compact { background: transparent; border: none; padding: 0; }
-  .aip--done   { border-color: color-mix(in srgb, var(--ok) 40%, transparent); }
-  .aip--error  { border-color: color-mix(in srgb, var(--err) 40%, transparent); }
+  .aip.compact { background: transparent; box-shadow: none; padding: 0; }
+  .aip--done   { box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--ok) 40%, transparent); }
+  .aip--error  { box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--err) 40%, transparent); }
 
   /* Header */
   .aip-header {

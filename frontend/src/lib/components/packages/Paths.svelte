@@ -320,11 +320,11 @@
 <style>
   .chapters-list { display: flex; flex-direction: column; gap: 12px; max-width: 700px; }
   .chapter-card {
-    background: var(--bg1); border: 1px solid var(--border); border-radius: 4px;
-    padding: 16px; transition: opacity .2s;
+    background: var(--bg1); border-radius: 4px;
+    padding: 16px; transition: opacity .2s; box-shadow: 0 1px 3px var(--shadow);
   }
   .chapter-card.locked { opacity: .5; }
-  .chapter-card.passed { border-color: var(--ok); }
+  .chapter-card.passed { box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--ok) 40%, transparent); }
   .ch-header { display: flex; align-items: flex-start; gap: 12px; margin-bottom: 10px; }
   .ch-number {
     width: 28px; height: 28px; border-radius: 50%; border: 2px solid var(--border);
@@ -342,10 +342,10 @@
 
   .path-card {
     display: flex; align-items: center; gap: 12px;
-    background: var(--bg1); border: 1px solid var(--border); border-radius: 4px;
+    background: var(--bg1); border: none; border-radius: 4px;
     padding: 14px 16px; cursor: pointer; transition: background .12s;
     margin-bottom: 8px; width: 100%; text-align: left;
-    font-family: inherit; color: inherit;
+    font-family: inherit; color: inherit; box-shadow: 0 1px 3px var(--shadow);
   }
   .path-card:hover { background: var(--bg2); }
   .path-name { font-size: 14px; font-weight: 600; color: var(--text0); }

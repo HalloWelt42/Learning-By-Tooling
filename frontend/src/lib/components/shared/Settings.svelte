@@ -347,7 +347,7 @@
     gap:16px; padding:0 20px 40px;
   }
   .settings-card {
-    background:var(--bg1); border:1px solid var(--border); border-radius:4px; padding:16px;
+    background:var(--bg1); border-radius:4px; padding:16px; box-shadow:0 1px 3px var(--shadow);
   }
   .settings-card-hd {
     display:flex; align-items:center; gap:8px; font-size:13px; font-weight:700;
@@ -380,13 +380,13 @@
   /* Chip Group */
   .chip-group { display:flex; gap:4px; flex-wrap:wrap; }
   .chip {
-    padding:4px 10px; font-size:11px; border:1px solid var(--border);
-    border-radius:3px; background:var(--bg2); color:var(--text2);
+    padding:4px 10px; font-size:11px; border:none;
+    border-radius:3px; background:var(--bg3); color:var(--text2);
     cursor:pointer; transition:all .12s; font-family:inherit;
     white-space:nowrap;
   }
-  .chip:hover { border-color:var(--text3); color:var(--text1); }
-  .chip.active { border-color:var(--accent); color:var(--accent); background:var(--glow); }
+  .chip:hover { background:var(--bg4); color:var(--text1); }
+  .chip.active { color:var(--accent); background:color-mix(in srgb, var(--accent) 15%, transparent); }
   .chip i { font-size:10px; margin-right:3px; }
 
   /* Input Row */

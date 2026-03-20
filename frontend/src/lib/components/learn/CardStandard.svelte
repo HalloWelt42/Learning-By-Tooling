@@ -126,13 +126,13 @@
 
         <div class="rate-row">
           <button class="rate-btn rb-err" onclick={() => rate('wrong')} disabled={busy}>
-            <i class="fa-solid fa-xmark"></i> Falsch
+            <i class="fa-solid fa-thumbs-down"></i> Nicht gewusst
           </button>
           <button class="rate-btn rb-skip" onclick={() => rate('skip')} disabled={busy}>
             <i class="fa-solid fa-forward"></i> Skip
           </button>
           <button class="rate-btn rb-ok" onclick={() => rate('correct')} disabled={busy}>
-            <i class="fa-solid fa-check"></i> Richtig
+            <i class="fa-solid fa-thumbs-up"></i> Gewusst
           </button>
         </div>
 
@@ -148,28 +148,7 @@
 </div>
 
 <style>
-.card-area { display:flex;justify-content:center;padding:28px 32px; }
-.fc {
-  width:100%;max-width:640px;background:var(--bg1);border:1px solid var(--border);border-radius:4px;
-  padding:28px;box-shadow:0 4px 24px var(--shadow);display:flex;flex-direction:column;
-  transition:max-width .3s,border-color .3s,box-shadow .3s;
-}
-.fc.fc-split {
-  display:grid;grid-template-columns:1fr 1fr;max-width:960px;gap:0;
-  border-color:color-mix(in srgb,var(--accent) 55%,transparent);
-  box-shadow:0 8px 40px var(--glow);
-}
-.fc-col { display:flex;flex-direction:column; }
-.fc-col-right { border-left:1px solid var(--border);padding-left:28px; }
-.fc-meta { display:flex;justify-content:space-between;align-items:center;margin-bottom:18px; }
-.fc-id { font-size:10px;color:var(--text3);font-family:'JetBrains Mono',monospace; }
-.fc-diff { font-size:11px;font-weight:600;display:flex;align-items:center;gap:4px; }
-.fc-q { font-size:18px;font-weight:600;color:var(--text0);line-height:1.5;margin-bottom:18px; }
-.fc-hint { font-size:12px;color:var(--text2);background:var(--bg2);border-radius:4px;padding:7px 12px;margin-bottom:14px;display:flex;align-items:center;gap:7px; }
-.flip-btn { width:100%;justify-content:center;padding:13px;font-size:14px; }
-.fc-ans-lbl { font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--accent);margin-bottom:8px;display:flex;align-items:center;gap:6px; }
-.fc-ans { font-family:'JetBrains Mono',monospace;font-size:12px;line-height:1.7;color:var(--text1);background:var(--bg2);border-radius:4px;padding:12px 16px;white-space:pre-wrap;margin-bottom:14px; }
-
+/* Karten-Layout, rate-btn, flip-btn, mat-link: siehe app.css */
 .ai-explain-btn { margin-bottom:14px; }
 .ai-explain { background:var(--bg2);border:1px solid color-mix(in srgb,var(--ac2) 40%,transparent);border-radius:4px;padding:12px 16px;margin-bottom:14px; }
 .ae-header { font-size:11px;font-weight:700;color:var(--ac2);letter-spacing:.07em;display:flex;align-items:center;gap:6px;margin-bottom:8px;text-transform:uppercase; }
@@ -177,15 +156,4 @@
 .ai-assist-row { display:flex;gap:6px;margin:10px 0 6px;flex-wrap:wrap; }
 .ai-related-box { display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:8px; }
 .related-tag { font-size:10px;background:var(--bg2);border:1px solid var(--border);border-radius:3px;padding:2px 8px;color:var(--accent); }
-
-.rate-row { display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-top:4px; }
-.rate-btn { padding:12px 10px;border-radius:4px;font-size:12px;font-weight:600;border:2px solid;transition:all .15s;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px; }
-.rate-btn:disabled { opacity:0.5;cursor:default; }
-.rb-ok  { border-color:var(--ok);color:var(--ok);background:transparent; }
-.rb-ok:hover:not(:disabled)  { background:var(--ok);color:#fff; }
-.rb-err { border-color:var(--err);color:var(--err);background:transparent; }
-.rb-err:hover:not(:disabled) { background:var(--err);color:#fff; }
-.rb-skip { border-color:var(--text3);color:var(--text2);background:transparent; }
-.rb-skip:hover:not(:disabled) { background:var(--bg3); }
-.mat-link { margin-top:10px;font-size:11px; }
 </style>

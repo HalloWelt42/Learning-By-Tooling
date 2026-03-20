@@ -4,6 +4,7 @@
   let { card, progress, totalCards, sessionMode, combo = 0, comboFlash = false, xpEarned = 0, xpFlash = false, materialUsed = false, onOpenMaterial = null } = $props()
 
   const MODE_LABELS = { standard: 'Karteikarte', mc: 'Multiple Choice', write: 'Freitext', srs: 'SRS' }
+  let modeLabel = $derived(MODE_LABELS[sessionMode] || sessionMode)
   let pctDone = $derived(totalCards > 0 ? progress.current_index / totalCards : 0)
   let catObj  = $derived($categories?.find(c => c.code === card?.category_code))
   let pkgObj  = $derived($packages?.find(p => p.id === $activePackageId))
@@ -22,7 +23,7 @@
     {#if catObj}
       <span class="ctx-cat" style="color:{catObj.color}">{catObj.name}</span>
     {/if}
-    <span class="ctx-mode">{MODE_LABELS[sessionMode] || sessionMode}</span>
+    <span class="ctx-mode">{modeLabel}</span>
   </div>
   <div class="ctx-pos">
     <span class="ctx-num">{progress.current_index + 1}</span>

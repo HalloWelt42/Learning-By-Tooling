@@ -40,19 +40,20 @@
     'fa-network-wired','fa-code','fa-file-code','fa-cube','fa-layer-group',
     'fa-gear','fa-shield-halved','fa-truck','fa-briefcase','fa-chart-bar',
   ]
+  // Katalog-Farben: MD3 400er, OHNE semantische Farben (kein Rot/Gruen/Orange/Blau/Blautoene)
   const MD_COLORS = [
-    { hex:'#F44336', name:'Red' }, { hex:'#E91E63', name:'Pink' },
-    { hex:'#9C27B0', name:'Purple' }, { hex:'#673AB7', name:'Deep Purple' },
-    { hex:'#3F51B5', name:'Indigo' }, { hex:'#2196F3', name:'Blue' },
-    { hex:'#03A9F4', name:'Light Blue' }, { hex:'#00BCD4', name:'Cyan' },
-    { hex:'#009688', name:'Teal' }, { hex:'#4CAF50', name:'Green' },
-    { hex:'#8BC34A', name:'Light Green' }, { hex:'#CDDC39', name:'Lime' },
-    { hex:'#FFC107', name:'Amber' }, { hex:'#FF9800', name:'Orange' },
-    { hex:'#FF5722', name:'Deep Orange' }, { hex:'#795548', name:'Brown' },
-    { hex:'#607D8B', name:'Blue Grey' }, { hex:'#9E9E9E', name:'Grey' },
+    { hex:'#EC407A', name:'Pink' },
+    { hex:'#AB47BC', name:'Purple' },
+    { hex:'#7E57C2', name:'Deep Purple' },
+    { hex:'#5C6BC0', name:'Indigo' },
+    { hex:'#26A69A', name:'Teal' },
+    { hex:'#D4E157', name:'Lime' },
+    { hex:'#FFCA28', name:'Amber' },
+    { hex:'#FF7043', name:'Deep Orange' },
+    { hex:'#8D6E63', name:'Brown' },
   ]
 
-  let form = $state({ name:'', description:'', color:'#5b8aff', icon:'fa-graduation-cap' })
+  let form = $state({ name:'', description:'', color:'#5C6BC0', icon:'fa-graduation-cap' })
 
   // Alle Eintraege vereinheitlicht: installierte Pakete + verfuegbare Bundles
   let allItems = $derived((() => {
@@ -162,7 +163,7 @@
       await loadGlobal()
       showToast(`Paket "${form.name}" erstellt`, 'success')
       showCreate = false
-      form = { name:'', description:'', color:'#2196F3', icon:'fa-graduation-cap' }
+      form = { name:'', description:'', color:'#5C6BC0', icon:'fa-graduation-cap' }
     } catch(e) { showToast(e.message, 'error') }
   }
 
@@ -608,11 +609,11 @@
 .icon-opt {
   width: 30px; height: 30px; border-radius: 4px;
   display: flex; align-items: center; justify-content: center;
-  border: 1px solid var(--border); font-size: 12px;
-  color: var(--text2); cursor: pointer; background: transparent; transition: all .15s;
+  border: none; font-size: 12px;
+  color: var(--text2); cursor: pointer; background: var(--bg3); transition: all .15s;
 }
-.icon-opt:hover { border-color: var(--c); color: var(--c); }
-.icon-opt.active { border-color: var(--c); background: color-mix(in srgb, var(--c) 15%, transparent); color: var(--c); }
+.icon-opt:hover { background: var(--bg4); color: var(--c); }
+.icon-opt.active { background: color-mix(in srgb, var(--c) 15%, transparent); color: var(--c); }
 .color-grid { display: flex; flex-wrap: wrap; gap: 4px; }
 .color-opt {
   width: 20px; height: 20px; border-radius: 50%; cursor: pointer;
@@ -669,7 +670,7 @@
   gap: 10px;
   padding: 12px 14px;
   background: var(--bg1);
-  border: 1px solid var(--border);
+  border: none;
   border-radius: 4px;
   cursor: pointer;
   transition: all .15s;
@@ -677,18 +678,19 @@
   font-family: inherit;
   width: 100%;
   color: inherit;
+  box-shadow: 0 1px 3px var(--shadow);
 }
 .pk-tile:hover {
-  border-color: color-mix(in srgb, var(--c) 60%, transparent);
   background: var(--bg2);
 }
 .pk-tile.active {
-  border-color: var(--c);
   background: color-mix(in srgb, var(--c) 8%, var(--bg1));
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--c) 40%, transparent);
 }
 .pk-tile.is-available {
   opacity: .7;
-  border-style: dashed;
+  box-shadow: none;
+  border: 1px dashed var(--border);
 }
 .pk-tile.is-available:hover { opacity: 1; }
 .pk-tile.is-available.active { opacity: 1; }
@@ -723,9 +725,8 @@
   flex-shrink: 0;
 }
 .pk-tile-badge.avail {
-  background: var(--glow);
+  background: color-mix(in srgb, var(--accent) 15%, transparent);
   color: var(--accent);
-  border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent);
 }
 .pk-tile-badge.draft {
   background: color-mix(in srgb, var(--warn) 15%, transparent);
@@ -737,7 +738,7 @@
   width: 380px;
   flex-shrink: 0;
   border-left: 1px solid var(--border);
-  background: var(--bg1);
+  background: var(--bg0);
   overflow-y: auto;
   padding: 24px;
   display: flex;

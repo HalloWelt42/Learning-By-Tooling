@@ -16,7 +16,7 @@ class RegisterRequest(BaseModel):
 class PackageCreate(BaseModel):
     name:        str
     description: Optional[str]  = None
-    color:       Optional[str]  = "#2196F3"
+    color:       Optional[str]  = "#5C6BC0"
     icon:        Optional[str]  = "fa-graduation-cap"
 
 class PackageUpdate(BaseModel):
@@ -49,7 +49,7 @@ class CategoryCreate(BaseModel):
     code:        str
     name:        str
     description: Optional[str]  = None
-    color:       Optional[str]  = "#2196F3"
+    color:       Optional[str]  = "#5C6BC0"
     icon:        Optional[str]  = "fa-layer-group"
 
 class SessionCreate(BaseModel):
@@ -74,6 +74,7 @@ class SessionReviewNext(BaseModel):
     use_ai:      Optional[bool] = False
     srs_quality: Optional[int]  = None  # 0-5 fuer SRS-Modus
     time_ms:     Optional[int]  = 0     # Antwortzeit in Millisekunden
+    mc_used:     Optional[bool] = None  # MC-Optionen tatsaechlich angezeigt?
 
 class SRSReview(BaseModel):
     card_id: str

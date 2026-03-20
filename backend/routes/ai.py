@@ -154,19 +154,25 @@ async def generate_mc_batch(data: dict, user: dict = Depends(get_current_user)):
         LIMIT ?
     """, (today, pkg_id, limit)).fetchall()
     generated = 0
+    failed = []
+    settings = _load_user_settings(user["id"])
     for c in cards:
-        settings = _load_user_settings(user["id"])
-        options = await generate_mc_options(c["question"], c["answer"], settings=settings)
-        if options and len(options) >= 3:
-            expires = (date.today() + timedelta(days=7)).isoformat()
-            conn.execute(
-                "INSERT OR REPLACE INTO mc_options (card_id, package_id, options, expires_at) VALUES (?,?,?,?)",
-                (c["card_id"], pkg_id, json.dumps(options), expires)
-            )
-            generated += 1
+        try:
+            options = await generate_mc_options(c["question"], c["answer"], settings=settings)
+            if options and len(options) >= 3:
+                expires = (date.today() + timedelta(days=7)).isoformat()
+                conn.execute(
+                    "INSERT OR REPLACE INTO mc_options (card_id, package_id, options, expires_at) VALUES (?,?,?,?)",
+                    (c["card_id"], pkg_id, json.dumps(options), expires)
+                )
+                generated += 1
+            else:
+                failed.append({"card_id": c["card_id"], "reason": "Zu wenige Optionen generiert"})
+        except Exception as e:
+            failed.append({"card_id": c["card_id"], "reason": str(e)[:100]})
     conn.commit()
     conn.close()
-    return {"generated": generated, "total": len(cards)}
+    return {"generated": generated, "total": len(cards), "failed": failed}
 
 
 @router.get("/api/mc/status/{package_id}")
@@ -191,3 +197,75 @@ async def clear_mc_cache(package_id: int, user: dict = Depends(get_current_user)
     conn.commit()
     conn.close()
     return {"deleted": r.rowcount}
+
+
+@router.get("/api/mc/list/{package_id}")
+def list_mc_options(package_id: int, user: dict = Depends(get_current_user)):
+    """Listet alle gecachten MC-Optionen eines Pakets mit Kartendaten."""
+    conn = get_db()
+    today = date.today().isoformat()
+    rows = conn.execute("""
+        SELECT mc.card_id, mc.options, mc.expires_at,
+               c.question, c.answer, c.category_code
+        FROM mc_options mc
+        JOIN cards c ON c.card_id = mc.card_id AND c.package_id = mc.package_id
+        WHERE mc.package_id = ? AND (mc.expires_at IS NULL OR mc.expires_at > ?)
+        ORDER BY mc.card_id
+    """, (package_id, today)).fetchall()
+    conn.close()
+    return [
+        {
+            "card_id": r["card_id"],
+            "question": r["question"],
+            "answer": r["answer"],
+            "category_code": r["category_code"],
+            "options": json.loads(r["options"]),
+            "expires_at": r["expires_at"],
+        }
+        for r in rows
+    ]
+
+
+@router.delete("/api/mc/option/{card_id}/{package_id}")
+def delete_mc_option(card_id: str, package_id: int, user: dict = Depends(get_current_user)):
+    """Loescht MC-Optionen fuer eine einzelne Karte."""
+    conn = get_db()
+    r = conn.execute(
+        "DELETE FROM mc_options WHERE card_id=? AND package_id=?",
+        (card_id, package_id)
+    )
+    conn.commit()
+    conn.close()
+    return {"deleted": r.rowcount}
+
+
+@router.post("/api/mc/regenerate")
+async def regenerate_mc_option(data: dict, user: dict = Depends(get_current_user)):
+    """Generiert MC-Optionen fuer eine einzelne Karte neu."""
+    if not await _ai_online():
+        raise HTTPException(503, "LM Studio nicht erreichbar")
+    card_id = data.get("card_id")
+    pkg_id = data.get("package_id")
+    if not card_id or not pkg_id:
+        raise HTTPException(400, "card_id und package_id erforderlich")
+    conn = get_db()
+    card = conn.execute(
+        "SELECT question, answer FROM cards WHERE card_id=? AND package_id=? AND active=1",
+        (card_id, pkg_id)
+    ).fetchone()
+    if not card:
+        conn.close()
+        raise HTTPException(404, "Karte nicht gefunden")
+    settings = _load_user_settings(user["id"])
+    options = await generate_mc_options(card["question"], card["answer"], settings=settings)
+    if not options or len(options) < 3:
+        conn.close()
+        raise HTTPException(500, "MC-Generierung fehlgeschlagen")
+    expires = (date.today() + timedelta(days=7)).isoformat()
+    conn.execute(
+        "INSERT OR REPLACE INTO mc_options (card_id, package_id, options, expires_at) VALUES (?,?,?,?)",
+        (card_id, pkg_id, json.dumps(options), expires)
+    )
+    conn.commit()
+    conn.close()
+    return {"card_id": card_id, "options": options}

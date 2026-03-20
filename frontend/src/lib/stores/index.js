@@ -47,7 +47,7 @@ function createTheme() {
       set(v)
     },
     toggle() {
-      const CYCLE = ['dark','light','soft','contrast','warm']
+      const CYCLE = ['dark','light','dracula','contrast','warm']
       update(t => {
         const next = CYCLE[(CYCLE.indexOf(t) + 1) % CYCLE.length]
         if (typeof localStorage !== 'undefined') localStorage.setItem('lv-theme', next)

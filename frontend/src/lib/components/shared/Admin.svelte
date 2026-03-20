@@ -132,14 +132,14 @@
           <button class="btn-icon" title="Passwort zurücksetzen" onclick={() => { resetUser = u; resetPw = '' }}>
             <i class="fa-solid fa-key"></i>
           </button>
-          <button class="btn-icon" title="Lernfortschritt zurücksetzen" onclick={() => resetUserStats(u)}>
+          <button class="btn-icon btn-icon-warn" title="Lernfortschritt zurücksetzen" onclick={() => resetUserStats(u)}>
             <i class="fa-solid fa-arrow-rotate-left"></i>
           </button>
           {#if u.id !== $authUser?.id}
             <button class="btn-icon" title="{u.disabled ? 'Aktivieren' : 'Pausieren'}" onclick={() => toggleUser(u)}>
               <i class="fa-solid {u.disabled ? 'fa-play' : 'fa-pause'}"></i>
             </button>
-            <button class="btn-icon" title="Benutzer entfernen" onclick={() => removeUser(u)}>
+            <button class="btn-icon btn-icon-danger" title="Benutzer entfernen" onclick={() => removeUser(u)}>
               <i class="fa-solid fa-trash-can"></i>
             </button>
           {/if}
@@ -169,23 +169,23 @@
     display:flex;gap:4px;padding:0 20px 16px;
   }
   .admin-tab {
-    padding:8px 16px;font-size:12px;font-weight:600;border:1px solid var(--border);
-    border-radius:4px;background:transparent;color:var(--text2);cursor:pointer;
+    padding:8px 16px;font-size:12px;font-weight:600;border:none;
+    border-radius:4px;background:var(--bg2);color:var(--text2);cursor:pointer;
     transition:all .12s;font-family:inherit;display:flex;align-items:center;gap:6px;
   }
-  .admin-tab:hover { border-color:var(--text3);color:var(--text1); }
-  .admin-tab.active { border-color:var(--accent);color:var(--accent);background:var(--glow); }
+  .admin-tab:hover { background:var(--bg3);color:var(--text1); }
+  .admin-tab.active { background:var(--bg3);color:var(--accent);box-shadow:inset 0 0 0 1px color-mix(in srgb, var(--accent) 35%, transparent); }
   .admin-tab i { font-size:11px; }
   .admin-form {
     display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:16px;
-    padding:14px;background:var(--bg2);border:1px solid var(--border);border-radius:4px;
+    padding:14px;background:var(--bg2);border-radius:4px;box-shadow:0 1px 3px var(--shadow);
   }
   .admin-form .btn { grid-column:span 2; }
   .user-list { display:flex;flex-direction:column;gap:6px; }
   .reset-form { margin-top:12px;padding:12px;background:var(--bg2);border:1px solid var(--accent);border-radius:4px; }
   .user-item {
     display:flex;align-items:center;gap:12px;padding:12px;
-    background:var(--bg2);border:1px solid var(--border);border-radius:4px;
+    background:var(--bg2);border-radius:4px;box-shadow:0 1px 3px var(--shadow);
   }
   .user-icon { width:32px;height:32px;border-radius:4px;background:var(--bg3);display:flex;align-items:center;justify-content:center;color:var(--text3);flex-shrink:0; }
   .user-info { flex:1;min-width:0; }

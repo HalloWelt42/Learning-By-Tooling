@@ -256,30 +256,9 @@
 </div>
 
 <style>
-.card-area { display:flex;justify-content:center;padding:28px 32px; }
-.fc {
-  width:100%;max-width:640px;background:var(--bg1);border:1px solid var(--border);border-radius:4px;
-  padding:28px;box-shadow:0 4px 24px var(--shadow);display:flex;flex-direction:column;
-  transition:max-width .3s,border-color .3s,box-shadow .3s;
-}
-.fc.fc-split {
-  display:grid;grid-template-columns:1fr 1fr;max-width:960px;gap:0;
-  border-color:color-mix(in srgb,var(--accent) 55%,transparent);
-  box-shadow:0 8px 40px var(--glow);
-}
-.fc-col { display:flex;flex-direction:column; }
-.fc-col-right { border-left:1px solid var(--border);padding-left:28px; }
-.fc-meta { display:flex;justify-content:space-between;align-items:center;margin-bottom:18px; }
-.fc-id { font-size:10px;color:var(--text3); }
-.fc-diff { font-size:11px;font-weight:600;display:flex;align-items:center;gap:4px; }
-.fc-q { font-size:18px;font-weight:600;color:var(--text0);line-height:1.5;margin-bottom:18px; }
-.fc-hint { font-size:12px;color:var(--text2);background:var(--bg2);border-radius:4px;padding:7px 12px;margin-bottom:14px;display:flex;align-items:center;gap:7px; }
+/* Karten-Layout, rate-btn, rate-row-write, flip-btn, mat-link: siehe app.css */
 .fc-input { margin-bottom:14px;font-size:13px;padding:12px;border-radius:4px; }
-.flip-btn { width:100%;justify-content:center;padding:13px;font-size:14px; }
 .write-hint { font-size:12px;color:var(--text3);display:flex;align-items:center;gap:8px;padding:12px;justify-content:center; }
-
-.fc-ans-lbl { font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--accent);margin-bottom:8px;display:flex;align-items:center;gap:6px; }
-.fc-ans { font-family:'JetBrains Mono',monospace;font-size:12px;line-height:1.7;color:var(--text1);background:var(--bg2);border-radius:4px;padding:12px 16px;white-space:pre-wrap;margin-bottom:14px; }
 .fc-user-ans { font-size:12px;line-height:1.7;color:var(--text2);background:var(--bg2);border:1px dashed var(--border);border-radius:4px;padding:12px 16px;white-space:pre-wrap;margin-bottom:14px; }
 
 /* KI Feedback */
@@ -295,13 +274,5 @@
 
 /* Aktionen */
 .write-actions { display:flex;flex-direction:column;gap:8px;margin-top:10px; }
-.rate-row-write { display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:4px; }
-.rate-btn { padding:12px 10px;border-radius:4px;font-size:12px;font-weight:600;border:2px solid;transition:all .15s;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px; }
-.rate-btn:disabled { opacity:0.5;cursor:default; }
-.rb-ok  { border-color:var(--ok);color:var(--ok);background:transparent; }
-.rb-ok:hover:not(:disabled)  { background:var(--ok);color:#fff; }
-.rb-err { border-color:var(--err);color:var(--err);background:transparent; }
-.rb-err:hover:not(:disabled) { background:var(--err);color:#fff; }
-.mat-link { margin-top:10px;font-size:11px; }
 .ai-offline-warn { font-size:11px;color:var(--warn);background:color-mix(in srgb,var(--warn) 10%,transparent);border:1px solid color-mix(in srgb,var(--warn) 30%,transparent);border-radius:4px;padding:8px 12px;margin-bottom:10px;display:flex;align-items:center;gap:8px; }
 </style>

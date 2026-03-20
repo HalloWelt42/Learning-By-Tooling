@@ -23,6 +23,9 @@ lernpakete/
 # IDE
 .idea/
 
+# Temp
+.tmp/
+
 # System
 .DS_Store
 Thumbs.db

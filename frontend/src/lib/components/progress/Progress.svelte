@@ -300,12 +300,12 @@
 }
 .ov-card {
   background: var(--bg1);
-  border: 1px solid var(--border);
   border-radius: 4px;
   padding: 20px;
   display: flex;
   flex-direction: column;
   gap: 14px;
+  box-shadow: 0 1px 3px var(--shadow);
 }
 .ov-card-head {
   font-size: 12px;
@@ -426,9 +426,9 @@
   align-items: center;
   gap: 14px;
   background: var(--bg1);
-  border: 1px solid var(--border);
   border-radius: 4px;
   padding: 14px 18px;
+  box-shadow: 0 1px 3px var(--shadow);
 }
 .ach-info { flex: 1; min-width: 0; }
 .ach-name { font-size: 13px; font-weight: 700; color: var(--text0); }

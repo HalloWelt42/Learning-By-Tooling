@@ -56,41 +56,30 @@
   let mode        = $state('standard')
   let catFilter   = $state([])
   let cardLimit   = $state(10)
-  let useAI       = $state(true)  // Standard: KI-Bewertung an (Kern des Freitext-Modus)
   let pendingSession = $state(null)
   let showAnalysis = $state(false)
 
   // -- MC Setup --
-  let mcPrepProgress = $state(0)
-  let mcPrepText     = $state('')
-  let mcStatus       = $state(null)
+  let mcStatus = $state(null)
 
+  // Auto-set activePackageId wenn nur 1 Paket vorhanden
   $effect(() => {
-    if (mode === 'mc' && $activePackageId) {
-      apiGet(`/api/mc/status/${$activePackageId}`).then(s => mcStatus = s).catch(() => mcStatus = null)
+    if ($packages?.length === 1 && !$activePackageId) {
+      activePackageId.set($packages[0].id)
     }
   })
 
-  async function prepareMcOptions() {
-    if (!$aiOnline) { showToast('LM Studio offline', 'warn'); return }
-    const pkgId = $activePackageId || null
-    if (!pkgId) { showToast('Paket auswählen', 'warn'); return }
-    const status = await apiGet(`/api/mc/status/${pkgId}`).catch(() => null)
-    if (!status || status.missing === 0) {
-      showToast('Alle MC-Optionen sind bereits im Cache', 'success'); mcStatus = status; return
+  // MC-Status laden wenn Paket ausgewaehlt
+  $effect(() => {
+    if ($activePackageId) {
+      apiGet(`/api/mc/status/${$activePackageId}`).then(s => mcStatus = s).catch(() => mcStatus = null)
+    } else {
+      mcStatus = null
     }
-    const total = status.missing
-    mcPrepProgress = 5; mcPrepText = `${total} Karten werden generiert...`
-    const poll = setInterval(async () => {
-      const s = await apiGet(`/api/mc/status/${pkgId}`).catch(() => null)
-      if (s) { mcPrepProgress = Math.max(5, Math.round((s.cached - status.cached) / total * 100)); mcPrepText = `${s.cached - status.cached} / ${total} Karten...` }
-    }, 2000)
-    const res = await apiPost('/api/mc/generate-batch', { package_id: pkgId, limit: total }).catch(() => null)
-    clearInterval(poll)
-    if (res) { mcPrepProgress = 100; mcPrepText = `${res.generated} MC-Optionen generiert`; showToast(`${res.generated} MC-Optionen erstellt`, 'success') }
-    else { mcPrepProgress = 0; mcPrepText = ''; showToast('Generierung fehlgeschlagen', 'error') }
-    mcStatus = await apiGet(`/api/mc/status/${pkgId}`).catch(() => null)
-  }
+  })
+
+  // MC gesperrt wenn Optionen fehlen
+  let mcLocked = $derived(!mcStatus || mcStatus.missing > 0)
 
   // -- Kategorien --
   let localCats = $state([])
@@ -147,6 +136,11 @@
   // -- Session starten --
   async function startSession() {
     try {
+      // MC-Gate: Sicherheitsnetz (MC-Button ist bereits gesperrt wenn Optionen fehlen)
+      if (mode === 'mc' && mcLocked) {
+        showToast('MC-Optionen nicht bereit. Bitte zuerst im Paket generieren.', 'warn')
+        return
+      }
       // Offene Session beenden bevor neue startet
       await apiDelete('/api/sessions/active').catch(() => {})
       const data = await apiPost('/api/sessions', {
@@ -373,12 +367,13 @@
       <div class="section-label">Lernmodus</div>
       <div class="modes">
         {#each [
-          ['standard','fa-layer-group','Karteikarte','Aufdecken und selbst bewerten', false],
-          ['mc',      'fa-list-check', 'Multiple Choice','KI generiert Antwortoptionen', true],
-          ['write',   'fa-keyboard',   'Freitext',   'KI bewertet deine Antwort', true],
-          ['srs',     'fa-brain',      'Spaced Repetition','Schwache Karten öfter, starke seltener', false],
-        ] as [id,fa,lbl,desc,needsAI]}
-          {@const locked = needsAI && !$aiOnline}
+          ['standard','fa-layer-group','Karteikarte','Aufdecken und selbst bewerten', false, false],
+          ['mc',      'fa-list-check', 'Multiple Choice','KI generiert Antwortoptionen', true, true],
+          ['write',   'fa-keyboard',   'Freitext',   'KI bewertet deine Antwort', true, false],
+          ['srs',     'fa-brain',      'Spaced Repetition','Schwache Karten öfter, starke seltener', false, false],
+        ] as [id,fa,lbl,desc,needsAI,needsMC]}
+          {@const locked = (needsAI && !$aiOnline) || (needsMC && mcLocked)}
+          {@const lockReason = needsAI && !$aiOnline ? 'LM Studio nicht erreichbar' : needsMC && mcLocked ? 'MC-Optionen zuerst im Paket generieren' : ''}
           <button class="mode-btn" class:active={mode===id} class:mode-locked={locked}
             onclick={() => { if (!locked) mode = id }}
             disabled={locked}>
@@ -387,7 +382,7 @@
               <span class="mode-lbl">{lbl}</span>
               <span class="mode-desc">{desc}</span>
               {#if locked}
-                <span class="mode-lock-hint"><i class="fa-solid fa-lock"></i> LM Studio nicht erreichbar</span>
+                <span class="mode-lock-hint"><i class="fa-solid fa-lock"></i> {lockReason}</span>
               {/if}
             </div>
           </button>
@@ -406,47 +401,14 @@
           {/if}
         {:else if mode === 'write'}
           <div class="mode-explain-title"><i class="fa-solid fa-circle-info"></i> So funktioniert es</div>
-          <p>Du tippst deine Antwort frei ein. Die lokale KI (LM Studio) bewertet deine Antwort: Was richtig war, was gefehlt hat, was falsch war. Du siehst sofort einen Score und detailliertes Feedback. Die Musterlösung kannst du optional dazuschalten.</p>
-          {#if !$aiOnline}
-            <p class="mode-warn"><i class="fa-solid fa-triangle-exclamation"></i> LM Studio ist nicht erreichbar. Ohne KI funktioniert nur der Selbstvergleich -- du siehst die richtige Antwort, musst aber selbst bewerten.</p>
-          {/if}
-          <label class="check-row" style="margin-top:8px">
-            <input type="checkbox" bind:checked={useAI} disabled={!$aiOnline} />
-            <span>{$aiOnline ? 'KI-Bewertung (empfohlen)' : 'KI-Bewertung (LM Studio nicht erreichbar)'}</span>
-          </label>
+          <p>Du tippst deine Antwort frei ein. Die lokale KI (LM Studio) bewertet deine Antwort: Was richtig war, was gefehlt hat, was falsch war. Du siehst sofort einen Score und detailliertes Feedback.</p>
         {:else if mode === 'srs'}
           <div class="mode-explain-title"><i class="fa-solid fa-circle-info"></i> So funktioniert es</div>
           <p>Karten die du schlecht beantwortest kommen öfter. Gut gekonnte erst nach Tagen oder Wochen wieder.</p>
         {/if}
       </div>
 
-      {#if mode === 'mc'}
-        <div class="mc-setup-box">
-          {#if !$aiOnline}
-            <div class="mc-status err"><i class="fa-solid fa-circle-xmark"></i> LM Studio offline</div>
-          {:else if !$activePackageId}
-            <div class="mc-status"><i class="fa-solid fa-circle-info" style="color:var(--warn)"></i> <span>Wähle ein Paket aus.</span></div>
-          {:else if mcPrepProgress > 0 && mcPrepProgress < 100}
-            <div class="mc-status">
-              <i class="fa-solid fa-brain aip-pulse" style="color:var(--accent)"></i>
-              <span>KI erstellt Optionen: {mcPrepText}</span>
-              <span class="mono" style="font-weight:800;color:var(--accent)">{mcPrepProgress}%</span>
-            </div>
-            <div style="height:4px;background:var(--bg3);border-radius:2px;overflow:hidden;margin-top:8px">
-              <div style="height:100%;background:var(--accent);border-radius:2px;transition:width .3s;width:{mcPrepProgress}%"></div>
-            </div>
-          {:else if mcStatus && mcStatus.missing === 0}
-            <div class="mc-status ok"><i class="fa-solid fa-circle-check"></i> Alle {mcStatus.total} Karten bereit.</div>
-          {:else if mcStatus}
-            <div class="mc-status"><i class="fa-solid fa-wand-magic-sparkles" style="color:var(--accent)"></i> <span>{mcStatus.cached}/{mcStatus.total} Karten haben MC-Optionen</span></div>
-            <button class="btn btn-ghost btn-sm" style="margin-top:8px" onclick={prepareMcOptions}>
-              <i class="fa-solid fa-bolt"></i> {mcStatus.missing} fehlende generieren
-            </button>
-          {:else}
-            <div class="mc-status"><i class="fa-solid fa-spinner fa-spin"></i> <span>Status wird geladen...</span></div>
-          {/if}
-        </div>
-      {:else if mode === 'srs'}
+      {#if mode === 'srs'}
         <div class="srs-info">
           <i class="fa-solid fa-circle-info" style="color:var(--accent)"></i>
           Karten die du schlecht kannst kommen öfter.
@@ -505,7 +467,7 @@
     {:else if sessionMode === 'mc'}
       <CardMC {card} onReview={handleReview} onAdvance={handleAdvance} />
     {:else if sessionMode === 'write'}
-      <CardWrite {card} useAI={useAI && $aiOnline} onReview={handleReview} onAdvance={handleAdvance} />
+      <CardWrite {card} useAI={$aiOnline} onReview={handleReview} onAdvance={handleAdvance} />
     {:else if sessionMode === 'srs'}
       <CardSRS {card} onReview={handleReview} onAdvance={handleAdvance} />
     {/if}
@@ -664,59 +626,6 @@
 </div>
 
 <style>
-/* -- Setup -- */
-.pkg-select { display:flex;gap:6px;flex-wrap:wrap; }
-.pkg-chip {
-  display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border-radius:4px;
-  border:1px solid var(--border);background:transparent;font-size:12px;font-weight:600;
-  color:var(--text2);cursor:pointer;transition:all .15s;font-family:inherit;
-}
-.pkg-chip:hover { border-color:var(--pkg-c, var(--accent));color:var(--text0); }
-.pkg-chip.active { border-color:var(--pkg-c, var(--accent));background:var(--glow);color:var(--pkg-c, var(--accent)); }
-.pkg-chip i { font-size:11px; }
-
-.setup-grid { display:grid;grid-template-columns:1fr 1fr;gap:16px; }
-.modes { display:flex;flex-direction:column;gap:6px; }
-.mode-btn {
-  display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:4px;
-  border:1px solid var(--border);background:transparent;text-align:left;transition:all .15s;
-}
-.mode-btn:hover { border-color:var(--accent); }
-.mode-btn.active { border-color:var(--accent);background:var(--glow); }
-.mode-btn.mode-locked { opacity:0.4;cursor:not-allowed;border-color:var(--border); }
-.mode-btn.mode-locked:hover { border-color:var(--border); }
-.mode-lock-hint { font-size:10px;color:var(--err);display:flex;align-items:center;gap:4px;margin-top:2px; }
-.mode-icon { font-size:16px;color:var(--accent);width:18px;text-align:center;flex-shrink:0; }
-.mode-info { display:flex;flex-direction:column;flex:1;gap:2px; }
-.mode-lbl  { font-size:13px;font-weight:600;color:var(--text0); }
-.mode-desc { font-size:11px;color:var(--text2); }
-.check-row { display:flex;align-items:center;gap:8px;cursor:pointer;font-size:12px;color:var(--text2); }
-.check-row input { width:auto; }
-.srs-info { margin-top:12px;font-size:11px;color:var(--text2);background:var(--glow);border:1px solid color-mix(in srgb,var(--accent) 30%,transparent);padding:8px 12px;border-radius:4px;display:flex;align-items:center;gap:8px; }
-
-.mode-explain { margin-top:12px;padding:12px;background:var(--bg2);border:1px solid var(--border);border-radius:4px; }
-.mode-explain-title { font-size:11px;font-weight:700;color:var(--accent);display:flex;align-items:center;gap:6px;margin-bottom:8px; }
-.mode-explain p { font-size:12px;color:var(--text2);line-height:1.6;margin-bottom:6px; }
-.mode-explain p:last-of-type { margin-bottom:0; }
-.mode-warn { color:var(--warn) !important;font-weight:600; }
-.mc-setup-box { margin-top:12px;background:var(--bg2);border:1px solid var(--border);border-radius:4px;padding:12px; }
-.mc-status { display:flex;align-items:center;gap:8px;font-size:11px;color:var(--text1); }
-.mc-status.ok { color:var(--ok); }
-.mc-status.err { color:var(--err); }
-
-.cat-checks { display:flex;flex-direction:column;gap:4px;max-height:280px;overflow-y:auto; }
-.cat-row { display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:4px;cursor:pointer;transition:background .12s; }
-.cat-row:hover { background:var(--bg2); }
-.cat-em { font-size:14px; }
-.cat-nm { flex:1;font-size:12px;font-weight:500;color:var(--text1); }
-.cat-cnt { font-size:10px;color:var(--text3); }
-.cat-sum { font-size:10px;color:var(--text2);margin-left:auto;font-weight:400; }
-.limit-row { display:flex;align-items:center;gap:8px;flex-wrap:wrap; }
-.limit-chip {
-  padding:6px 14px;border-radius:4px;border:1px solid var(--border);background:none;
-  font-size:13px;font-weight:700;color:var(--text2);cursor:pointer;font-family:inherit;transition:all .15s;
-}
-.limit-chip:hover { border-color:var(--accent);color:var(--text0); }
 
 /* -- Result -- */
 .result-wrap {

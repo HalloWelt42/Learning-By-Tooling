@@ -248,7 +248,7 @@
           {#each [
             {id:'dark',     icon:'fa-moon'},
             {id:'light',    icon:'fa-sun'},
-            {id:'soft',     icon:'fa-book-open'},
+            {id:'dracula',  icon:'fa-ghost'},
             {id:'contrast', icon:'fa-water'},
             {id:'warm',     icon:'fa-tree'},
           ] as t}

@@ -1,45 +1,18 @@
 <script>
-  import { categories, currentView, activePackageId, showToast, loadGlobal, aiOnline } from '../../stores/index.js'
-  import { apiGet, apiPost, apiPut, apiDelete, apiUpload, BASE } from '../../utils/api.js'
+  import { categories, showToast, loadGlobal } from '../../stores/index.js'
+  import { apiGet, apiPost, apiDelete, BASE } from '../../utils/api.js'
   import { navigate } from '../../utils/router.js'
-  import { DL, DC, DI } from '../../utils/difficulty.js'
   import { onMount } from 'svelte'
-  import { marked } from 'marked'
-  import Paths from './Paths.svelte'
   import CardsTab from './CardsTab.svelte'
-  import LexiconTab from './LexiconTab.svelte'
-  import ImportTab from './ImportTab.svelte'
-  marked.setOptions({ breaks: true, gfm: true })
+  import WorkshopTab from './WorkshopTab.svelte'
+  import MaterialTab from './MaterialTab.svelte'
 
   let { pkg } = $props()
 
   let tab = $state('overview')
 
   let stats     = $state(null)
-  let documents = $state([])
-  let cards     = $state([])
-  let drafts    = $state([])
-
-  let searchQ       = $state('')
-
-  let showUpload    = $state(false)
-  let uploadFile    = $state(null)
-  let uploadTitle   = $state('')
-  let uploadCat     = $state('AL')
-  let cardsPerChunk = $state(3)
-  let autoGen       = $state(true)
-  let uploadState   = $state('idle')
-  let uploadMsg     = $state('')
-
-  let genState      = $state('idle')
-  let genSteps      = $state([])
-  let genSummary    = $state(null)
-  let selectedDoc   = $state(null)
-  let selectedChunks = $state(new Set())
-  let chunks        = $state([])
-
-  let editDraft     = $state(null)
-  let editDForm     = $state({})
+  let searchQ   = $state('')
 
   // Reset
   let confirmReset = $state(false)
@@ -47,16 +20,10 @@
     if (!confirmReset) { confirmReset = true; setTimeout(() => confirmReset = false, 3000); return }
     try {
       await apiPost('/api/reset/my-stats', { package_id: pkg.id })
-      showToast('Lernfortschritt zurückgesetzt', 'success')
+      showToast('Lernfortschritt zurueckgesetzt', 'success')
       confirmReset = false
       await loadStats()
     } catch(e) { showToast(e.message, 'error') }
-  }
-
-  // Medien
-  let media = $state([])
-  async function loadMedia() {
-    try { media = await apiGet(`/api/packages/${pkg.id}/media`) } catch(e) { media = [] }
   }
 
   // Freigabe
@@ -72,7 +39,7 @@
     if (!shareEmail.trim()) return
     try {
       await apiPost(`/api/packages/${pkg.id}/share`, { email: shareEmail, role: shareRole })
-      showToast(`Paket für ${shareEmail} freigegeben`, 'success')
+      showToast(`Paket fuer ${shareEmail} freigegeben`, 'success')
       shareEmail = ''
       await loadShareUsers()
     } catch(e) {
@@ -89,13 +56,8 @@
     }
   }
 
-  let confirmDeleteDoc  = $state(null)
-  let readingDocId      = $state(null)
-  let readingDocText    = $state('')
-
   onMount(() => {
-    loadAll()
-    // Query-Parameter auswerten (z.B. ?tab=cards&q=K-001)
+    loadStats()
     const hash = window.location.hash
     const qIdx = hash.indexOf('?')
     if (qIdx > -1) {
@@ -104,10 +66,6 @@
       if (params.get('q')) searchQ = params.get('q')
     }
   })
-
-  async function loadAll() {
-    await Promise.all([loadStats(), loadDocuments(), loadDrafts()])
-  }
 
   async function exportPkg() {
     try {
@@ -124,139 +82,17 @@
       a.click()
       URL.revokeObjectURL(url)
       showToast('Paket exportiert', 'success')
-    } catch (e) {
+    } catch(e) {
       showToast(e.message, 'error')
     }
   }
-  async function loadStats()     { stats     = await apiGet(`/api/packages/${pkg.id}/stats`).catch(()=>null) }
-  async function loadDocuments() { documents = await apiGet(`/api/packages/${pkg.id}/documents`).catch(()=>[]) }
-  async function loadDrafts()    { drafts    = await apiGet(`/api/packages/${pkg.id}/drafts`).catch(()=>[]) }
-  async function loadCards()     { cards     = await apiGet(`/api/cards?package_id=${pkg.id}`).catch(()=>[]) }
 
+  async function loadStats() { stats = await apiGet(`/api/packages/${pkg.id}/stats`).catch(() => null) }
 
-  // Daten für Sub-Komponenten laden wenn Tab wechselt
-  $effect(() => {
-    if (tab === 'paths') loadCards()
-    if (tab === 'documents') loadMedia()
-  })
+  function pct(c, t) { return t > 0 ? Math.round(c / t * 100) : 0 }
 
-  // Karten-Funktionen sind jetzt in CardsTab.svelte
-
-  // ── Upload & KI ──────────────────────────────────────────────────────────
-  async function handleUpload() {
-    if (!uploadFile) { showToast('Datei auswählen','error'); return }
-    uploadState='uploading'; uploadMsg='Datei wird verarbeitet...'
-    try {
-      const fd = new FormData()
-      fd.append('file',     uploadFile)
-      fd.append('title',    uploadTitle || uploadFile.name.replace(/\.[^.]+$/,''))
-      fd.append('category', uploadCat)
-      const r = await apiUpload(`/api/packages/${pkg.id}/documents/upload`, fd)
-      uploadMsg=`${r.title} -- ${r.chunk_count} Abschnitte`; uploadState='done'
-      await loadDocuments(); await loadStats(); await loadGlobal()
-      showUpload=false; uploadFile=null; uploadTitle=''
-      if (autoGen && $aiOnline) {
-        await loadDocuments()
-        const doc = documents.find(d=>d.id===r.document_id)
-        if (doc) await openDoc(doc)
-      }
-    } catch(e) { uploadState='error'; uploadMsg=e.message; showToast(e.message,'error') }
-  }
-
-  async function openDoc(doc) {
-    selectedDoc=doc
-    const data = await apiGet(`/api/documents/${doc.id}/chunks`).catch(()=>null)
-    if (data) chunks = data.chunks
-    selectedChunks=new Set(); genState='idle'; genSummary=null
-  }
-
-  async function startGen() {
-    if (!$aiOnline || !selectedDoc) return
-    const cnt = selectedChunks.size>0 ? selectedChunks.size : chunks.filter(c=>!c.processed).length
-    genSteps=[
-      {label:'Abschnitte vorbereiten',           status:'running'},
-      {label:`${cnt} Abschnitte senden`,          status:'pending'},
-      {label:'KI generiert Fragen und Antworten', status:'pending'},
-      {label:'Entwürfe speichern',               status:'pending'},
-    ]
-    genState='running'; genSummary=null
-    const tick=ms=>new Promise(r=>setTimeout(r,ms))
-    await tick(400)
-    genSteps=genSteps.map((s,i)=>i===0?{...s,status:'done'}:i===1?{...s,status:'running'}:s)
-    await tick(300)
-    genSteps=genSteps.map((s,i)=>i===1?{...s,status:'done'}:i===2?{...s,status:'running'}:s)
-    try {
-      const r = await apiPost(`/api/documents/${selectedDoc.id}/generate`,{
-        category:uploadCat||'AL', cards_per_chunk:cardsPerChunk,
-        chunk_ids:selectedChunks.size>0?[...selectedChunks]:null,
-      })
-      genSteps=genSteps.map((s,i)=>i===2?{...s,status:'done'}:i===3?{...s,status:'running'}:s)
-      await tick(300)
-      genSteps=genSteps.map(s=>({...s,status:'done'}))
-      genState='done'; genSummary=r
-      await loadDrafts(); await loadDocuments(); await loadStats(); await loadGlobal()
-      selectedChunks=new Set()
-      showToast(`${r.created} Entwürfe erstellt`,'success')
-    } catch(e) {
-      genSteps=genSteps.map(s=>s.status==='running'?{...s,status:'error'}:s)
-      genState='error'; showToast(e.message,'error')
-    }
-  }
-
-  async function deleteDoc(doc) {
-    if (confirmDeleteDoc !== doc.id) {
-      confirmDeleteDoc = doc.id
-      setTimeout(() => confirmDeleteDoc = null, 3000)
-      return
-    }
-    confirmDeleteDoc = null
-    await apiDelete(`/api/documents/${doc.id}`)
-    if (selectedDoc?.id===doc.id) { selectedDoc=null; chunks=[] }
-    await loadDocuments(); await loadStats()
-    showToast('Dokument gelöscht','info')
-  }
-
-  function toggleChunk(id) { const s=new Set(selectedChunks); s.has(id)?s.delete(id):s.add(id); selectedChunks=s }
-
-  async function toggleReading(doc) {
-    if (readingDocId === doc.id) { readingDocId = null; readingDocText = ''; return }
-    readingDocId = doc.id
-    try {
-      const data = await apiGet(`/api/documents/${doc.id}/chunks`)
-      readingDocText = data.chunks.map(c => c.text).join('\n\n')
-    } catch(e) { readingDocText = 'Fehler beim Laden' }
-  }
-
-  // ── Entwürfe ─────────────────────────────────────────────────────────────
-  async function approveDraft(d) {
-    await apiPut(`/api/drafts/${d.id}`,{action:'approve',package_id:pkg.id})
-    await loadDrafts(); await loadStats(); await loadGlobal()
-    showToast('Karte freigegeben','success')
-  }
-  async function rejectDraft(d) { await apiPut(`/api/drafts/${d.id}`,{action:'reject'}); await loadDrafts() }
-  function startEditDraft(d) { editDraft=d; editDForm={question:d.question,answer:d.answer,hint:d.hint||'',difficulty:d.difficulty,category_code:d.category_code} }
-  async function saveEditDraft() {
-    await apiPut(`/api/drafts/${editDraft.id}`,{action:'edit',...editDForm,package_id:pkg.id})
-    editDraft=null; await loadDrafts(); await loadStats(); await loadGlobal()
-    showToast('Bearbeitet und freigegeben','success')
-  }
-  async function approveAll() {
-    for (const d of pending) await apiPut(`/api/drafts/${d.id}`,{action:'approve',package_id:pkg.id}).catch(()=>{})
-    await loadDrafts(); await loadStats(); await loadGlobal()
-    showToast(`${pending.length} Karten freigegeben`,'success')
-  }
-
-  // Lexikon, Lernpfade, Import sind jetzt in eigenen Komponenten
-
-  // ── Helpers ───────────────────────────────────────────────────────────────
-  const FT = {pdf:'fa-file-pdf',md:'fa-file-code',txt:'fa-file-lines',docx:'fa-file-word'}
-  const GSTEP_ICON  = {done:'fa-check',running:'fa-spinner fa-spin',pending:'fa-circle',error:'fa-xmark'}
-  const GSTEP_COLOR = {done:'var(--ok)',running:'var(--accent)',pending:'var(--text3)',error:'var(--err)'}
-  function fmtSize(b){return b<1024?`${b}B`:b<1048576?`${(b/1024).toFixed(1)}KB`:`${(b/1048576).toFixed(1)}MB`}
-  function pct(c,t){return t>0?Math.round(c/t*100):0}
-
-  let pending = $derived(drafts.filter(d=>d.status==='pending'))
-  let catCounts = $derived((stats?.by_category||[]).filter(c=>c.count>0))
+  let pendingDrafts = $derived(stats?.pending_drafts || 0)
+  let catCounts = $derived((stats?.by_category || []).filter(c => c.count > 0))
 </script>
 
 <div class="pd-wrap">
@@ -298,7 +134,7 @@
                   <i class="fa-solid fa-user" style="color:var(--text3)"></i>
                   <span class="share-email">{su.display_name || su.email}</span>
                   <span class="share-role mono">{su.role}</span>
-                  <button class="btn-icon" title="Freigabe entziehen" onclick={() => removeShare(su.id)}>
+                  <button class="btn-icon btn-icon-danger" title="Freigabe entziehen" onclick={() => removeShare(su.id)}>
                     <i class="fa-solid fa-xmark"></i>
                   </button>
                 </div>
@@ -317,11 +153,11 @@
         {#if stats.due_today>0}
           <div class="pds warn"><i class="fa-solid fa-brain"></i><span class="pds-val">{stats.due_today}</span><span class="pds-lbl">Fällig</span></div>
         {/if}
-        {#if stats.pending_drafts>0}
-          <button class="pds accent clickable" onclick={()=>tab='documents'}>
+        {#if stats.pending_drafts > 0}
+          <button class="pds accent clickable" onclick={() => tab = 'workshop'}>
             <i class="fa-solid fa-pen-to-square"></i>
             <span class="pds-val">{stats.pending_drafts}</span>
-            <span class="pds-lbl">Entwürfe</span>
+            <span class="pds-lbl">Entwuerfe</span>
           </button>
         {/if}
         <button class="btn btn-ghost" title="Paket als ZIP exportieren" onclick={exportPkg}>
@@ -340,16 +176,14 @@
   <!-- ── Tabs ─────────────────────────────────────────────────────────────── -->
   <div class="pd-tabs">
     {#each [
-      ['overview',  'fa-gauge',       'Übersicht',  0],
-      ['documents', 'fa-file-lines',  'Dokumente',  pending.length],
-      ['cards',     'fa-layer-group', 'Karten',     0],
-      ['lexicon',   'fa-book-open',   'Lexikon',    0],
-      ['paths',     'fa-route',       'Lernpfade',  0],
-      ['import',    'fa-file-import', 'Import',     0],
-    ] as [id,fa,lbl,badge]}
-      <button class="pd-tab" class:active={tab===id} onclick={()=>tab=id}>
+      ['overview',  'fa-gauge',              'Uebersicht',  0],
+      ['workshop',  'fa-screwdriver-wrench', 'Werkstatt',   pendingDrafts],
+      ['cards',     'fa-layer-group',        'Karten',      0],
+      ['material',  'fa-book-open',          'Material',    0],
+    ] as [id, fa, lbl, badge]}
+      <button class="pd-tab" class:active={tab === id} onclick={() => tab = id}>
         <i class="fa-solid {fa}"></i> {lbl}
-        {#if badge>0}<span class="tab-badge">{badge}</span>{/if}
+        {#if badge > 0}<span class="tab-badge">{badge}</span>{/if}
       </button>
     {/each}
   </div>
@@ -357,21 +191,21 @@
   <!-- ── Tab-Inhalte ───────────────────────────────────────────────────────── -->
   <div class="pd-body">
 
-    <!-- ÜBERSICHT -->
-    {#if tab==='overview'}
+    <!-- UEBERSICHT -->
+    {#if tab === 'overview'}
       <div class="tab-page">
-        {#if stats && catCounts.length>0}
+        {#if stats && catCounts.length > 0}
           <div class="overview-cols">
             <div class="card-box">
               <div class="section-label">Karten nach Kategorie</div>
               {#each catCounts as cat}
                 <div class="cat-row">
-                  <div class="cat-icon-box" style="background:color-mix(in srgb,{cat.color} 15%,transparent)">
+                  <div class="cat-icon-box" style="background:color-mix(in srgb, {cat.color} 15%, transparent)">
                     <i class="fa-solid {cat.icon}" style="color:{cat.color}"></i>
                   </div>
                   <span class="cat-name">{cat.name}</span>
                   <div class="prog-track">
-                    <div class="prog-fill" style="width:{cat.shown>0?pct(cat.correct,cat.shown):0}%"></div>
+                    <div class="prog-fill" style="width:{cat.shown > 0 ? pct(cat.correct, cat.shown) : 0}%"></div>
                   </div>
                   <span class="cat-n">{cat.count}</span>
                 </div>
@@ -385,358 +219,42 @@
                 <div class="section-label">Lernstand (SRS)</div>
                 {#if t > 0}
                   <div class="srs-bar">
-                    {#if s.mastered > 0}<div class="srs-seg srs-mastered" style="width:{s.mastered/t*100}%" title="Gemeistert: {s.mastered}"></div>{/if}
-                    {#if s.solid > 0}<div class="srs-seg srs-solid" style="width:{s.solid/t*100}%" title="Gefestigt: {s.solid}"></div>{/if}
-                    {#if s.learning > 0}<div class="srs-seg srs-learning" style="width:{s.learning/t*100}%" title="Lernphase: {s.learning}"></div>{/if}
-                    {#if s.due > 0}<div class="srs-seg srs-due" style="width:{s.due/t*100}%" title="Fällig: {s.due}"></div>{/if}
-                    {#if s.new > 0}<div class="srs-seg srs-new" style="width:{s.new/t*100}%" title="Neu: {s.new}"></div>{/if}
+                    {#if s.mastered > 0}<div class="srs-seg srs-mastered" style="width:{s.mastered / t * 100}%" title="Gemeistert: {s.mastered}"></div>{/if}
+                    {#if s.solid > 0}<div class="srs-seg srs-solid" style="width:{s.solid / t * 100}%" title="Gefestigt: {s.solid}"></div>{/if}
+                    {#if s.learning > 0}<div class="srs-seg srs-learning" style="width:{s.learning / t * 100}%" title="Lernphase: {s.learning}"></div>{/if}
+                    {#if s.due > 0}<div class="srs-seg srs-due" style="width:{s.due / t * 100}%" title="Faellig: {s.due}"></div>{/if}
+                    {#if s.new > 0}<div class="srs-seg srs-new" style="width:{s.new / t * 100}%" title="Neu: {s.new}"></div>{/if}
                   </div>
                 {/if}
                 <div class="srs-legend">
                   <span class="srs-item"><span class="srs-dot srs-mastered"></span> Gemeistert <strong>{s.mastered}</strong></span>
                   <span class="srs-item"><span class="srs-dot srs-solid"></span> Gefestigt <strong>{s.solid}</strong></span>
                   <span class="srs-item"><span class="srs-dot srs-learning"></span> Lernphase <strong>{s.learning}</strong></span>
-                  <span class="srs-item"><span class="srs-dot srs-due"></span> Fällig <strong>{s.due}</strong></span>
+                  <span class="srs-item"><span class="srs-dot srs-due"></span> Faellig <strong>{s.due}</strong></span>
                   <span class="srs-item"><span class="srs-dot srs-new"></span> Neu <strong>{s.new}</strong></span>
                 </div>
               </div>
             {/if}
-
-            <div class="card-box">
-              <div class="section-label">Dokumente</div>
-              {#if documents.length===0}
-                <button class="upload-cta" onclick={()=>{tab='documents';showUpload=true}}>
-                  <i class="fa-solid fa-upload"></i> Erstes Dokument hochladen
-                </button>
-              {:else}
-                {#each documents.slice(0,6) as doc}
-                  <div class="doc-row">
-                    <i class="fa-solid {FT[doc.filetype]||'fa-file'} doc-row-icon"></i>
-                    <div class="doc-row-body">
-                      <div class="doc-row-title">{doc.title}</div>
-                      <div class="doc-row-meta">{doc.chunk_count} Abschnitte</div>
-                    </div>
-                    <button class="btn btn-ghost btn-sm" onclick={()=>{tab='documents';toggleReading(doc)}}>
-                      <i class="fa-solid fa-book-open"></i> Lesen
-                    </button>
-                  </div>
-                {/each}
-              {/if}
-            </div>
           </div>
         {:else}
           <div class="empty-state">
             <i class="fa-solid fa-box-open"></i>
-            <p>Paket ist noch leer. Lade ein Dokument hoch oder importiere Karten.</p>
+            <p>Paket ist noch leer. Oeffne die Werkstatt um Karten zu erstellen oder zu importieren.</p>
           </div>
         {/if}
       </div>
 
-    <!-- DOKUMENTE -->
-    {:else if tab==='documents'}
-      <div class="tab-page">
-        <div class="tab-hd">
-          <div>
-            <div class="tab-hd-title">Dokumente & KI-Generierung</div>
-            <div class="tab-hd-sub">Dokument hochladen -- KI generiert Lernkarten-Entwürfe</div>
-          </div>
-          <button class="btn btn-primary" onclick={()=>{showUpload=!showUpload;uploadState='idle'}}>
-            <i class="fa-solid fa-upload"></i> Hochladen
-          </button>
-        </div>
+    <!-- WERKSTATT -->
+    {:else if tab === 'workshop'}
+      <WorkshopTab {pkg} />
 
-        {#if showUpload}
-          <div class="card-box upload-box">
-            <div class="upload-hd">
-              <span class="section-label" style="margin:0">Neues Dokument</span>
-              <button class="ib" title="Schliessen" onclick={()=>showUpload=false}><i class="fa-solid fa-xmark"></i></button>
-            </div>
-            {#if uploadState!=='idle'}
-              <div class="proc-banner" class:proc-uploading={uploadState==='uploading'} class:proc-done={uploadState==='done'} class:proc-error={uploadState==='error'}>
-                <i class="fa-solid {uploadState==='uploading'?'fa-spinner fa-spin':uploadState==='done'?'fa-circle-check':'fa-circle-xmark'}"></i>
-                <span>{uploadMsg}</span>
-              </div>
-            {:else}
-              <div class="upload-body">
-                <label class="drop-zone" class:has-file={!!uploadFile}>
-                  <input type="file" accept=".txt,.md,.pdf,.docx"
-                    onchange={e=>{uploadFile=e.currentTarget.files[0]||null;uploadTitle=uploadFile?uploadFile.name.replace(/\.[^.]+$/,''):''}}>
-                  {#if uploadFile}
-                    <i class="fa-solid {FT[uploadFile.name.split('.').pop()]||'fa-file'} drop-file-icon"></i>
-                    <span class="drop-file-name">{uploadFile.name}</span>
-                    <span class="drop-file-size">{fmtSize(uploadFile.size)}</span>
-                  {:else}
-                    <i class="fa-solid fa-cloud-arrow-up drop-cloud"></i>
-                    <span class="drop-hint">TXT, MD, PDF oder DOCX</span>
-                    <span class="drop-hint2">Klicken oder hier ablegen</span>
-                  {/if}
-                </label>
-                <div class="upload-fields">
-                  <label class="field-label">Titel<input type="text" bind:value={uploadTitle} placeholder="Dokumenttitel..."></label>
-                  <label class="field-label">Kategorie für Karten
-                    <select bind:value={uploadCat}>
-                      {#each $categories as cat}<option value={cat.code}>{cat.name}</option>{/each}
-                    </select>
-                  </label>
-                  <label class="field-label">Karten pro Abschnitt: {cardsPerChunk}
-                    <input type="range" min="1" max="6" bind:value={cardsPerChunk} class="range-input">
-                  </label>
-                  <label class="checkbox-label">
-                    <input type="checkbox" bind:checked={autoGen}>
-                    <span>KI-Generierung direkt starten</span>
-                  </label>
-                  {#if !$aiOnline && autoGen}
-                    <div class="ai-warn-pill">
-                      <i class="fa-solid fa-triangle-exclamation"></i>
-                      LM Studio ist offline
-                    </div>
-                  {/if}
-                </div>
-              </div>
-              <div class="upload-footer">
-                <button class="btn btn-ghost" onclick={()=>showUpload=false}>Abbrechen</button>
-                <button class="btn btn-primary" onclick={handleUpload} disabled={!uploadFile}>
-                  <i class="fa-solid fa-upload"></i> Hochladen
-                </button>
-              </div>
-            {/if}
-          </div>
-        {/if}
-
-        {#if documents.length>0}
-          <div class="docs-layout">
-            <!-- Dokument-Liste -->
-            <div class="docs-list-col">
-              <div class="section-label">Hochgeladene Dokumente</div>
-              {#each documents as doc}
-                <div class="doc-item" class:selected={selectedDoc?.id===doc.id} onclick={()=>openDoc(doc)} role="button" tabindex="0" onkeydown={e=>e.key==="Enter"&&openDoc(doc)}>
-                  <i class="fa-solid {FT[doc.filetype]||'fa-file'} di-icon"></i>
-                  <div class="di-body">
-                    <div class="di-title">{doc.title}</div>
-                    <div class="di-meta">{fmtSize(doc.filesize)} · {doc.chunk_count} Abschnitte</div>
-                    {#if doc.card_count>0}<span class="di-badge">{doc.card_count} Entwürfe</span>{/if}
-                  </div>
-                  <button class="ib sm" class:di-reading={readingDocId===doc.id} title="Material lesen" onclick={e=>{e.stopPropagation();toggleReading(doc)}}>
-                    <i class="fa-solid fa-book-open"></i>
-                  </button>
-                  <button class="ib sm err" title="Dokument löschen" onclick={e=>{e.stopPropagation();deleteDoc(doc)}}>
-                    {#if confirmDeleteDoc === doc.id}
-                      Wirklich?
-                    {:else}
-                      <i class="fa-solid fa-trash"></i>
-                    {/if}
-                  </button>
-                </div>
-                {#if readingDocId === doc.id}
-                  <article class="material-doc material-inline">
-                    <div class="material-content markdown">
-                      {#if readingDocText}
-                        {@html marked(readingDocText)}
-                      {:else}
-                        <i class="fa-solid fa-spinner fa-spin"></i> Lade...
-                      {/if}
-                    </div>
-                  </article>
-                {/if}
-              {/each}
-            </div>
-
-            <!-- Rechte Spalte: Chunks + KI -->
-            {#if selectedDoc}
-              <div class="doc-detail-col">
-                <div class="doc-detail-hd">
-                  <div>
-                    <div class="doc-detail-title">{selectedDoc.title}</div>
-                    <div class="doc-detail-meta">{chunks.length} Abschnitte</div>
-                  </div>
-                  <button class="btn btn-primary btn-sm" onclick={startGen}
-                    disabled={genState==='running'||!$aiOnline}>
-                    {#if genState==='running'}
-                      <i class="fa-solid fa-spinner fa-spin"></i> Generiere...
-                    {:else}
-                      <i class="fa-solid fa-wand-magic-sparkles"></i> KI-Karten
-                    {/if}
-                  </button>
-                </div>
-
-                {#if genState!=='idle'}
-                  <div class="gen-panel">
-                    <div class="gen-panel-hd">
-                      <i class="fa-solid fa-wand-magic-sparkles text-accent"></i>
-                      <span class="gen-panel-title">KI-Generierung</span>
-                      <span class="gen-status gen-{genState}">
-                        <i class="fa-solid {genState==='running'?'fa-spinner fa-spin':genState==='done'?'fa-check':'fa-xmark'}"></i>
-                        {genState==='running'?'Läuft':genState==='done'?'Fertig':'Fehler'}
-                      </span>
-                    </div>
-                    <div class="gen-steps">
-                      {#each genSteps as step}
-                        <div class="gen-step gen-step-{step.status}">
-                          <div class="gen-dot">
-                            <i class="fa-solid {GSTEP_ICON[step.status]}" style="color:{GSTEP_COLOR[step.status]}"></i>
-                          </div>
-                          <div class="gen-step-right">
-                            <span class="gen-step-label">{step.label}</span>
-                            {#if step.status==='running'}
-                              <div class="gen-step-bar"><div class="gen-step-fill"></div></div>
-                            {/if}
-                          </div>
-                        </div>
-                      {/each}
-                    </div>
-                    {#if genSummary}
-                      <div class="gen-result">
-                        <span class="text-ok"><i class="fa-solid fa-circle-check"></i> {genSummary.created} Entwürfe</span>
-                        <span class="text-2"><i class="fa-solid fa-layer-group"></i> {genSummary.chunks_processed} Abschnitte</span>
-                        {#if genSummary.created>0}
-                          <button class="btn btn-ok btn-sm" onclick={()=>tab='documents'}>
-                            <i class="fa-solid fa-list-check"></i> Prüfen
-                          </button>
-                        {/if}
-                      </div>
-                    {/if}
-                  </div>
-                {/if}
-
-                <div class="chunks-col">
-                  {#each chunks as chunk}
-                    <div class="chunk-item"
-                      class:selected={selectedChunks.has(chunk.id)}
-                      class:done={chunk.processed}
-                      onclick={()=>toggleChunk(chunk.id)}
-                      onkeydown={e=>(e.key==="Enter"||e.key===" ")&&toggleChunk(chunk.id)}
-                      role="button" tabindex="0">
-                      <input type="checkbox" checked={selectedChunks.has(chunk.id)}
-                        onchange={()=>toggleChunk(chunk.id)} onclick={e=>e.stopPropagation()}>
-                      <div class="chunk-body">
-                        <div class="chunk-meta">
-                          <span class="chunk-idx">#{chunk.chunk_index+1}</span>
-                          {#if chunk.processed}
-                            <span class="chunk-done"><i class="fa-solid fa-check"></i> verarbeitet</span>
-                          {/if}
-                        </div>
-                        <div class="chunk-text markdown">{@html marked(chunk.text)}</div>
-                      </div>
-                    </div>
-                  {/each}
-                </div>
-              </div>
-            {:else}
-              <div class="doc-detail-col doc-detail-empty">
-                <i class="fa-solid fa-file-lines"></i>
-                <p>Dokument auswählen</p>
-              </div>
-            {/if}
-          </div>
-        {:else}
-          <div class="empty-state">
-            <i class="fa-solid fa-file-circle-plus"></i>
-            <p>Noch keine Dokumente in diesem Paket</p>
-          </div>
-        {/if}
-
-        <!-- Entwürfe Review -->
-        {#if pending.length>0}
-          <div class="drafts-section">
-            <div class="drafts-hd">
-              <div class="section-label drafts-title">
-                <i class="fa-solid fa-wand-magic-sparkles"></i>
-                KI-Entwürfe prüfen ({pending.length})
-              </div>
-              <button class="btn btn-ok btn-sm" onclick={approveAll}>
-                <i class="fa-solid fa-check-double"></i> Alle freigeben
-              </button>
-            </div>
-            {#each pending as draft}
-              {#if editDraft?.id===draft.id}
-                <div class="card-box draft-edit">
-                  <div class="draft-edit-title">
-                    <i class="fa-solid fa-pen text-accent"></i> Karte bearbeiten
-                  </div>
-                  <label class="field-label">Frage<textarea bind:value={editDForm.question} rows="2"></textarea></label>
-                  <label class="field-label">Antwort<textarea bind:value={editDForm.answer} rows="3"></textarea></label>
-                  <div class="draft-edit-row">
-                    <label class="field-label">Hinweis<input type="text" bind:value={editDForm.hint}></label>
-                    <label class="field-label">Kategorie
-                      <select bind:value={editDForm.category_code}>
-                        {#each $categories as cat}<option value={cat.code}>{cat.name}</option>{/each}
-                      </select>
-                    </label>
-                  </div>
-                  <div class="draft-edit-footer">
-                    <button class="btn btn-ghost btn-sm" onclick={()=>editDraft=null}>Abbrechen</button>
-                    <button class="btn btn-ok btn-sm" onclick={saveEditDraft}>
-                      <i class="fa-solid fa-check"></i> Speichern
-                    </button>
-                  </div>
-                </div>
-              {:else}
-                <div class="card-box draft-card">
-                  <div class="draft-card-hd">
-                    <span class="draft-cat" style="color:{$categories.find(c=>c.code===draft.category_code)?.color||'var(--accent)'}">
-                      {draft.category_code}
-                      {#if draft.doc_title}<span class="draft-src">aus {draft.doc_title}</span>{/if}
-                    </span>
-                    <span class="{DC[draft.difficulty]}">{DL[draft.difficulty]}</span>
-                  </div>
-                  <div class="draft-q">{draft.question}</div>
-                  <div class="draft-a">{draft.answer}</div>
-                  {#if draft.hint}<div class="draft-hint"><i class="fa-solid fa-lightbulb"></i> {draft.hint}</div>{/if}
-                  <div class="draft-btns">
-                    <button class="btn btn-err btn-sm" onclick={()=>rejectDraft(draft)}>
-                      <i class="fa-solid fa-xmark"></i> Ablehnen
-                    </button>
-                    <button class="btn btn-ghost btn-sm" onclick={()=>startEditDraft(draft)}>
-                      <i class="fa-solid fa-pen"></i> Bearbeiten
-                    </button>
-                    <button class="btn btn-ok btn-sm" onclick={()=>approveDraft(draft)}>
-                      <i class="fa-solid fa-check"></i> Freigeben
-                    </button>
-                  </div>
-                </div>
-              {/if}
-            {/each}
-          </div>
-        {/if}
-
-        <!-- Medien-Galerie -->
-        {#if media.length > 0}
-          <div class="media-section">
-            <div class="section-label"><i class="fa-solid fa-images"></i> Medien ({media.length})</div>
-            <div class="media-grid">
-              {#each media as m (m.name)}
-                {#if m.type === 'pdf'}
-                  <a href="{m.url}" target="_blank" class="media-item media-pdf">
-                    <i class="fa-solid fa-file-pdf"></i>
-                    <span class="media-name">{m.name}</span>
-                    <span class="media-size mono">{(m.size/1024).toFixed(0)} KB</span>
-                  </a>
-                {:else}
-                  <div class="media-item media-img">
-                    <img src="{m.url}" alt={m.name} loading="lazy" />
-                    <span class="media-name">{m.name}</span>
-                  </div>
-                {/if}
-              {/each}
-            </div>
-          </div>
-        {/if}
-      </div>
-
-    <!-- KARTEN -->
-    {:else if tab==='cards'}
+    <!-- KARTEN (nur Browse) -->
+    {:else if tab === 'cards'}
       <CardsTab {pkg} {searchQ} />
 
-    {:else if tab==='lexicon'}
-      <LexiconTab {pkg} />
-
-    {:else if tab==='paths'}
-      <div class="tab-page">
-        <Paths packageId={pkg.id} {documents} {cards} />
-      </div>
-
-    {:else if tab==='import'}
-      <ImportTab {pkg} />
+    <!-- MATERIAL -->
+    {:else if tab === 'material'}
+      <MaterialTab {pkg} />
     {/if}
 
   </div>
@@ -794,15 +312,8 @@
 .pd-name { font-size: 18px; font-weight: 700; color: var(--text0); }
 .pd-desc { font-size: 12px; color: var(--text2); margin-top: 2px; }
 
-.media-grid { display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px; }
-.media-item { background:var(--bg1);border:1px solid var(--border);border-radius:4px;overflow:hidden;display:flex;flex-direction:column; }
-.media-img img { width:100%;height:120px;object-fit:cover;display:block; }
-.media-pdf { padding:20px;align-items:center;text-decoration:none;color:var(--text1);gap:6px;text-align:center; }
-.media-pdf i { font-size:28px;color:var(--err); }
-.media-name { font-size:10px;color:var(--text2);padding:6px 8px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap; }
-.media-size { font-size:9px;color:var(--text3); }
-
-.share-panel { background:var(--bg1);border:1px solid var(--border);border-radius:4px;padding:14px;margin-top:12px; }
+/* ── Freigabe ────────────────────────────────────────────────────────────── */
+.share-panel { background:var(--bg1);border-radius:4px;padding:14px;margin-top:12px;box-shadow:0 1px 3px var(--shadow); }
 .share-hd { font-size:12px;font-weight:700;color:var(--text2);margin-bottom:10px;text-transform:uppercase;letter-spacing:.04em; }
 .share-form { display:flex;gap:8px;align-items:center;flex-wrap:wrap; }
 .share-list { margin-top:12px;display:flex;flex-direction:column;gap:4px; }
@@ -810,10 +321,10 @@
 .share-email { flex:1;color:var(--text1); }
 .share-role { font-size:10px;color:var(--text3);background:var(--bg2);padding:2px 6px;border-radius:2px; }
 
+/* ── Stats ───────────────────────────────────────────────────────────────── */
 .pd-stats {
   display: flex;
   align-items: center;
-  gap: 0;
   flex-shrink: 0;
   flex-wrap: wrap;
   gap: 4px;
@@ -882,8 +393,6 @@
   display: flex;
   flex-direction: column;
 }
-
-/* ── Tab-Seiten ───────────────────────────────────────────────────────────── */
 .tab-page {
   flex: 1;
   overflow-y: auto;
@@ -892,21 +401,8 @@
   margin: 0 auto;
   width: 100%;
 }
-.material-doc { margin-bottom: 32px; }
-.material-inline { margin: 0 0 6px; padding: 12px 14px; background: var(--bg1); border: 1px solid var(--border); border-radius: 4px; max-height: 500px; overflow-y: auto; }
-.material-content { font-size: 13px; color: var(--text1); line-height: 1.7; }
-.di-reading { color: var(--accent) !important; background: var(--glow) !important; }
-.media-section { margin-top: 24px; padding-top: 20px; border-top: 1px solid var(--border); }
-.tab-hd {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 20px;
-}
-.tab-hd-title { font-size: 15px; font-weight: 700; color: var(--text0); }
-.tab-hd-sub   { font-size: 12px; color: var(--text2); margin-top: 2px; }
 
-/* ── Übersicht ────────────────────────────────────────────────────────────── */
+/* ── Uebersicht ──────────────────────────────────────────────────────────── */
 .overview-cols {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -917,9 +413,9 @@
 .cat-icon-box { width: 28px; height: 28px; border-radius: 4px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
 .cat-icon-box i { font-size: 12px; }
 .cat-name { font-size: 12px; font-weight: 600; color: var(--text1); }
-.cat-n { font-size: 12px; font-weight: 700; color: var(--text1); font-family: 'JetBrains Mono', monospace; text-align: right; }
+.cat-n { font-size: 11px; font-weight: 600; color: var(--text2); min-width: 22px; text-align: right; font-family: 'JetBrains Mono', monospace; }
 
-/* SRS-Stapel */
+/* ── SRS-Stapel ──────────────────────────────────────────────────────────── */
 .srs-bar { display:flex;height:10px;border-radius:3px;overflow:hidden;margin-bottom:12px;gap:1px; }
 .srs-seg { min-width:3px;transition:width .3s; }
 .srs-mastered { background:#50a868; }
@@ -936,229 +432,9 @@
 .srs-dot.srs-learning { background:#d0a040; }
 .srs-dot.srs-due { background:#d06050; }
 .srs-dot.srs-new { background:var(--bg3); }
-.cat-n { font-size: 11px; font-weight: 600; color: var(--text2); min-width: 22px; text-align: right; font-family: 'JetBrains Mono', monospace; }
 
-.doc-row { display: flex; align-items: center; gap: 10px; padding: 8px 6px; border-radius: 4px; cursor: pointer; transition: background .12s; width: 100%; text-align: left; border: none; background: none; font-family: inherit; }
-.doc-row:hover { background: var(--bg2); }
-.doc-row-icon { font-size: 16px; color: var(--accent); flex-shrink: 0; }
-.doc-row-body { flex: 1; }
-.doc-row-title { font-size: 12px; font-weight: 600; color: var(--text1); }
-.doc-row-meta  { font-size: 10px; color: var(--text3); font-family: 'JetBrains Mono', monospace; }
-.doc-row-arr   { font-size: 10px; color: var(--text3); }
-.upload-cta { display: flex; align-items: center; gap: 8px; color: var(--accent); font-size: 13px; font-weight: 600; padding: 12px 8px; border-radius: 4px; border: 1px dashed var(--accent); background: var(--glow); width: 100%; justify-content: center; cursor: pointer; transition: filter .15s; font-family: inherit; }
-.upload-cta:hover { filter: brightness(1.1); }
-
-/* ── Upload Form ──────────────────────────────────────────────────────────── */
-.upload-box { margin-bottom: 20px; }
-.upload-hd { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; }
-.upload-body { display: grid; grid-template-columns: 180px 1fr; gap: 18px; margin-bottom: 12px; }
-.upload-footer { display: flex; justify-content: flex-end; gap: 10px; padding-top: 12px; border-top: 1px solid var(--border); margin-top: 4px; }
-.upload-fields { display: flex; flex-direction: column; gap: 10px; }
-.drop-zone {
-  display: flex; flex-direction: column; align-items: center; justify-content: center;
-  border: 2px dashed var(--border); border-radius: 4px; padding: 20px 12px;
-  cursor: pointer; transition: all .2s; text-align: center; gap: 6px; min-height: 150px;
-}
-.drop-zone:hover, .drop-zone.has-file { border-color: var(--accent); background: var(--glow); }
-.drop-zone input { display: none; }
-.drop-cloud { font-size: 32px; color: var(--accent); opacity: .6; }
-.drop-file-icon { font-size: 28px; color: var(--accent); }
-.drop-file-name { font-size: 12px; font-weight: 600; color: var(--text0); }
-.drop-file-size { font-size: 10px; color: var(--text3); font-family: 'JetBrains Mono', monospace; }
-.drop-hint  { font-size: 12px; color: var(--text2); }
-.drop-hint2 { font-size: 10px; color: var(--text3); }
-.proc-banner { display: flex; align-items: center; gap: 10px; padding: 11px 14px; border-radius: 4px; font-size: 13px; font-weight: 500; }
-.proc-uploading { background: var(--glow); color: var(--accent); border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent); }
-.proc-done      { background: var(--glowok); color: var(--ok); border: 1px solid color-mix(in srgb, var(--ok) 35%, transparent); }
-.proc-error     { background: color-mix(in srgb, var(--err) 10%, transparent); color: var(--err); border: 1px solid color-mix(in srgb, var(--err) 35%, transparent); }
-.ai-warn-pill { font-size: 11px; color: var(--warn); background: color-mix(in srgb, var(--warn) 10%, transparent); padding: 7px 12px; border-radius: 4px; border: 1px solid color-mix(in srgb, var(--warn) 35%, transparent); display: flex; align-items: center; gap: 7px; }
-
-/* ── Dokument-Layout ──────────────────────────────────────────────────────── */
-.docs-layout { display: grid; grid-template-columns: 260px 1fr; gap: 16px; margin-top: 16px; }
-.doc-item { display: flex; align-items: center; gap: 10px; padding: 9px 10px; border-radius: 4px; cursor: pointer; border: 1px solid transparent; transition: all .12s; width: 100%; text-align: left; background: none; font-family: inherit; margin-bottom: 3px; }
-.doc-item:hover { background: var(--bg2); }
-.doc-item.selected { background: var(--glow); border-color: color-mix(in srgb, var(--accent) 40%, transparent); }
-.di-icon { font-size: 18px; color: var(--accent); flex-shrink: 0; }
-.di-body { flex: 1; }
-.di-title { font-size: 12px; font-weight: 600; color: var(--text1); }
-.di-meta  { font-size: 10px; color: var(--text3); font-family: 'JetBrains Mono', monospace; }
-.di-badge { font-size: 10px; color: var(--ac3); }
-
-.doc-detail-col { background: var(--bg1); border: 1px solid var(--border); border-radius: 4px; padding: 14px; display: flex; flex-direction: column; gap: 10px; min-height: 300px; overflow-y: auto; }
-.doc-detail-empty { align-items: center; justify-content: center; }
-.doc-detail-empty i { font-size: 32px; opacity: .2; color: var(--text3); }
-.doc-detail-empty p { font-size: 13px; color: var(--text3); }
-.doc-detail-hd { display: flex; justify-content: space-between; align-items: center; padding-bottom: 10px; border-bottom: 1px solid var(--border); flex-shrink: 0; }
-.doc-detail-title { font-size: 13px; font-weight: 700; color: var(--text0); }
-.doc-detail-meta  { font-size: 10px; color: var(--text2); margin-top: 1px; }
-
-/* ── KI Prozess ───────────────────────────────────────────────────────────── */
-.gen-panel { background: var(--bg2); border: 1px solid var(--border); border-radius: 4px; padding: 12px; flex-shrink: 0; }
-.gen-panel-hd { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
-.gen-panel-title { font-size: 12px; font-weight: 600; color: var(--text1); flex: 1; }
-.gen-status { display: flex; align-items: center; gap: 5px; font-size: 11px; font-weight: 600; padding: 3px 8px; border-radius: 4px; }
-.gen-running { color: var(--accent); background: var(--glow); }
-.gen-done    { color: var(--ok); background: var(--glowok); }
-.gen-error   { color: var(--err); background: color-mix(in srgb, var(--err) 10%, transparent); }
-.gen-steps { display: flex; flex-direction: column; gap: 6px; margin-bottom: 8px; }
-.gen-step { display: flex; align-items: flex-start; gap: 10px; padding: 3px 0; }
-.gen-step-pending { opacity: .3; }
-.gen-step-done    { opacity: .65; }
-.gen-step-running, .gen-step-error { opacity: 1; }
-.gen-dot { width: 18px; height: 18px; border-radius: 50%; border: 1.5px solid var(--border); display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 1px; }
-.gen-step-running .gen-dot { border-color: var(--accent); }
-.gen-step-done    .gen-dot { border-color: var(--ok); background: var(--ok); }
-.gen-step-done    .gen-dot i { color: #fff !important; }
-.gen-step-error   .gen-dot { border-color: var(--err); background: var(--err); }
-.gen-step-error   .gen-dot i { color: #fff !important; }
-.gen-step-right { flex: 1; display: flex; flex-direction: column; gap: 3px; }
-.gen-step-label { font-size: 12px; color: var(--text1); }
-.gen-step-bar { height: 2px; background: var(--bg3); border-radius: 1px; overflow: hidden; }
-.gen-step-fill { height: 100%; background: var(--accent); animation: scan 1.8s ease-in-out infinite; }
-@keyframes scan { 0%{transform:translateX(-100%)} 100%{transform:translateX(400%)} }
-.gen-result { display: flex; align-items: center; gap: 12px; font-size: 12px; font-weight: 500; flex-wrap: wrap; padding-top: 8px; border-top: 1px solid var(--border); }
-
-/* ── Chunks ───────────────────────────────────────────────────────────────── */
-.chunks-col { display: flex; flex-direction: column; gap: 4px; overflow-y: auto; flex: 1; }
-.chunk-item { display: flex; align-items: flex-start; gap: 8px; padding: 8px 10px; border-radius: 4px; cursor: pointer; border: 1px solid transparent; transition: all .12s; width: 100%; text-align: left; background: none; font-family: inherit; }
-.chunk-item:hover { background: var(--bg2); }
-.chunk-item.selected { background: var(--glow); border-color: color-mix(in srgb, var(--accent) 35%, transparent); }
-.chunk-item.done { opacity: .5; }
-.chunk-item input { flex-shrink: 0; margin-top: 2px; }
-.chunk-body { flex: 1; }
-.chunk-meta { display: flex; align-items: center; gap: 8px; margin-bottom: 3px; }
-.chunk-idx  { font-size: 9px; color: var(--text3); font-family: 'JetBrains Mono', monospace; }
-.chunk-done { font-size: 9px; color: var(--ok); }
-.chunk-text { font-size: 11px; color: var(--text2); line-height: 1.5; margin: 0; }
-
-/* ── Entwürfe ─────────────────────────────────────────────────────────────── */
-.drafts-section { margin-top: 24px; padding-top: 20px; border-top: 1px solid var(--border); }
-.drafts-hd { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; }
-.drafts-title { color: var(--warn) !important; display: flex; align-items: center; gap: 6px; }
-.draft-card { margin-bottom: 10px; max-width: 700px; }
-.draft-card-hd { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
-.draft-cat { font-size: 11px; font-weight: 700; letter-spacing: .06em; }
-.draft-src { font-size: 10px; color: var(--text3); font-weight: 400; margin-left: 6px; }
-.draft-q   { font-size: 14px; font-weight: 600; color: var(--text0); margin-bottom: 8px; line-height: 1.5; }
-.draft-a   { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--text1); background: var(--bg2); border-radius: 4px; padding: 9px 12px; white-space: pre-wrap; margin-bottom: 8px; line-height: 1.6; }
-.draft-hint { font-size: 11px; color: var(--text2); margin-bottom: 8px; display: flex; align-items: center; gap: 5px; }
-.draft-hint i { color: var(--warn); }
-.draft-btns { display: flex; gap: 8px; justify-content: flex-end; }
-.draft-edit { margin-bottom: 10px; max-width: 700px; display: flex; flex-direction: column; gap: 10px; }
-.draft-edit-title { font-size: 13px; font-weight: 600; color: var(--text0); display: flex; align-items: center; gap: 8px; padding-bottom: 12px; border-bottom: 1px solid var(--border); }
-.draft-edit-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-.draft-edit-footer { display: flex; justify-content: flex-end; gap: 8px; padding-top: 12px; border-top: 1px solid var(--border); }
-
-/* ── Karten Split Layout ──────────────────────────────────────────────────── */
-.cards-panel-layout {
-  flex: 1;
-  display: grid;
-  grid-template-columns: 320px 1fr;
-  overflow: hidden;
-}
-.cards-list-col {
-  border-right: 1px solid var(--bdr2);
-  display: flex;
-  flex-direction: column;
-  background: var(--bg1);
-  overflow: hidden;
-}
-.cl-header { padding: 14px 14px 10px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--border); flex-shrink: 0; }
-.cl-title { font-size: 13px; font-weight: 700; color: var(--text0); display: flex; align-items: center; gap: 6px; }
-.cl-title i { font-size: 13px; }
-.cnt-badge { font-size: 10px; background: var(--bg3); color: var(--text2); border-radius: 4px; padding: 1px 6px; font-family: 'JetBrains Mono', monospace; }
-.cl-filters { padding: 10px 12px; display: flex; flex-direction: column; gap: 7px; border-bottom: 1px solid var(--border); flex-shrink: 0; }
-.search-wrap { position: relative; }
-.search-icon { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); font-size: 11px; color: var(--text3); pointer-events: none; }
-.search-inp { padding-left: 30px !important; }
-.cl-list { flex: 1; overflow-y: auto; padding: 6px; }
-.list-loading { padding: 24px; text-align: center; color: var(--accent); font-size: 18px; }
-.list-empty   { padding: 20px; text-align: center; color: var(--text3); font-size: 12px; }
-.cl-item { display: block; width: 100%; padding: 9px 10px; border-radius: 4px; text-align: left; cursor: pointer; transition: background .12s; border: 1px solid var(--border); margin-bottom: 4px; background: var(--bg1); font-family: inherit; }
-.cl-item:hover    { background: var(--bg2); border-color: var(--text3); }
-.cl-item.selected { background: var(--bg2); border-color: var(--accent); }
-.cl-item.inactive { opacity: .4; }
-.cli-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 3px; }
-.cli-id  { font-size: 9px; color: var(--text3); font-family: 'JetBrains Mono', monospace; letter-spacing: .06em; }
-.cli-q   { font-size: 11px; color: var(--text1); line-height: 1.4; margin-bottom: 3px; }
-.cli-cat { font-size: 9px; font-weight: 600; }
-
-.cards-detail-col { overflow-y: auto; background: var(--bg0); }
-.card-form-wrap, .card-detail-wrap { padding: 22px; }
-.form-hd { display: flex; justify-content: space-between; align-items: center; margin-bottom: 18px; padding-bottom: 12px; border-bottom: 1px solid var(--border); }
-.form-title { font-size: 14px; font-weight: 700; color: var(--text0); display: flex; align-items: center; gap: 8px; }
-.form-fields { display: flex; flex-direction: column; gap: 12px; }
-.form-footer { display: flex; justify-content: flex-end; gap: 10px; padding-top: 14px; border-top: 1px solid var(--border); margin-top: 14px; }
-.form-row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-.diff-btns { display: flex; gap: 8px; }
-.diff-btn {
-  padding: 5px 13px;
-  border-radius: 4px;
-  font-size: 11px;
-  font-weight: 600;
-  border: 1px solid var(--border);
-  background: transparent;
-  color: var(--text2);
-  cursor: pointer;
-  transition: all .15s;
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  font-family: inherit;
-}
-
-.card-detail-actions { display: flex; gap: 6px; }
-.detail-section { margin-bottom: 16px; }
-.detail-q    { font-size: 15px; font-weight: 600; color: var(--text0); background: var(--bg2); border-radius: 4px; padding: 12px 14px; line-height: 1.5; }
-.detail-hint { font-size: 12px; color: var(--text2); background: var(--bg2); border-radius: 4px; padding: 8px 12px; display: flex; align-items: center; gap: 6px; }
-.detail-hint i { flex-shrink: 0; }
-.detail-ans  { font-size: 12px; color: var(--text1); background: var(--bg1); border: 1px solid var(--border); border-radius: 4px; padding: 12px 14px; line-height: 1.65; }
-.detail-ai   { font-size: 13px; color: var(--text1); background: var(--bg2); border: 1px solid color-mix(in srgb, var(--ac2) 35%, transparent); border-radius: 4px; padding: 12px 14px; line-height: 1.6; }
-.ai-load-indicator { display: flex; align-items: center; gap: 12px; padding: 10px 14px; background: var(--glow); border: 1px solid color-mix(in srgb, var(--accent) 30%, transparent); border-radius: 4px; margin-top: 4px; }
-.ai-load-indicator > i { color: var(--accent); flex-shrink: 0; }
-.ai-load-text { font-size: 12px; color: var(--accent); margin-bottom: 4px; }
-.ai-bar { height: 2px; background: var(--bg3); border-radius: 1px; overflow: hidden; }
-.ai-bar-fill { height: 100%; background: var(--accent); animation: scan 1.8s ease-in-out infinite; }
-
-/* ── Lexikon ──────────────────────────────────────────────────────────────── */
-.lex-group { margin-bottom: 20px; }
-.lex-letter { font-size: 11px; font-weight: 700; letter-spacing: .12em; color: var(--accent); font-family: 'JetBrains Mono', monospace; padding-bottom: 8px; border-bottom: 1px solid var(--border); margin-bottom: 8px; }
-.lex-entry { margin-bottom: 8px; }
-.lex-term  { font-size: 16px; font-weight: 700; color: var(--text0); margin-bottom: 8px; }
-.lex-def   { font-size: 13px; color: var(--text1); line-height: 1.7; white-space: pre-wrap; }
-
-/* ── Lernpfade ────────────────────────────────────────────────────────────── */
-.paths-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 14px; }
-.path-card { display: flex; flex-direction: column; gap: 10px; }
-.path-name { font-size: 15px; font-weight: 700; color: var(--text0); }
-.path-desc { font-size: 12px; color: var(--text2); }
-.path-cats { display: flex; flex-wrap: wrap; gap: 5px; }
-.path-cat-tag { font-size: 10px; font-weight: 600; padding: 2px 8px; border-radius: 4px; border: 1px solid; }
-.cat-check-grid { display: flex; flex-wrap: wrap; gap: 8px; padding: 10px; background: var(--bg2); border-radius: 4px; border: 1px solid var(--border); }
-.cat-check-item { display: flex; align-items: center; gap: 5px; font-size: 11px; cursor: pointer; color: var(--text1); }
-
-/* ── Import ───────────────────────────────────────────────────────────────── */
-.import-box { max-width: 920px; }
-.import-desc { font-size: 13px; color: var(--text2); margin-bottom: 16px; line-height: 1.6; }
-.import-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 14px; }
-.import-ta { font-family: 'JetBrains Mono', monospace !important; font-size: 11px !important; }
-.import-result { display: flex; align-items: center; gap: 16px; padding: 10px 14px; background: var(--bg2); border-radius: 4px; margin-bottom: 12px; font-size: 13px; font-weight: 600; }
-
-/* ── Gemeinsame Form-Elemente ─────────────────────────────────────────────── */
-.field-label { display: flex; flex-direction: column; gap: 5px; font-size: 12px; font-weight: 600; color: var(--text2); }
-.checkbox-label { display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 12px; color: var(--text2); }
-.checkbox-label input { width: auto; }
-.range-input { width: 100%; accent-color: var(--accent); padding: 0; background: none; border: none; box-shadow: none; }
-.ib { width: 28px; height: 28px; border-radius: 4px; display: flex; align-items: center; justify-content: center; color: var(--text2); font-size: 12px; transition: all .15s; background: none; border: none; cursor: pointer; }
-.ib:hover { background: var(--bg2); color: var(--text0); }
-.ib.sm { width: 24px; height: 24px; font-size: 11px; }
-.ib.err:hover { background: var(--err); color: #fff; }
-
-/* ── Hilfklassen (lokal) ──────────────────────────────────────────────────── */
-.text-accent { color: var(--accent); }
-.text-ok     { color: var(--ok); }
-.text-warn   { color: var(--warn); }
-.text-err    { color: var(--err); }
-.text-ac2    { color: var(--ac2); }
-.text-2      { color: var(--text2); }
+/* ── Empty State ─────────────────────────────────────────────────────────── */
+.empty-state { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 48px 20px; gap: 8px; }
+.empty-state i { font-size: 36px; color: var(--text3); opacity: .3; }
+.empty-state p { font-size: 13px; color: var(--text3); }
 </style>

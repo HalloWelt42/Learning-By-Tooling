@@ -65,9 +65,9 @@
     min-height: 100vh; background: var(--bg0);
   }
   .login-card {
-    background: var(--bg1); border: 1px solid var(--border);
+    background: var(--bg1);
     border-radius: 6px; padding: 32px; width: 340px;
-    box-shadow: 0 4px 24px rgba(0,0,0,.2);
+    box-shadow: 0 4px 24px rgba(0,0,0,.4);
   }
   .login-header { text-align: center; margin-bottom: 24px; }
   .login-icon {
