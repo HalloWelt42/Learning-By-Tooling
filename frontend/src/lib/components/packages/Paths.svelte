@@ -4,8 +4,9 @@
 -->
 <script>
   import { onMount } from 'svelte'
-  import { showToast, categories, activePackageId, currentView } from '../../stores/index.js'
+  import { showToast, categories, activePackageId, currentView, activeSession } from '../../stores/index.js'
   import { apiGet, apiPost, apiPut, apiDelete } from '../../utils/api.js'
+  import { navigate } from '../../utils/router.js'
   import { marked } from 'marked'
   marked.setOptions({ breaks: true, gfm: true })
 
@@ -19,6 +20,8 @@
   let form        = $state({ name: '', description: '' })
   let chapterForm = $state({ title: '', description: '', document_ids: [], card_ids: [], pass_threshold: 0.7 })
   let materialView = $state(null)
+  let confirmDeleteCh = $state(null)
+  let confirmDeletePath = $state(null)
 
   onMount(loadPaths)
 
@@ -49,22 +52,56 @@
     await loadPathDetail(selectedPath)
   }
 
-  async function deleteChapter(chId) {
+  function requestDeleteChapter(chId) {
+    if (confirmDeleteCh === chId) { doDeleteChapter(chId); return }
+    confirmDeleteCh = chId
+    setTimeout(() => { if (confirmDeleteCh === chId) confirmDeleteCh = null }, 3000)
+  }
+
+  async function doDeleteChapter(chId) {
     await apiDelete(`/api/chapters/${chId}`)
+    confirmDeleteCh = null
+    showToast('Kapitel gelöscht', 'info')
     await loadPathDetail(selectedPath)
   }
 
-  async function deletePath(pId) {
+  function requestDeletePath(pId) {
+    if (confirmDeletePath === pId) { doDeletePath(pId); return }
+    confirmDeletePath = pId
+    setTimeout(() => { if (confirmDeletePath === pId) confirmDeletePath = null }, 3000)
+  }
+
+  async function doDeletePath(pId) {
     await apiDelete(`/api/paths/${pId}`)
+    confirmDeletePath = null
     selectedPath = null
     pathDetail = null
     await loadPaths()
     showToast('Lernpfad gelöscht', 'info')
   }
 
-  function startChapterSession(chapter) {
-    // TODO: Session mit nur diesen Karten starten
-    showToast(`Session für "${chapter.title}" -- ${chapter.card_ids?.length || 0} Karten`, 'info')
+  async function startChapterSession(chapter) {
+    if (!chapter.card_ids?.length) {
+      showToast('Keine Karten in diesem Kapitel', 'warn')
+      return
+    }
+    try {
+      await apiDelete('/api/sessions/active').catch(() => {})
+      const data = await apiPost('/api/sessions', {
+        mode: 'standard',
+        package_id: packageId,
+        card_ids: chapter.card_ids,
+      })
+      if (data.total === 0) {
+        showToast('Keine aktiven Karten in diesem Kapitel', 'warn')
+        return
+      }
+      activeSession.set(data)
+      activePackageId.set(packageId)
+      navigate(`/learn/${packageId}`)
+    } catch(e) {
+      showToast(`Session-Start fehlgeschlagen: ${e.message}`, 'error')
+    }
   }
 
   async function showMaterial(docId) {
@@ -110,6 +147,11 @@
       </div>
       <button class="btn btn-ghost btn-sm" onclick={() => showAddChapter = !showAddChapter}>
         <i class="fa-solid fa-plus"></i> Kapitel
+      </button>
+      <button class="btn btn-sm {confirmDeletePath === selectedPath ? 'btn-danger' : 'btn-ghost'}"
+        onclick={() => requestDeletePath(selectedPath)} title="Pfad löschen">
+        <i class="fa-solid fa-trash"></i>
+        {#if confirmDeletePath === selectedPath}<span style="font-size:10px;margin-left:2px">Sicher?</span>{/if}
       </button>
     </div>
 
@@ -193,6 +235,11 @@
               {#if !unlocked}
                 <i class="fa-solid fa-lock" style="color:var(--text3);font-size:14px"></i>
               {/if}
+              <button class="btn btn-sm ch-del-btn {confirmDeleteCh === chapter.id ? 'btn-danger' : 'btn-ghost'}"
+                onclick={() => requestDeleteChapter(chapter.id)} title="Kapitel löschen">
+                <i class="fa-solid fa-trash"></i>
+                {#if confirmDeleteCh === chapter.id}<span style="font-size:10px;margin-left:2px">Sicher?</span>{/if}
+              </button>
             </div>
 
             {#if unlocked}
@@ -303,4 +350,6 @@
   .path-card:hover { background: var(--bg2); }
   .path-name { font-size: 14px; font-weight: 600; color: var(--text0); }
   .path-desc { font-size: 12px; color: var(--text2); margin-top: 2px; }
+  .ch-del-btn { opacity: 0.3; transition: opacity .15s; padding: 4px 6px; font-size: 11px; flex-shrink: 0; }
+  .chapter-card:hover .ch-del-btn { opacity: 1; }
 </style>

@@ -432,6 +432,21 @@ def _migrate(conn: sqlite3.Connection):
             conn.execute("ALTER TABLE users ADD COLUMN settings TEXT DEFAULT '{}'")
             conn.commit()
 
+    # lexicon: UNIQUE(term) -> UNIQUE(package_id, term)
+    if 'lexicon' in existing_tables:
+        indexes = conn.execute("PRAGMA index_list(lexicon)").fetchall()
+        has_old_unique = any(
+            'autoindex' in idx[1] and
+            len(conn.execute(f"PRAGMA index_info({idx[1]})").fetchall()) == 1
+            for idx in indexes
+        )
+        if has_old_unique:
+            try:
+                conn.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_lexicon_pkg_term ON lexicon(package_id, term)")
+                conn.commit()
+            except Exception:
+                pass
+
     # Kategorie-Namen: Umlaute korrigieren (falls alte ASCII-Version in DB)
     umlaut_fixes = [
         ("GS", "Geschaeftsprozesse", "Geschaeftsprozesse und Anwendungsfaelle"),

@@ -37,7 +37,15 @@ def start_session(data: SessionCreate, user: dict = Depends(get_current_user)):
         "UPDATE sessions SET ended_at=? WHERE user_id=? AND ended_at IS NULL",
         (datetime.now().isoformat(), uid)
     )
-    if data.srs_mode:
+    if data.card_ids:
+        # Explizite Kartenliste (z.B. Lernpfad-Kapitel)
+        pl = ",".join("?" * len(data.card_ids))
+        rows = conn.execute(
+            f"SELECT id FROM cards WHERE card_id IN ({pl}) AND active=1",
+            data.card_ids
+        ).fetchall()
+        card_db_ids = [r["id"] for r in rows]
+    elif data.srs_mode:
         q = """
             SELECT c.id FROM cards c
             LEFT JOIN card_stats cs ON cs.card_id=c.card_id AND cs.user_id=?
@@ -48,6 +56,8 @@ def start_session(data: SessionCreate, user: dict = Depends(get_current_user)):
             q += " AND c.package_id=?"; p.append(data.package_id)
         q += " ORDER BY COALESCE(cs.due_date,'1970-01-01') ASC, RANDOM() LIMIT ?"
         p.append(data.card_limit)
+        rows = conn.execute(q, p).fetchall()
+        card_db_ids = [r["id"] for r in rows]
     else:
         q = "SELECT id FROM cards WHERE active=1"
         p = []
@@ -57,9 +67,8 @@ def start_session(data: SessionCreate, user: dict = Depends(get_current_user)):
             pl = ",".join("?" * len(data.category_filter))
             q += f" AND category_code IN ({pl})"; p.extend(data.category_filter)
         q += " ORDER BY RANDOM() LIMIT ?"; p.append(data.card_limit)
-
-    rows    = conn.execute(q, p).fetchall()
-    card_db_ids = [r["id"] for r in rows]
+        rows = conn.execute(q, p).fetchall()
+        card_db_ids = [r["id"] for r in rows]
     pkg_id_val = data.package_id if data.package_id else None
     conn.execute(
         "INSERT INTO sessions (user_id,mode,package_id,category_filter,total_cards,card_order,current_index) VALUES (?,?,?,?,?,?,0)",

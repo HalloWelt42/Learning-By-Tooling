@@ -58,6 +58,7 @@ class SessionCreate(BaseModel):
     category_filter: Optional[list] = []
     card_limit:      Optional[int]  = 20
     srs_mode:        Optional[bool] = False
+    card_ids:        Optional[list] = None
 
 class ReviewSubmit(BaseModel):
     session_id:  int
@@ -85,6 +86,11 @@ class LexiconCreate(BaseModel):
     definition:    str
     category_code: Optional[str]  = None
     related_cards: Optional[list] = []
+
+class LexiconUpdate(BaseModel):
+    term:          Optional[str]  = None
+    definition:    Optional[str]  = None
+    category_code: Optional[str]  = None
 
 class PathCreate(BaseModel):
     package_id:     Optional[int]  = None

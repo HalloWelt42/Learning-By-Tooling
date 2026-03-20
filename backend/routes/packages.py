@@ -14,7 +14,7 @@ from auth import get_current_user
 from helpers import rebuild_fts, next_card_id
 from schemas import (
     PackageCreate, PackageUpdate, CategoryCreate, DraftAction,
-    LexiconCreate, PathCreate, ChapterCreate, ChapterUpdate,
+    LexiconCreate, LexiconUpdate, PathCreate, ChapterCreate, ChapterUpdate,
 )
 
 UPLOAD_DIR = Path(os.environ.get("UPLOAD_DIR", str(Path(__file__).parent.parent.parent / "uploads")))
@@ -490,6 +490,51 @@ def create_lexicon_entry(data: LexiconCreate, user: dict = Depends(get_current_u
         return row_to_dict(conn.execute("SELECT * FROM lexicon WHERE term=?", (data.term,)).fetchone())
     except Exception as e:
         raise HTTPException(400, str(e))
+    finally:
+        conn.close()
+
+
+@router.put("/api/lexicon/{entry_id}")
+def update_lexicon_entry(entry_id: int, data: LexiconUpdate, user: dict = Depends(get_current_user)):
+    conn = get_db()
+    try:
+        entry = conn.execute("SELECT * FROM lexicon WHERE id=?", (entry_id,)).fetchone()
+        if not entry:
+            raise HTTPException(404, "Eintrag nicht gefunden")
+        updates = {}
+        if data.term is not None:
+            updates["term"] = data.term
+        if data.definition is not None:
+            updates["definition"] = data.definition
+        if data.category_code is not None:
+            updates["category_code"] = data.category_code
+        if updates:
+            sets = ", ".join(f"{k}=?" for k in updates)
+            conn.execute(f"UPDATE lexicon SET {sets} WHERE id=?", list(updates.values()) + [entry_id])
+            conn.commit()
+            conn.execute("INSERT INTO lexicon_fts(lexicon_fts) VALUES('rebuild')")
+            conn.commit()
+        return row_to_dict(conn.execute("SELECT * FROM lexicon WHERE id=?", (entry_id,)).fetchone())
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(400, str(e))
+    finally:
+        conn.close()
+
+
+@router.delete("/api/lexicon/{entry_id}")
+def delete_lexicon_entry(entry_id: int, user: dict = Depends(get_current_user)):
+    conn = get_db()
+    try:
+        entry = conn.execute("SELECT * FROM lexicon WHERE id=?", (entry_id,)).fetchone()
+        if not entry:
+            raise HTTPException(404, "Eintrag nicht gefunden")
+        conn.execute("DELETE FROM lexicon WHERE id=?", (entry_id,))
+        conn.commit()
+        conn.execute("INSERT INTO lexicon_fts(lexicon_fts) VALUES('rebuild')")
+        conn.commit()
+        return {"ok": True}
     finally:
         conn.close()
 
