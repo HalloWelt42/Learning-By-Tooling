@@ -22,7 +22,7 @@
   import AiProcess from './AiProcess.svelte'
   import { DL, DC } from '../../utils/difficulty.js'
 
-  let { card, useAI, onReview, onAdvance } = $props()
+  let { card, useAI, onReview, onAdvance, onReport } = $props()
 
   // Interner State
   const startTime = Date.now()
@@ -249,6 +249,12 @@
               <i class="fa-solid fa-book-open"></i> Im Material nachlesen
             </button>
           {/if}
+        {/if}
+
+        {#if onReport}
+          <button class="btn btn-ghost btn-sm btn-report" onclick={onReport}>
+            <i class="fa-solid fa-flag"></i> Fehler melden
+          </button>
         {/if}
       </div>
     {/if}

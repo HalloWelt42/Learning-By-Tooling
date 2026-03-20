@@ -41,6 +41,9 @@
   let showPerfectStar = $state(false)
   let showStreakFire = $state(false)
   let materialUsed  = $state(false)
+  let showReportDialog = $state(false)
+  let reportReason = $state('')
+  let reportBusy = $state(false)
 
   let hasMaterial = $derived((() => {
     const pkg = ($packages || []).find(p => p.id === $activePackageId)
@@ -79,7 +82,7 @@
   })
 
   // MC gesperrt wenn Optionen fehlen
-  let mcLocked = $derived(!mcStatus || mcStatus.missing > 0)
+  let mcLocked = $derived(!mcStatus || mcStatus.cached === 0)
 
   // -- Kategorien --
   let localCats = $state([])
@@ -224,6 +227,26 @@
     }
   }
 
+  function handleReport() {
+    showReportDialog = true
+    reportReason = ''
+  }
+
+  async function submitReport() {
+    if (reportBusy) return
+    reportBusy = true
+    try {
+      const resp = await handleReview({ result: 'report', user_answer: reportReason })
+      showReportDialog = false
+      reportReason = ''
+      handleAdvance(resp)
+    } catch(e) {
+      showToast('Fehler beim Melden', 'error')
+    } finally {
+      reportBusy = false
+    }
+  }
+
   function recordWrong(c) {
     if (c && !wrongCards.find(w => w.card_id === c.card_id)) {
       wrongCards = [...wrongCards, c]
@@ -300,7 +323,7 @@
   function reset() {
     if (sessionId) apiPost(`/api/sessions/${sessionId}/end`, {}).catch(() => {})
     activeSession.set(null)
-    phase = 'setup'; sessionId = null; card = null; results = []; wrongCards = []; showAnalysis = false
+    phase = 'setup'; sessionId = null; card = null; results = []; wrongCards = []; showAnalysis = false; showReportDialog = false
     totalCards = 0; pendingSession = null; combo = 0; comboPeak = 0; sessionXp = 0; xpFloats = []; materialUsed = false
     completionBonus = 0; xpCountUp.set(0, { duration: 0 })
     showCoinRain = false; showConfetti = false; showPerfectStar = false; showStreakFire = false
@@ -463,15 +486,31 @@
   <!-- Card-Komponente je nach Modus, {#key} erzwingt Neu-Mount bei Kartenwechsel -->
   {#key card.card_id}
     {#if sessionMode === 'standard'}
-      <CardStandard {card} onReview={handleReview} onAdvance={handleAdvance} />
+      <CardStandard {card} onReview={handleReview} onAdvance={handleAdvance} onReport={handleReport} />
     {:else if sessionMode === 'mc'}
-      <CardMC {card} onReview={handleReview} onAdvance={handleAdvance} />
+      <CardMC {card} onReview={handleReview} onAdvance={handleAdvance} onReport={handleReport} />
     {:else if sessionMode === 'write'}
-      <CardWrite {card} useAI={$aiOnline} onReview={handleReview} onAdvance={handleAdvance} />
+      <CardWrite {card} useAI={$aiOnline} onReview={handleReview} onAdvance={handleAdvance} onReport={handleReport} />
     {:else if sessionMode === 'srs'}
-      <CardSRS {card} onReview={handleReview} onAdvance={handleAdvance} />
+      <CardSRS {card} onReview={handleReview} onAdvance={handleAdvance} onReport={handleReport} />
     {/if}
   {/key}
+
+  {#if showReportDialog}
+    <div class="report-overlay" onclick={() => showReportDialog = false}>
+      <div class="report-dialog" onclick={e => e.stopPropagation()}>
+        <h3><i class="fa-solid fa-flag" style="color:var(--err)"></i> Karte als fehlerhaft melden</h3>
+        <p style="font-size:12px;color:var(--text2)">Die Karte wird übersprungen und deaktiviert bis sie korrigiert wird.</p>
+        <textarea bind:value={reportReason} placeholder="Was ist falsch? (optional)" rows="3" style="width:100%"></textarea>
+        <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px">
+          <button class="btn btn-ghost" onclick={() => showReportDialog = false}>Abbrechen</button>
+          <button class="btn btn-primary" onclick={submitReport} disabled={reportBusy}>
+            {reportBusy ? 'Wird gemeldet...' : 'Melden & Überspringen'}
+          </button>
+        </div>
+      </div>
+    </div>
+  {/if}
 
   <div style="padding:0 32px 24px">
     <button class="btn btn-ghost btn-sm" onclick={endSession}>
@@ -810,6 +849,12 @@
   background:var(--color);border-radius:1px;
   animation:confetti-fall var(--dur) ease-in var(--delay) forwards;
 }
+/* Report-Dialog */
+.report-overlay { position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:100;display:flex;align-items:center;justify-content:center; }
+.report-dialog { background:var(--bg1);border:1px solid var(--border);border-radius:8px;padding:20px;max-width:400px;width:90%; }
+.report-dialog h3 { margin:0 0 8px;font-size:14px; }
+.report-dialog textarea { background:var(--bg2);border:1px solid var(--border);border-radius:4px;padding:8px;color:var(--text0);font-size:12px;resize:vertical; }
+
 @keyframes confetti-fall {
   0%   { transform:translateY(0) rotate(0deg) scale(0);opacity:0; }
   8%   { opacity:1;transform:translateY(5vh) rotate(90deg) scale(1); }

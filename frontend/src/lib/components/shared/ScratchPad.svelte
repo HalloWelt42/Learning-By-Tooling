@@ -119,7 +119,7 @@
       bind:this={taEl}
       bind:value={text}
       oninput={saveText}
-      placeholder="Notizen hier schreiben..."
+      placeholder="Spickzettel hier schreiben..."
       spellcheck="false"
     ></textarea>
 

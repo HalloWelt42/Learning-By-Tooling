@@ -212,7 +212,7 @@
         <button class="nav-item" class:active={showScratchPad}
           onclick={() => showScratchPad = !showScratchPad}>
           <i class="fa-solid fa-clipboard-list"></i>
-          <span>Notizen</span>
+          <span>Spickzettel</span>
         </button>
       </nav>
 

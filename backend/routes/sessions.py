@@ -268,6 +268,39 @@ async def review_and_next(session_id: int, data: SessionReviewNext, user: dict =
     card = conn.execute("SELECT * FROM cards WHERE id=?", (current_db_id,)).fetchone()
     current_card_id = card["card_id"] if card else str(current_db_id)
 
+    # -- Report: Karte als fehlerhaft melden, deaktivieren, überspringen --
+    if data.result == "report":
+        conn.execute("UPDATE cards SET active=0, reported=1 WHERE id=?", (current_db_id,))
+        conn.execute("INSERT INTO card_reports (card_id, user_id, reason) VALUES (?,?,?)",
+            (current_card_id, uid, data.user_answer or ""))
+        conn.execute("UPDATE sessions SET current_index=current_index+1 WHERE id=?", (session_id,))
+        conn.commit()
+        new_sess = conn.execute("SELECT current_index, total_cards FROM sessions WHERE id=?", (session_id,)).fetchone()
+        new_idx = new_sess["current_index"]
+        done = new_idx >= len(card_order)
+        if done:
+            s = conn.execute(
+                "SELECT COUNT(*) as t, SUM(result='correct') as c, SUM(result='skip') as sk FROM reviews WHERE session_id=? AND user_id=?",
+                (session_id, uid)
+            ).fetchone()
+            conn.execute(
+                "UPDATE sessions SET ended_at=?, correct=?, skipped=? WHERE id=? AND user_id=?",
+                (datetime.now().isoformat(), s["c"] or 0, s["sk"] or 0, session_id, uid)
+            )
+            conn.commit()
+        next_card = None
+        if not done:
+            next_card = _load_card_data(conn, card_order[new_idx])
+        progress = _session_progress(conn, session_id, uid, dict(session))
+        progress["current_index"] = new_idx
+        conn.close()
+        return {
+            "ok": True, "result": "report", "ai_score": None, "ai_feedback": None,
+            "xp_earned": 0, "done": done,
+            "next_card": next_card,
+            "progress": progress,
+        }
+
     # -- KI-Bewertung (Freitext mit KI) --
     ai_score = ai_feedback = None
     result = data.result

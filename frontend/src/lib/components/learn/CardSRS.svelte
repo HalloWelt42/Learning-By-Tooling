@@ -7,7 +7,7 @@
   import { marked } from 'marked'
   import { DL, DC } from '../../utils/difficulty.js'
 
-  let { card, onReview, onAdvance } = $props()
+  let { card, onReview, onAdvance, onReport } = $props()
 
   const startTime = Date.now()
   let flipped = $state(false)
@@ -78,6 +78,12 @@
           <button class="btn btn-ghost btn-sm mat-link"
             onclick={() => window.open(`/#/packages/${$activePackageId}?tab=documents`, '_blank')}>
             <i class="fa-solid fa-book-open"></i> Im Material nachlesen
+          </button>
+        {/if}
+
+        {#if onReport}
+          <button class="btn btn-ghost btn-sm btn-report" onclick={onReport}>
+            <i class="fa-solid fa-flag"></i> Fehler melden
           </button>
         {/if}
       </div>

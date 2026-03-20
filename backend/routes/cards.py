@@ -10,7 +10,7 @@ from fastapi import APIRouter, HTTPException, Depends
 from db import get_db, row_to_dict
 from auth import get_current_user
 from helpers import next_card_id, rebuild_fts
-from schemas import CardCreate, CardUpdate, SRSReview
+from schemas import CardCreate, CardUpdate, SRSReview, CardReport
 from services import sm2_update
 
 router = APIRouter(tags=["cards"])
@@ -292,3 +292,45 @@ def global_search(
         "q":      q_clean,
         "items":  [dict(r) for r in rows],
     }
+
+
+# -- Fehler-Melden ---------------------------------------------------------------
+
+@router.post("/api/cards/{card_id}/report")
+def report_card(card_id: str, data: CardReport, user: dict = Depends(get_current_user)):
+    """Karte als fehlerhaft melden und deaktivieren."""
+    conn = get_db()
+    row = conn.execute("SELECT id FROM cards WHERE card_id=?", (card_id,)).fetchone()
+    if not row:
+        conn.close()
+        raise HTTPException(404, "Karte nicht gefunden")
+    conn.execute("UPDATE cards SET active=0, reported=1 WHERE card_id=?", (card_id,))
+    conn.execute("INSERT INTO card_reports (card_id, user_id, reason) VALUES (?,?,?)",
+        (card_id, user["id"], data.reason or ""))
+    conn.commit()
+    conn.close()
+    return {"ok": True}
+
+
+@router.post("/api/cards/{card_id}/unreport")
+def unreport_card(card_id: str, user: dict = Depends(get_current_user)):
+    """Karte reaktivieren und offene Reports schliessen."""
+    conn = get_db()
+    conn.execute("UPDATE cards SET active=1, reported=0 WHERE card_id=?", (card_id,))
+    conn.execute("UPDATE card_reports SET status='resolved', resolved_at=datetime('now') WHERE card_id=? AND status='open'", (card_id,))
+    conn.commit()
+    conn.close()
+    return {"ok": True}
+
+
+@router.get("/api/cards/{card_id}/reports")
+def get_card_reports(card_id: str, user: dict = Depends(get_current_user)):
+    """Alle Reports zu einer Karte."""
+    conn = get_db()
+    rows = conn.execute("""
+        SELECT r.*, u.display_name FROM card_reports r
+        LEFT JOIN users u ON r.user_id = u.id
+        WHERE r.card_id=? ORDER BY r.created_at DESC
+    """, (card_id,)).fetchall()
+    conn.close()
+    return [dict(r) for r in rows]

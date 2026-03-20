@@ -8,7 +8,7 @@
   import { showToast } from '../../stores/index.js'
   import { DL, DC } from '../../utils/difficulty.js'
 
-  let { card, onReview, onAdvance } = $props()
+  let { card, onReview, onAdvance, onReport } = $props()
 
   const startTime = Date.now()
   let mcOptions  = $state([])
@@ -122,6 +122,12 @@
         <i class="fa-solid fa-circle-xmark"></i>
         MC-Optionen nicht verfügbar -- Karte wird übersprungen
       </div>
+    {/if}
+
+    {#if onReport}
+      <button class="btn btn-ghost btn-sm btn-report" onclick={onReport} style="margin-top:12px">
+        <i class="fa-solid fa-flag"></i> Fehler melden
+      </button>
     {/if}
   </div>
 </div>

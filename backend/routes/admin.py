@@ -106,12 +106,19 @@ def reset_my_stats(data: dict, user: dict = Depends(get_current_user)):
             pl = ",".join("?" * len(card_ids))
             conn.execute(f"DELETE FROM card_stats WHERE user_id=? AND card_id IN ({pl})", [uid] + card_ids)
             conn.execute(f"DELETE FROM reviews WHERE user_id=? AND card_id IN ({pl})", [uid] + card_ids)
+            conn.execute(f"DELETE FROM card_reports WHERE user_id=? AND card_id IN ({pl})", [uid] + card_ids)
+            # Gemeldete Karten reaktivieren
+            conn.execute(f"UPDATE cards SET reported=0, active=1 WHERE package_id=? AND reported=1", (pkg_id,))
         conn.execute("DELETE FROM sessions WHERE user_id=? AND package_id=?", (uid, pkg_id))
     else:
         # Alles
         conn.execute("DELETE FROM card_stats WHERE user_id=?", (uid,))
         conn.execute("DELETE FROM reviews WHERE user_id=?", (uid,))
         conn.execute("DELETE FROM sessions WHERE user_id=?", (uid,))
+        conn.execute("DELETE FROM card_reports WHERE user_id=?", (uid,))
+        conn.execute("DELETE FROM user_xp WHERE user_id=?", (uid,))
+        # Alle gemeldeten Karten des Users reaktivieren
+        conn.execute("UPDATE cards SET reported=0, active=1 WHERE reported=1 AND package_id IN (SELECT package_id FROM user_packages WHERE user_id=?)", (uid,))
     conn.commit()
     conn.close()
     return {"ok": True}
@@ -124,6 +131,8 @@ def admin_reset_user_stats(target_id: int, user: dict = Depends(get_current_user
     conn.execute("DELETE FROM card_stats WHERE user_id=?", (target_id,))
     conn.execute("DELETE FROM reviews WHERE user_id=?", (target_id,))
     conn.execute("DELETE FROM sessions WHERE user_id=?", (target_id,))
+    conn.execute("DELETE FROM card_reports WHERE user_id=?", (target_id,))
+    conn.execute("DELETE FROM user_xp WHERE user_id=?", (target_id,))
     conn.commit()
     conn.close()
     return {"ok": True}

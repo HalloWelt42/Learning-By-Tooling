@@ -133,3 +133,6 @@ class ChapterUpdate(BaseModel):
     card_ids:       Optional[list]  = None
     pass_threshold: Optional[float] = None
     sort_order:     Optional[int]   = None
+
+class CardReport(BaseModel):
+    reason: Optional[str] = ""

@@ -1,6 +1,6 @@
 <script>
   import { categories, showToast, aiOnline } from '../../stores/index.js'
-  import { apiGet, apiPost } from '../../utils/api.js'
+  import { apiGet, apiPost, apiPut } from '../../utils/api.js'
   import { DL, DC, DI } from '../../utils/difficulty.js'
   import { marked } from 'marked'
   marked.setOptions({ breaks: true, gfm: true })
@@ -14,6 +14,10 @@
   let selectedCard   = $state(null)
   let aiState        = $state('idle')
   let aiText         = $state('')
+  let editing        = $state(null)
+  let editForm       = $state({})
+  let saving         = $state(false)
+  let showInactive   = $state(false)
 
 
   $effect(() => { filterCat; filterDiff; searchQ; loadCards() })
@@ -42,7 +46,68 @@
     }
   }
 
-  let totalCards = $derived(cards.length)
+  function startEdit(card) {
+    editing = card.card_id
+    editForm = {
+      question: card.question,
+      answer: card.answer,
+      hint: card.hint || '',
+      category_code: card.category_code || 'GB',
+      difficulty: card.difficulty || 2
+    }
+  }
+
+  function cancelEdit() {
+    editing = null
+    editForm = {}
+  }
+
+  async function saveEdit(card) {
+    if (saving) return
+    saving = true
+    try {
+      await apiPut(`/api/cards/${card.card_id}`, {
+        question: editForm.question,
+        answer: editForm.answer,
+        hint: editForm.hint || null,
+        category_code: editForm.category_code,
+        difficulty: editForm.difficulty,
+        source: 'manual'
+      })
+      const idx = cards.findIndex(c => c.card_id === card.card_id)
+      if (idx >= 0) {
+        cards[idx] = { ...cards[idx], ...editForm, source: 'manual' }
+        cards = [...cards]
+      }
+      if (selectedCard?.card_id === card.card_id) {
+        selectedCard = { ...selectedCard, ...editForm, source: 'manual' }
+      }
+      editing = null
+    } catch(e) {
+      // Fehler still behandeln
+    } finally {
+      saving = false
+    }
+  }
+
+  async function toggleActive(card) {
+    try {
+      if (card.reported) {
+        await apiPost(`/api/cards/${card.card_id}/unreport`)
+        card.active = 1
+        card.reported = 0
+      } else {
+        const newActive = card.active ? 0 : 1
+        await apiPut(`/api/cards/${card.card_id}`, { active: newActive })
+        card.active = newActive
+      }
+      cards = [...cards]
+    } catch(e) {}
+  }
+
+  let filteredCards = $derived(cards.filter(c => showInactive || c.active))
+
+  let totalCards = $derived(filteredCards.length)
   let correctRate = $derived(() => {
     // Placeholder -- stats könnten später geladen werden
     return null
@@ -74,19 +139,24 @@
           <option value={2}>Mittel</option>
           <option value={3}>Schwer</option>
         </select>
+        <label style="font-size:11px;display:flex;align-items:center;gap:4px;color:var(--text2)">
+          <input type="checkbox" bind:checked={showInactive} /> Inaktive
+        </label>
       </div>
     </div>
     {#if loadingCards}
       <div class="list-loading"><i class="fa-solid fa-spinner fa-spin text-accent"></i></div>
     {:else}
       <div class="cl-list">
-        {#each cards as c}
+        {#each filteredCards as c}
           <button class="cl-item"
             class:selected={selectedCard?.card_id === c.card_id}
             class:inactive={!c.active}
+            class:reported={c.reported}
             onclick={() => { selectedCard = c; aiText = ''; aiState = 'idle' }}>
             <div class="cli-top">
               <span class="cli-id">{c.card_id}</span>
+              {#if c.reported}<i class="fa-solid fa-flag" style="color:var(--err);font-size:9px"></i>{/if}
               {#if c.source === 'ai'}<span class="cli-ai-badge" title="KI-generiert"><i class="fa-solid fa-wand-magic-sparkles"></i></span>{/if}
               <span class="{DC[c.difficulty]}"><i class="fa-solid {DI[c.difficulty]}"></i></span>
             </div>
@@ -96,7 +166,7 @@
             </div>
           </button>
         {/each}
-        {#if !loadingCards && cards.length === 0}
+        {#if !loadingCards && filteredCards.length === 0}
           <div class="list-empty">Keine Karten gefunden</div>
         {/if}
       </div>
@@ -111,46 +181,89 @@
           <span class="cli-id">{selectedCard.card_id}</span>
           {#if selectedCard.source === 'ai'}<span class="source-badge source-ai"><i class="fa-solid fa-wand-magic-sparkles"></i> KI-generiert</span>{:else}<span class="source-badge source-manual"><i class="fa-solid fa-pen-nib"></i> Manuell</span>{/if}
           <span class="{DC[selectedCard.difficulty]} detail-diff"><i class="fa-solid {DI[selectedCard.difficulty]}"></i> {DL[selectedCard.difficulty]}</span>
-        </div>
-        <div class="detail-section">
-          <div class="section-label">Frage</div>
-          <div class="detail-q">{selectedCard.question}</div>
-        </div>
-        {#if selectedCard.hint}
-          <div class="detail-section">
-            <div class="section-label">Hinweis</div>
-            <div class="detail-hint">
-              <i class="fa-solid fa-lightbulb text-warn"></i> {selectedCard.hint}
-            </div>
-          </div>
-        {/if}
-        <div class="detail-section">
-          <div class="section-label">Antwort</div>
-          <div class="detail-ans markdown">{@html marked(selectedCard.answer)}</div>
-        </div>
-        <div class="detail-meta">
-          <span class="detail-meta-item">
-            <i class="fa-solid {$categories.find(x => x.code === selectedCard.category_code)?.icon || 'fa-tag'}"></i>
-            {$categories.find(x => x.code === selectedCard.category_code)?.name || selectedCard.category_code}
-          </span>
-        </div>
-        {#if aiState === 'idle' && $aiOnline}
-          <button class="btn btn-ghost btn-sm" onclick={() => getAI(selectedCard)}>
-            <i class="fa-solid fa-wand-magic-sparkles"></i> KI-Erklärung
+          <button class="btn btn-ghost btn-sm" onclick={() => startEdit(selectedCard)} title="Bearbeiten">
+            <i class="fa-solid fa-pen"></i>
           </button>
-        {:else if aiState === 'loading'}
-          <div class="ai-load-indicator">
-            <i class="fa-solid fa-spinner fa-spin"></i>
-            <div>
-              <div class="ai-load-text">KI generiert Erklärung...</div>
-              <div class="ai-bar"><div class="ai-bar-fill"></div></div>
+          <button class="btn btn-ghost btn-sm" onclick={() => toggleActive(selectedCard)} title={selectedCard.active ? 'Deaktivieren' : 'Aktivieren'}>
+            <i class="fa-solid {selectedCard.active ? 'fa-eye' : 'fa-eye-slash'}" style={!selectedCard.active ? 'color:var(--err)' : ''}></i>
+          </button>
+        </div>
+
+        {#if editing === selectedCard.card_id}
+          <div class="edit-form">
+            <label class="field-label">Frage
+              <textarea bind:value={editForm.question} rows="3"></textarea>
+            </label>
+            <label class="field-label">Antwort
+              <textarea bind:value={editForm.answer} rows="4"></textarea>
+            </label>
+            <label class="field-label">Hinweis
+              <input type="text" bind:value={editForm.hint} />
+            </label>
+            <div style="display:flex;gap:8px">
+              <label class="field-label" style="flex:1">Kategorie
+                <select bind:value={editForm.category_code}>
+                  {#each $categories as cat}
+                    <option value={cat.code}>{cat.code} - {cat.name}</option>
+                  {/each}
+                </select>
+              </label>
+              <label class="field-label" style="flex:1">Schwierigkeit
+                <select bind:value={editForm.difficulty}>
+                  <option value={1}>Leicht</option>
+                  <option value={2}>Mittel</option>
+                  <option value={3}>Schwer</option>
+                </select>
+              </label>
+            </div>
+            <div style="display:flex;gap:8px;margin-top:8px">
+              <button class="btn btn-ghost" onclick={cancelEdit}>Abbrechen</button>
+              <button class="btn btn-primary" onclick={() => saveEdit(selectedCard)} disabled={saving}>
+                {saving ? 'Speichern...' : 'Speichern'}
+              </button>
             </div>
           </div>
-        {:else if aiText}
+        {:else}
           <div class="detail-section">
-            <div class="section-label text-ac2">KI-Erklärung</div>
-            <div class="detail-ai markdown">{@html marked(aiText)}</div>
+            <div class="section-label">Frage</div>
+            <div class="detail-q">{selectedCard.question}</div>
           </div>
+          {#if selectedCard.hint}
+            <div class="detail-section">
+              <div class="section-label">Hinweis</div>
+              <div class="detail-hint">
+                <i class="fa-solid fa-lightbulb text-warn"></i> {selectedCard.hint}
+              </div>
+            </div>
+          {/if}
+          <div class="detail-section">
+            <div class="section-label">Antwort</div>
+            <div class="detail-ans markdown">{@html marked(selectedCard.answer)}</div>
+          </div>
+          <div class="detail-meta">
+            <span class="detail-meta-item">
+              <i class="fa-solid {$categories.find(x => x.code === selectedCard.category_code)?.icon || 'fa-tag'}"></i>
+              {$categories.find(x => x.code === selectedCard.category_code)?.name || selectedCard.category_code}
+            </span>
+          </div>
+          {#if aiState === 'idle' && $aiOnline}
+            <button class="btn btn-ghost btn-sm" onclick={() => getAI(selectedCard)}>
+              <i class="fa-solid fa-wand-magic-sparkles"></i> KI-Erklärung
+            </button>
+          {:else if aiState === 'loading'}
+            <div class="ai-load-indicator">
+              <i class="fa-solid fa-spinner fa-spin"></i>
+              <div>
+                <div class="ai-load-text">KI generiert Erklärung...</div>
+                <div class="ai-bar"><div class="ai-bar-fill"></div></div>
+              </div>
+            </div>
+          {:else if aiText}
+            <div class="detail-section">
+              <div class="section-label text-ac2">KI-Erklärung</div>
+              <div class="detail-ai markdown">{@html marked(aiText)}</div>
+            </div>
+          {/if}
         {/if}
       </div>
 
@@ -221,5 +334,22 @@
 .ai-bar { height: 2px; background: var(--bg3); border-radius: 1px; overflow: hidden; }
 .ai-bar-fill { height: 100%; background: var(--accent); animation: scan 1.8s ease-in-out infinite; }
 @keyframes scan { 0% { transform: translateX(-100%); } 100% { transform: translateX(400%); } }
+
+/* ── Reported-Karten ─────────────────────────────────────── */
+.cl-item.reported { border-left: 2px solid var(--err); }
+
+/* ── Edit-Form ───────────────────────────────────────────── */
+.edit-form { display: flex; flex-direction: column; gap: 10px; }
+.field-label { display: flex; flex-direction: column; gap: 4px; font-size: 12px; font-weight: 600; color: var(--text2); }
+.field-label textarea,
+.field-label input,
+.field-label select {
+  background: var(--bg2); border: 1px solid var(--border); border-radius: 4px;
+  padding: 8px 10px; font-size: 12px; color: var(--text0); font-family: inherit;
+  resize: vertical;
+}
+.field-label textarea:focus,
+.field-label input:focus,
+.field-label select:focus { border-color: var(--accent); outline: none; }
 
 </style>

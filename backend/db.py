@@ -454,6 +454,29 @@ def _migrate(conn: sqlite3.Connection):
             except Exception:
                 pass
 
+    # card_reports: Fehler-Melde-System
+    if 'card_reports' not in existing_tables:
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS card_reports (
+                id          INTEGER PRIMARY KEY AUTOINCREMENT,
+                card_id     TEXT    NOT NULL,
+                user_id     INTEGER NOT NULL,
+                reason      TEXT    DEFAULT '',
+                status      TEXT    DEFAULT 'open',
+                created_at  TEXT    DEFAULT (datetime('now')),
+                resolved_at TEXT,
+                FOREIGN KEY (user_id) REFERENCES users(id)
+            )
+        """)
+        conn.commit()
+
+    # cards: reported-Spalte (Karte als fehlerhaft markiert)
+    if 'cards' in existing_tables:
+        card_cols3 = {r[1] for r in conn.execute("PRAGMA table_info(cards)").fetchall()}
+        if 'reported' not in card_cols3:
+            conn.execute("ALTER TABLE cards ADD COLUMN reported INTEGER DEFAULT 0")
+            conn.commit()
+
     # Kategorie-Namen: Umlaute korrigieren (falls alte ASCII-Version in DB)
     umlaut_fixes = [
         ("GS", "Geschaeftsprozesse", "Geschaeftsprozesse und Anwendungsfaelle"),

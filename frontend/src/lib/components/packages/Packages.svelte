@@ -19,6 +19,7 @@
   let zipInstalling = $state(false)
   let zipResult     = $state(null)
   let showZip       = $state(false)
+  let deletingBundle = $state(false)
 
   const CAT_NAMES = {
     GB:'Grundlagen', TH:'Theorie', PX:'Praxis', VF:'Verfahren',
@@ -426,22 +427,21 @@
 
         <div class="pk-detail-actions">
           {#if selected.type === 'installed'}
-            <button class="btn btn-primary" onclick={() => navigate(`/packages/${selected.pkgId}`)}>
+            <button class="btn btn-primary pk-act-btn" onclick={() => navigate(`/packages/${selected.pkgId}`)}>
               <i class="fa-solid fa-arrow-right"></i> Paket öffnen
             </button>
-            <button class="btn btn-ghost" onclick={() => navigate(`/learn/${selected.pkgId}`)}>
+            <button class="btn btn-ghost pk-act-btn" onclick={() => navigate(`/learn/${selected.pkgId}`)}>
               <i class="fa-solid fa-play"></i> Lernen
             </button>
-            <button class="btn btn-ghost" onclick={() => exportPkg(selected.pkgId)}>
+            <button class="btn btn-ghost pk-act-btn" onclick={() => exportPkg(selected.pkgId)}>
               <i class="fa-solid fa-file-export"></i> Export
             </button>
-            <div class="pk-detail-sep"></div>
-            <button class="btn btn-ghost btn-danger" onclick={() => confirmPkg = selected}>
+            <button class="btn btn-ghost btn-danger pk-act-btn" disabled={deletingBundle} onclick={() => confirmPkg = selected}>
               <i class="fa-solid fa-trash-can"></i> Löschen
             </button>
           {:else}
             <button
-              class="btn btn-primary"
+              class="btn btn-primary pk-act-btn"
               disabled={installing === selected.bundleId}
               onclick={() => installBundle(selected.bundleId)}
             >
@@ -808,17 +808,14 @@
 .pk-cat-n { font-weight: 400; opacity: .7; }
 
 .pk-detail-actions {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
   gap: 8px;
   margin-top: auto;
   padding-top: 16px;
   border-top: 1px solid var(--border);
 }
-.pk-detail-sep {
-  width: 100%;
-  height: 0;
-}
+.pk-act-btn { justify-content: center; }
 .btn-danger { color: var(--err) !important; }
 .btn-danger:hover { background: color-mix(in srgb, var(--err) 12%, transparent) !important; }
 
