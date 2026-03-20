@@ -681,9 +681,47 @@ def export_package(pkg_id: int, token: str = Query(None), user: dict = Depends(g
         raise HTTPException(404, "Paket nicht gefunden")
 
     cards = conn.execute(
-        "SELECT card_id, category_code, question, answer, hint, difficulty FROM cards WHERE package_id=? AND active=1 ORDER BY card_id",
+        "SELECT card_id, category_code, question, answer, hint, difficulty, source FROM cards WHERE package_id=? AND active=1 ORDER BY card_id",
         (pkg_id,)
     ).fetchall()
+
+    # Lexikon
+    lex_rows = conn.execute(
+        "SELECT term, definition, category_code FROM lexicon WHERE package_id=? ORDER BY term", (pkg_id,)
+    ).fetchall()
+
+    # Lernpfade + Kapitel
+    path_rows = conn.execute(
+        "SELECT * FROM learning_paths WHERE package_id=? ORDER BY sort_order, id", (pkg_id,)
+    ).fetchall()
+    paths_data = []
+    for p in path_rows:
+        chapters = conn.execute(
+            "SELECT title, description, document_ids, card_ids, pass_threshold, sort_order FROM path_chapters WHERE path_id=? ORDER BY sort_order, id",
+            (p["id"],)
+        ).fetchall()
+        paths_data.append({
+            "name": p["name"],
+            "description": p["description"],
+            "chapters": [dict(ch) for ch in chapters],
+        })
+
+    # Dokumente (Text-Inhalte)
+    doc_rows = conn.execute(
+        "SELECT id, filename, title, filetype FROM documents WHERE package_id=?", (pkg_id,)
+    ).fetchall()
+    docs_data = []
+    for d in doc_rows:
+        chunks = conn.execute(
+            "SELECT text FROM document_chunks WHERE document_id=? ORDER BY chunk_index", (d["id"],)
+        ).fetchall()
+        docs_data.append({
+            "filename": d["filename"],
+            "title": d["title"],
+            "filetype": d["filetype"],
+            "text": "\n\n".join(ch["text"] for ch in chunks),
+        })
+
     conn.close()
 
     if not cards:
@@ -728,12 +766,29 @@ def export_package(pkg_id: int, token: str = Query(None), user: dict = Depends(g
         "categories": cat_counts,
     }], ensure_ascii=False, indent=2)
 
+    # Erweiterte Metadaten (Lexikon, Lernpfade, Dokumente)
+    extra_meta = {}
+    if lex_rows:
+        extra_meta["lexicon"] = [dict(r) for r in lex_rows]
+    if paths_data:
+        extra_meta["paths"] = paths_data
+    if docs_data:
+        extra_meta["documents"] = docs_data
+
     # ZIP erstellen
     buf = io.BytesIO()
     with zipfile.ZipFile(buf, 'w', zipfile.ZIP_DEFLATED) as zf:
         zf.writestr(f"{slug}-fragen.md", fragen_md)
         zf.writestr(f"{slug}-antworten.md", antworten_md)
         zf.writestr("bundles.json", bundle_meta)
+        if extra_meta:
+            zf.writestr("paket-extra.json", json.dumps(extra_meta, ensure_ascii=False, indent=2))
+        # Medien-Dateien aus uploads/{pkg_id}/
+        pkg_upload_dir = UPLOAD_DIR / str(pkg_id)
+        if pkg_upload_dir.exists():
+            for f in pkg_upload_dir.iterdir():
+                if f.is_file() and not f.name.startswith('.'):
+                    zf.write(f, f"medien/{f.name}")
     buf.seek(0)
 
     filename = f"{slug}-v1.0.zip"

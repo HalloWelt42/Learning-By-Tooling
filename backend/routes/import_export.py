@@ -215,6 +215,60 @@ async def import_zip(
 
     result["docs_imported"] = docs_imported
     result["images_imported"] = images_imported
+
+    # Erweiterte Daten aus paket-extra.json importieren (Lexikon, Lernpfade)
+    extra_name = next((n for n in names if n.lower() == "paket-extra.json"), None)
+    if extra_name:
+        try:
+            extra = json.loads(zf.read(extra_name).decode("utf-8"))
+        except Exception:
+            extra = {}
+
+        conn = get_db()
+        lex_imported = 0
+        if "lexicon" in extra:
+            for entry in extra["lexicon"]:
+                try:
+                    conn.execute(
+                        "INSERT OR IGNORE INTO lexicon (package_id,term,definition,category_code) VALUES (?,?,?,?)",
+                        (package_id, entry["term"], entry["definition"], entry.get("category_code"))
+                    )
+                    lex_imported += 1
+                except Exception:
+                    pass
+            conn.commit()
+            try:
+                conn.execute("INSERT INTO lexicon_fts(lexicon_fts) VALUES('rebuild')")
+                conn.commit()
+            except Exception:
+                pass
+
+        paths_imported = 0
+        if "paths" in extra:
+            for p in extra["paths"]:
+                try:
+                    conn.execute(
+                        "INSERT INTO learning_paths (package_id,name,description,sort_order) VALUES (?,?,?,0)",
+                        (package_id, p["name"], p.get("description"))
+                    )
+                    conn.commit()
+                    path_id = conn.execute("SELECT last_insert_rowid()").fetchone()[0]
+                    for ch in p.get("chapters", []):
+                        conn.execute(
+                            "INSERT INTO path_chapters (path_id,sort_order,title,description,document_ids,card_ids,pass_threshold) VALUES (?,?,?,?,?,?,?)",
+                            (path_id, ch.get("sort_order", 0), ch["title"], ch.get("description"),
+                             json.dumps(ch.get("document_ids", [])), json.dumps(ch.get("card_ids", [])),
+                             ch.get("pass_threshold", 0.7))
+                        )
+                    conn.commit()
+                    paths_imported += 1
+                except Exception:
+                    pass
+
+        conn.close()
+        result["lexicon_imported"] = lex_imported
+        result["paths_imported"] = paths_imported
+
     return result
 
 
