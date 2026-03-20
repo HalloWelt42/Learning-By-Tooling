@@ -9,6 +9,7 @@ services:
       - ./data:/data
       - ./uploads:/uploads
       - ./lernpakete:/lernpakete:ro
+      - ./VERSION:/version:ro
     environment:
       - PYTHONUNBUFFERED=1
       - DB_PATH=/data/lbt.db

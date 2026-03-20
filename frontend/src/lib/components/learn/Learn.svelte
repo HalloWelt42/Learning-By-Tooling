@@ -40,6 +40,17 @@
   let showConfetti = $state(false)
   let showPerfectStar = $state(false)
   let showStreakFire = $state(false)
+  let materialUsed  = $state(false)
+
+  let hasMaterial = $derived((() => {
+    const pkg = ($packages || []).find(p => p.id === $activePackageId)
+    return pkg && pkg.doc_count > 0
+  })())
+
+  function openMaterial() {
+    materialUsed = true
+    window.open(`/#/packages/${$activePackageId}?tab=material`, '_blank')
+  }
 
   // -- Setup State --
   let mode        = $state('standard')
@@ -245,6 +256,13 @@
 
     const pct = totalCards > 0 ? Math.round(correct / totalCards * 100) : 0
 
+    // Material-Strafe: XP halbieren (aufgerundet) -- nur bei Testmodi (MC, Freitext)
+    const isTestMode = sessionMode === 'mc' || sessionMode === 'write'
+    if (materialUsed && isTestMode) {
+      sessionXp = Math.ceil(sessionXp / 2)
+      completionBonus = Math.ceil(completionBonus / 2)
+    }
+
     // Spektakel-Kaskade mit Timing
     setTimeout(() => {
       xpCountUp.set(sessionXp + completionBonus)
@@ -289,7 +307,7 @@
     if (sessionId) apiPost(`/api/sessions/${sessionId}/end`, {}).catch(() => {})
     activeSession.set(null)
     phase = 'setup'; sessionId = null; card = null; results = []; wrongCards = []; showAnalysis = false
-    totalCards = 0; pendingSession = null; combo = 0; comboPeak = 0; sessionXp = 0; xpFloats = []
+    totalCards = 0; pendingSession = null; combo = 0; comboPeak = 0; sessionXp = 0; xpFloats = []; materialUsed = false
     completionBonus = 0; xpCountUp.set(0, { duration: 0 })
     showCoinRain = false; showConfetti = false; showPerfectStar = false; showStreakFire = false
     progress = { reviewed:0, correct:0, wrong:0, skipped:0, total:0, current_index:0 }
@@ -470,7 +488,7 @@
 <!-- LEARNING -->
 {:else if phase === 'learning' && card}
 
-  <SessionBar {card} {progress} {totalCards} {sessionMode} {combo} {comboFlash} xpEarned={sessionXp} xpFlash={xpFlashFlag} />
+  <SessionBar {card} {progress} {totalCards} {sessionMode} {combo} {comboFlash} xpEarned={sessionXp} xpFlash={xpFlashFlag} {materialUsed} onOpenMaterial={hasMaterial ? openMaterial : null} />
 
   <!-- XP Float Animation -->
   {#each xpFloats as fl (fl.id)}
@@ -501,7 +519,9 @@
 
 <!-- RESULT -->
 {:else if phase === 'result'}
-  {@const pctVal = totalCards > 0 ? Math.round(correct/totalCards*100) : 0}
+  {@const rawPct = totalCards > 0 ? Math.round(correct/totalCards*100) : 0}
+  {@const isTest = sessionMode === 'mc' || sessionMode === 'write'}
+  {@const pctVal = materialUsed && isTest ? Math.ceil(rawPct / 2) : rawPct}
 
   <!-- Muenzenregen-Overlay -->
   {#if showCoinRain}
@@ -586,6 +606,13 @@
         </div>
       {/if}
     </div>
+
+    {#if materialUsed && isTest}
+      <div class="res-penalty">
+        <i class="fa-solid fa-book-open"></i>
+        Material verwendet -- Score und XP halbiert
+      </div>
+    {/if}
 
     <!-- Belohnungs-Zeile -->
     <div class="res-rewards">
@@ -755,6 +782,14 @@
 .rs.muted .rs-num { color:var(--text3); }
 .rs.combo .rs-num { color:#ffa500; }
 .rs-sep { width:1px;height:28px;background:var(--border); }
+
+.res-penalty {
+  display:flex;align-items:center;gap:8px;
+  font-size:12px;color:var(--warn);
+  padding:6px 14px;background:color-mix(in srgb, var(--warn) 10%, transparent);
+  border:1px solid color-mix(in srgb, var(--warn) 30%, transparent);
+  border-radius:4px;margin-bottom:4px;
+}
 
 /* Belohnungs-Zeile */
 .res-rewards {

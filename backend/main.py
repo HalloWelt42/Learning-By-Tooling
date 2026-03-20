@@ -23,7 +23,16 @@ from routes.ai import router as ai_router
 from routes.admin import router as admin_router
 from routes.import_export import router as import_export_router
 
-app = FastAPI(title="Learning-By-Tooling", version="0.5.0")
+# Version aus zentraler VERSION-Datei lesen
+def _read_version() -> str:
+    for p in (Path("/version"), Path(__file__).parent.parent / "VERSION"):
+        if p.is_file():
+            return p.read_text().strip()
+    return "0.0.0"
+
+APP_VERSION = _read_version()
+
+app = FastAPI(title="Learning-By-Tooling", version=APP_VERSION)
 
 # CORS -- grosszuegig fuer die Entwicklungsphase
 app.add_middleware(
@@ -61,4 +70,4 @@ app.include_router(import_export_router)
 
 @app.get("/api/health")
 def health():
-    return {"status": "ok", "version": "4.0.0", "app": "Learning-By-Tooling"}
+    return {"status": "ok", "version": APP_VERSION, "app": "Learning-By-Tooling"}

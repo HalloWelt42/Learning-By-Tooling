@@ -1,7 +1,7 @@
 <script>
   import { categories, packages, activePackageId } from '../../stores/index.js'
 
-  let { card, progress, totalCards, sessionMode, combo = 0, comboFlash = false, xpEarned = 0, xpFlash = false } = $props()
+  let { card, progress, totalCards, sessionMode, combo = 0, comboFlash = false, xpEarned = 0, xpFlash = false, materialUsed = false, onOpenMaterial = null } = $props()
 
   const MODE_LABELS = { standard: 'Karteikarte', mc: 'Multiple Choice', write: 'Freitext', srs: 'SRS' }
   let pctDone = $derived(totalCards > 0 ? progress.current_index / totalCards : 0)
@@ -45,6 +45,11 @@
     <div class="lb-fill" style="width:{pctDone * 100}%"></div>
   </div>
   <div class="lb-score">
+    {#if onOpenMaterial}
+      <button class="ls mat-btn" class:mat-used={materialUsed} onclick={onOpenMaterial} title={materialUsed ? 'Material geöffnet (Score halbiert)' : 'Im Material nachlesen'}>
+        <i class="fa-solid fa-book-open"></i>
+      </button>
+    {/if}
     {#if combo >= 3}
       <span class="ls combo" class:combo-flash={comboFlash}>
         <i class="fa-solid fa-bolt"></i>{combo}x
@@ -99,6 +104,12 @@
   background:radial-gradient(circle at 35% 35%, #E8E8E8, #909090);
   border:1px solid #A0A0A0;margin-right:3px;vertical-align:middle;
 }
+.mat-btn {
+  background:none;border:1px solid var(--border);border-radius:3px;cursor:pointer;
+  color:var(--text3);padding:2px 6px;font-size:11px;transition:all .15s;
+}
+.mat-btn:hover { color:var(--accent);border-color:var(--accent); }
+.mat-btn.mat-used { color:var(--warn);border-color:var(--warn); }
 .ls.combo-flash { animation:combo-pulse .5s ease; }
 @keyframes combo-pulse {
   0%   { transform:scale(1); }
