@@ -494,17 +494,23 @@ def get_lexicon(
 
 @router.post("/api/lexicon")
 def create_lexicon_entry(data: LexiconCreate, user: dict = Depends(get_current_user)):
+    if not data.term or not data.term.strip():
+        raise HTTPException(400, "Begriff darf nicht leer sein")
+    if not data.definition or not data.definition.strip():
+        raise HTTPException(400, "Definition darf nicht leer sein")
     conn = get_db()
     try:
         conn.execute(
             "INSERT INTO lexicon (package_id,term,definition,category_code,related_cards) VALUES (?,?,?,?,?)",
-            (data.package_id, data.term, data.definition, data.category_code, json.dumps(data.related_cards or []))
+            (data.package_id, data.term.strip(), data.definition.strip(), data.category_code, json.dumps(data.related_cards or []))
         )
         conn.commit()
         conn.execute("INSERT INTO lexicon_fts(lexicon_fts) VALUES('rebuild')")
         conn.commit()
-        return row_to_dict(conn.execute("SELECT * FROM lexicon WHERE term=?", (data.term,)).fetchone())
+        return row_to_dict(conn.execute("SELECT * FROM lexicon WHERE package_id=? AND term=?", (data.package_id, data.term.strip())).fetchone())
     except Exception as e:
+        if "UNIQUE constraint" in str(e):
+            raise HTTPException(409, "Eintrag mit diesem Begriff existiert bereits")
         raise HTTPException(400, str(e))
     finally:
         conn.close()

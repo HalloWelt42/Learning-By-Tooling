@@ -40,10 +40,12 @@ def start_session(data: SessionCreate, user: dict = Depends(get_current_user)):
     if data.card_ids:
         # Explizite Kartenliste (z.B. Lernpfad-Kapitel)
         pl = ",".join("?" * len(data.card_ids))
-        rows = conn.execute(
-            f"SELECT id FROM cards WHERE card_id IN ({pl}) AND active=1",
-            data.card_ids
-        ).fetchall()
+        params = list(data.card_ids)
+        q = f"SELECT id FROM cards WHERE card_id IN ({pl}) AND active=1"
+        if data.package_id is not None:
+            q += " AND package_id=?"
+            params.append(data.package_id)
+        rows = conn.execute(q, params).fetchall()
         card_db_ids = [r["id"] for r in rows]
     elif data.srs_mode:
         q = """

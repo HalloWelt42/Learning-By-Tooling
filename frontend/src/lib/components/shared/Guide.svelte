@@ -43,35 +43,52 @@
       icon: 'fa-file-import',
       color: '#4CAF50',
       title: '2. Inhalte importieren',
-      sub: 'Lernkarten, Dokumente und Bilder laden',
-      content: `Am einfachsten geht es per ZIP-Datei: Fragen, Antworten und optionales Lernmaterial in eine ZIP packen und hochladen. Die App erkennt alles automatisch.`,
+      sub: 'Lernkarten, Dokumente, Lexikon und Lernpfade laden',
+      content: `Am einfachsten geht es per ZIP-Datei: Fragen, Antworten und optionales Lernmaterial in eine ZIP packen und hochladen. Die App erkennt alles automatisch -- auch Lexikon-Einträge und Lernpfade.`,
       steps: [
         'Auf "Lernpakete" gehen',
         'ZIP-Datei in den Upload-Bereich ziehen oder klicken',
-        'Die App importiert Karten, Dokumente und Bilder automatisch',
+        'Die App importiert Karten, Dokumente, Bilder, Lexikon und Lernpfade automatisch',
         'Alternativ: Im Paket unter "Import" die Markdown-Dateien manuell einfügen',
       ],
-      tip: 'Bilder (.png, .jpg) und PDFs im ZIP werden als Lernmaterial gespeichert und im Medien-Tab angezeigt.',
+      tip: 'ZIPs können eine paket-extra.json enthalten mit Lexikon-Einträgen und Lernpfaden. Beim Export wird diese Datei automatisch erstellt.',
       format: true,
     },
     {
       icon: 'fa-file-lines',
       color: '#FF9800',
       title: '3. Lernmaterial nutzen',
-      sub: 'Texte lesen, Bilder ansehen, PDFs öffnen',
-      content: `Jedes Paket kann neben Lernkarten auch Begleitmaterial enthalten: Lehrtexte, Bilder, PDFs. Du findest alles im Paket unter den Tabs "Material", "Dokumente" und "Medien".`,
+      sub: 'Texte, Bilder, Lexikon und Lernpfade',
+      content: `Jedes Paket kann neben Lernkarten auch Begleitmaterial enthalten: Lehrtexte, Bilder, PDFs, ein Lexikon mit Fachbegriffen und geführte Lernpfade.`,
       steps: [
         'Paket öffnen -> Tab "Material" für Lehrtexte',
-        'Tab "Dokumente" für hochgeladene Dateien',
         'Tab "Medien" für Bilder und PDFs',
+        'Tab "Lexikon" für Fachbegriffe -- mit Suche und Bearbeitung',
+        'Tab "Lernpfade" für geführte Kapitel mit festgelegten Karten',
         'Beim Lernen: "Im Material nachlesen" verlinkt direkt ins Paket',
       ],
       tip: 'Wenn eine lokale KI (LM Studio) verfügbar ist, kann sie aus hochgeladenen Dokumenten automatisch Lernkarten-Entwürfe generieren.',
     },
     {
+      icon: 'fa-book-open',
+      color: '#00BCD4',
+      title: '4. Lexikon und Lernpfade',
+      sub: 'Fachbegriffe sammeln, Kapitel definieren',
+      content: `Das Lexikon sammelt Fachbegriffe zu jedem Paket mit Definitionen und Kategorien. Lernpfade strukturieren Karten in geordnete Kapitel -- ideal um ein Thema schrittweise durchzuarbeiten.`,
+      steps: [
+        'Lexikon: Im Paket den Tab "Lexikon" öffnen',
+        '"+ Eintrag" klicken, Begriff und Definition eingeben, speichern',
+        'Einträge durchsuchen mit der Suchleiste, bearbeiten oder löschen per Klick',
+        'Lernpfade: Tab "Lernpfade" öffnen, neuen Pfad mit Kapiteln erstellen',
+        'Jedes Kapitel bekommt einen Titel und eine Auswahl an Karten (z.B. K-001, K-002)',
+        '"Kapitel starten" öffnet eine Lernsession nur mit den zugewiesenen Karten',
+      ],
+      tip: 'Lexikon-Einträge und Lernpfade werden beim Export in die ZIP-Datei eingebettet und beim Import automatisch wiederhergestellt.',
+    },
+    {
       icon: 'fa-play',
       color: '#F44336',
-      title: '4. Lernen',
+      title: '5. Lernen',
       sub: 'Session starten und Wissen aufbauen',
       content: `Vier Lernmodi stehen zur Wahl. Jeder Modus erklärt sich beim Auswählen selbst -- probiere einfach aus was dir am besten liegt.`,
       steps: [
@@ -84,23 +101,53 @@
       tip: 'Multiple Choice und Freitext-Bewertung nutzen die lokale KI. Ohne KI funktionieren Karteikarte und Spaced Repetition genauso gut.',
     },
     {
+      icon: 'fa-star',
+      color: '#FFD700',
+      title: '6. XP und Gamification',
+      sub: 'Punkte sammeln, Combos aufbauen, Sounds geniessen',
+      content: `Jede richtige Antwort bringt XP. Combos (mehrere richtige Antworten in Folge) erhöhen den Multiplikator. Bei richtiger Antwort dreht sich eine Goldmünze und es erklingt ein Coin-Sound.`,
+      steps: [
+        'XP werden automatisch bei jeder Session vergeben (10 XP pro richtige Antwort)',
+        'Combos: Ab 3 richtigen Antworten in Folge steigt der XP-Multiplikator',
+        'Speed-Bonus: Antworten unter 5 Sekunden bringen 5 Extra-XP',
+        'Tagessträhne: Jeden Tag mindestens eine Session halten',
+        'Sound-Toggle: In der Sidebar den Lautsprecher-Button klicken um Sounds ein/auszuschalten',
+      ],
+      tip: 'Die XP-Anzeige und der aktuelle Combo-Zähler sind während der Session oben in der Leiste sichtbar. Nach der Session folgt eine detaillierte Auswertung.',
+    },
+    {
       icon: 'fa-chart-line',
       color: '#9C27B0',
-      title: '5. Fortschritt verfolgen',
+      title: '7. Fortschritt verfolgen',
       sub: 'Abzeichen sammeln und Lernverlauf sehen',
       content: `Die App merkt sich was du gelernt hast. Unter "Fortschritt" siehst du deine Abzeichen (Shield-Badges mit 30 Stufen), den Lernverlauf und deine Statistiken.`,
       steps: [
         '"Fortschritt" in der Sidebar klicken',
-        'Abzeichen-Tab: 6 Abzeichen mit je 30 Levelstufen',
+        'Abzeichen-Tab: 6 Abzeichen mit je 30 Levelstufen (Weiss bis Platin)',
         'Verlauf-Tab: Alle bisherigen Sessions mit Ergebnis',
         'Im Paket: "Lernstand (SRS)" zeigt wie gut du die Karten kannst',
+        'Tagessträhne und Gesamt-XP in der Sidebar oben',
       ],
       tip: 'Die Shield-Badges oben links in der Sidebar zeigen deine besten Abzeichen auf einen Blick.',
     },
     {
+      icon: 'fa-file-export',
+      color: '#795548',
+      title: '8. Export und Backup',
+      sub: 'Pakete sichern und weitergeben',
+      content: `Jedes Paket kann als ZIP exportiert werden -- mit allen Karten, Dokumenten, Medien, Lexikon-Einträgen und Lernpfaden. Die ZIP-Datei kann auf einer anderen LernVault-Instanz importiert werden.`,
+      steps: [
+        'Im Paket oben rechts auf das Export-Icon klicken',
+        'Die ZIP enthält: Fragen, Antworten, Dokumente, Medien, Lexikon und Lernpfade',
+        'Zum Importieren: ZIP auf der Startseite in den Upload-Bereich ziehen',
+        'Bestehende Pakete werden erkannt und Karten ergänzt (keine Duplikate)',
+      ],
+      tip: 'Die paket-extra.json im ZIP enthält Lexikon und Lernpfade. Sie wird beim Export automatisch erstellt und beim Import gelesen.',
+    },
+    {
       icon: 'fa-user-group',
       color: '#607D8B',
-      title: '6. Teilen und verwalten',
+      title: '9. Teilen und verwalten',
       sub: 'Pakete freigeben, Benutzer einladen',
       content: `Lernpakete können mit anderen Benutzern geteilt werden. Jeder lernt für sich -- Fortschritt und Statistiken sind getrennt, aber die Inhalte werden gemeinsam genutzt.`,
       steps: [
@@ -245,7 +292,7 @@ HTTP 200 mit {"status":"ok"}
                 </div>
                 <div class="format-rule">
                   <i class="fa-solid fa-check text-ok"></i>
-                  <span><strong>Kategoriecode</strong> muss in der App vorhanden sein (GB, AP, HA, OA, TC, MO, KA, FE, DB, AK, GS, AL)</span>
+                  <span><strong>Kategoriecode</strong> muss in der App vorhanden sein (GB, TH, PX, VF, PR, VT, AL und weitere)</span>
                 </div>
                 <div class="format-rule">
                   <i class="fa-solid fa-check text-ok"></i>
