@@ -22,5 +22,53 @@
       "questions": "testpaket-fragen.md",
       "answers": "testpaket-antworten.md"
     }
+  },
+  {
+    "id": "oauth2-authentifizierung",
+    "name": "OAuth2 und Authentifizierung",
+    "version": "1.0",
+    "description": "Von Passwoertern zu Tokens: Auth-Konzepte, OAuth2 Flows, JWT, OpenID Connect, API-Sicherheit.",
+    "icon": "fa-shield-halved",
+    "color": "#7c4dff",
+    "files": {
+      "questions": "oauth2-authentifizierung-fragen.md",
+      "answers": "oauth2-authentifizierung-antworten.md"
+    }
+  },
+  {
+    "id": "http-im-detail",
+    "name": "HTTP im Detail",
+    "version": "1.0",
+    "description": "Nachrichtenformat, Methoden, Statuscodes, Header, Kompression, HTTP/1.1 vs HTTP/2 vs HTTP/3.",
+    "icon": "fa-exchange-alt",
+    "color": "#00897b",
+    "files": {
+      "questions": "http-im-detail-fragen.md",
+      "answers": "http-im-detail-antworten.md"
+    }
+  },
+  {
+    "id": "docker-container",
+    "name": "Docker und Container",
+    "version": "1.0",
+    "description": "Container-Grundlagen, Docker-Architektur, Dockerfile, Images, Volumes, Networking, Compose, Security.",
+    "icon": "fa-cube",
+    "color": "#0db7ed",
+    "files": {
+      "questions": "docker-container-fragen.md",
+      "answers": "docker-container-antworten.md"
+    }
+  },
+  {
+    "id": "api-design-rest",
+    "name": "API-Design und REST",
+    "version": "1.0",
+    "description": "REST-Prinzipien, Ressourcen-Modellierung, Pagination, Fehlerbehandlung, Versionierung, GraphQL, gRPC und Webhooks.",
+    "icon": "fa-plug",
+    "color": "#e65100",
+    "files": {
+      "questions": "api-design-rest-fragen.md",
+      "answers": "api-design-rest-antworten.md"
+    }
   }
 ]

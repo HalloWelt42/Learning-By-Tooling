@@ -35,6 +35,22 @@ def list_bundles(user: dict = Depends(get_current_user)):
     conn.close()
     for b in bundles:
         b["installed"] = b["name"] in installed
+        # Karten und Kategorien aus Fragen-Datei zaehlen
+        files = b.get("files", {})
+        fragen_file = BUNDLES_PATH / (files.get("questions") or b.get("fragen_file", ""))
+        if fragen_file.exists():
+            text = fragen_file.read_text()
+            cats: dict[str, int] = {}
+            count = 0
+            for m in re.finditer(r"^##\s+K-\d+\s*\|\s*(\w+)", text, re.MULTILINE):
+                count += 1
+                code = m.group(1).upper()
+                cats[code] = cats.get(code, 0) + 1
+            b["card_count"] = count
+            b["categories"] = cats
+        else:
+            b["card_count"] = 0
+            b["categories"] = {}
     return bundles
 
 

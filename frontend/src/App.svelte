@@ -233,25 +233,27 @@
       {#if ($packages || []).length > 0}
         <div class="pkg-section">
           <div class="pkg-section-label">Lernpakete</div>
-          {#each ($packages || []) as pkg (pkg.id)}
-            <button
-              class="pkg-item"
-              class:active={$activePackageId === pkg.id && $currentView === 'package'}
-              style="--c:{pkg.color}"
-              onclick={() => navigate(`/packages/${pkg.id}`)}
-            >
-              <div class="pkg-dot" style="background:{pkg.color}">
-                <i class="fa-solid {pkg.icon}"></i>
-              </div>
-              <div class="pkg-item-body">
-                <span class="pkg-item-name">{pkg.name}</span>
-                <span class="pkg-item-meta">{pkg.card_count} Karten</span>
-              </div>
-              {#if pkg.draft_count > 0}
-                <span class="pkg-badge">{pkg.draft_count}</span>
-              {/if}
-            </button>
-          {/each}
+          <div class="pkg-scroll">
+            {#each ($packages || []) as pkg (pkg.id)}
+              <button
+                class="pkg-item"
+                class:active={$activePackageId === pkg.id && $currentView === 'package'}
+                style="--c:{pkg.color}"
+                onclick={() => navigate(`/packages/${pkg.id}`)}
+              >
+                <div class="pkg-dot" style="background:{pkg.color}">
+                  <i class="fa-solid {pkg.icon}"></i>
+                </div>
+                <div class="pkg-item-body">
+                  <span class="pkg-item-name">{pkg.name}</span>
+                  <span class="pkg-item-meta">{pkg.card_count} Karten</span>
+                </div>
+                {#if pkg.draft_count > 0}
+                  <span class="pkg-badge">{pkg.draft_count}</span>
+                {/if}
+              </button>
+            {/each}
+          </div>
         </div>
       {/if}
 
@@ -363,7 +365,7 @@
   .sidebar {
     width:220px; flex-shrink:0; background:var(--bg1);
     border-right:1px solid var(--border); display:flex;
-    flex-direction:column; overflow-y:auto;
+    flex-direction:column; overflow:hidden;
   }
   .main {
     flex:1; overflow-y:auto; background:var(--bg0); min-width:0;
@@ -374,8 +376,9 @@
   .brand-name { font-size:13px;font-weight:800;color:var(--text0);letter-spacing:-.03em; }
   .brand-ver  { font-size:9px;color:var(--text3);font-family:'JetBrains Mono',monospace;margin-left:auto; }
 
-  .pkg-section { padding:8px 0; border-top:1px solid var(--border); }
-  .pkg-section-label { padding:8px 14px 4px;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--text3); }
+  .pkg-section { padding:8px 0; border-top:1px solid var(--border); display:flex; flex-direction:column; min-height:0; overflow:hidden; }
+  .pkg-section-label { padding:8px 14px 4px;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--text3);flex-shrink:0; }
+  .pkg-scroll { overflow-y:auto; max-height:200px; }
   .pkg-item {
     display:flex;align-items:center;gap:8px;width:100%;
     padding:6px 14px;background:none;border:none;
