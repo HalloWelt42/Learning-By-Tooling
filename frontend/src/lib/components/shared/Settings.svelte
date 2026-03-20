@@ -421,7 +421,7 @@
   .ai-group-label {
     font-size:10px; font-weight:700; color:var(--text3);
     text-transform:uppercase; letter-spacing:.06em;
-    margin-bottom:8px; padding-bottom:4px; border-bottom:1px solid var(--bdr2);
+    margin-bottom:8px; padding-bottom:4px; border-bottom:1px solid var(--border);
   }
   .ai-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(200px, 1fr)); gap:10px; }
   .ai-field { display:flex; flex-direction:column; gap:4px; }

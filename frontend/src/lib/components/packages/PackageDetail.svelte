@@ -1063,11 +1063,11 @@
   background: var(--bg1);
   overflow: hidden;
 }
-.cl-header { padding: 14px 14px 10px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--bdr2); flex-shrink: 0; }
+.cl-header { padding: 14px 14px 10px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--border); flex-shrink: 0; }
 .cl-title { font-size: 13px; font-weight: 700; color: var(--text0); display: flex; align-items: center; gap: 6px; }
 .cl-title i { font-size: 13px; }
 .cnt-badge { font-size: 10px; background: var(--bg3); color: var(--text2); border-radius: 4px; padding: 1px 6px; font-family: 'JetBrains Mono', monospace; }
-.cl-filters { padding: 10px 12px; display: flex; flex-direction: column; gap: 7px; border-bottom: 1px solid var(--bdr2); flex-shrink: 0; }
+.cl-filters { padding: 10px 12px; display: flex; flex-direction: column; gap: 7px; border-bottom: 1px solid var(--border); flex-shrink: 0; }
 .search-wrap { position: relative; }
 .search-icon { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); font-size: 11px; color: var(--text3); pointer-events: none; }
 .search-inp { padding-left: 30px !important; }
