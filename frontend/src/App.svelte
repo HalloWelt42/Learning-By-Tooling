@@ -21,12 +21,10 @@
   import Admin         from './lib/components/shared/Admin.svelte'
   import Settings      from './lib/components/shared/Settings.svelte'
   import ScratchPad    from './lib/components/shared/ScratchPad.svelte'
-  import ShieldBadge   from './lib/components/progress/ShieldBadge.svelte'
   import { route, initRouter, navigate } from './lib/utils/router.js'
   import { apiGet, apiPost } from './lib/utils/api.js'
 
   let interval = $state(null)
-  let userBadges = $state([])
   let showPwWarn = $state(false)
   let showScratchPad = $state(false)
   let sessionTimer = $state(null)
@@ -81,14 +79,12 @@
       loadStreak()
       loadXp()
       initSound()
-      apiGet('/api/achievements').then(a => { userBadges = (a||[]).sort((x,y) => y.level - x.level) }).catch(() => {})
       apiGet('/api/auth/me').then(me => { if (me?.default_password) showPwWarn = true }).catch(() => {})
       interval = setInterval(() => {
         loadGlobal()
         loadStreak()
         loadXp()
-        apiGet('/api/achievements').then(a => { userBadges = (a||[]).sort((x,y) => y.level - x.level) }).catch(() => {})
-      }, 30_000)
+        }, 30_000)
 
       const cleanupRouter = initRouter()
       const unsubRoute = route.subscribe(r => {
@@ -134,19 +130,9 @@
         </div>
       </div>
 
-      {#if userBadges.length > 0}
-        <div class="badge-bar" role="button" tabindex="0" onclick={() => navigate('/progress')}>
-          {#each userBadges as b}
-            <span title="{b.name}: {b.desc} ({b.value}) -- {b.level > 0 ? b.color?.name + ', Stufe ' + b.level + '/30' : 'Noch nicht begonnen'}{b.next_at ? ', nächste bei ' + b.next_at : ''}">
-              <ShieldBadge level={b.level} icon={b.icon} size={28} showNum={true} />
-            </span>
-          {/each}
-        </div>
-      {/if}
-
-      <div class="gamify-bar">
+      <div class="gamify-bar" role="button" tabindex="0" onclick={() => navigate('/progress')} title="Fortschritt öffnen">
         {#if $streakData.current > 0 || $streakData.today}
-          <div class="gamify-item" role="button" tabindex="0" onclick={() => navigate('/progress')} title="Tagessträhne: {$streakData.current} Tage">
+          <div class="gamify-item" title="Tagessträhne: {$streakData.current} Tage">
             <i class="fa-solid fa-fire" class:streak-active={$streakData.today}></i>
             <span class="gamify-num">{Math.round($sidebarStreak)}</span>
             {#if !$streakData.today}
@@ -416,13 +402,8 @@
   .sf-sep { color:var(--border); }
   .user-row { display:flex;align-items:center;gap:7px;font-size:11px;color:var(--text2); }
   .user-row > span:first-of-type { flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap; }
-  .badge-bar {
-    display:flex;gap:6px;justify-content:center;padding:8px 0 4px;
-    cursor:pointer;border-radius:4px;transition:background .15s;
-  }
-  .badge-bar:hover { background:var(--bg2); }
-
   .gamify-bar {
+    cursor:pointer;border-radius:4px;transition:background .15s;
     display:flex;align-items:center;justify-content:center;gap:12px;
     padding:4px 10px;
   }
