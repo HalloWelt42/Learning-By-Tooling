@@ -274,12 +274,62 @@ async def import_zip(
 
 # -- Markdown Import -----------------------------------------------------------
 
-@router.post("/api/import/markdown")
-def import_markdown(data: MarkdownImport, user: dict = Depends(get_current_user)):
+def _parse_markdown(fragen: str, antworten: str):
+    """Parse Markdown-Karten und gibt strukturierte Daten zurueck."""
     card_pat = re.compile(r"```\s*\n(K-\d+)\s*\|\s*([^\n]+?)\s*\n([\s\S]*?)```", re.MULTILINE)
     ans_pat  = re.compile(r"```\s*\n(A-\d+)\s*\|[^\n]*\n([\s\S]*?)```",         re.MULTILINE)
-    questions = {m.group(1): (resolve_category(m.group(2)), m.group(3).strip()) for m in card_pat.finditer(data.fragen)}
-    answers   = {m.group(1).replace("A-","K-"): m.group(2).strip() for m in ans_pat.finditer(data.antworten)}
+    questions = {m.group(1): (resolve_category(m.group(2)), m.group(3).strip()) for m in card_pat.finditer(fragen)}
+    answers   = {m.group(1).replace("A-","K-"): m.group(2).strip() for m in ans_pat.finditer(antworten)}
+    return questions, answers
+
+
+@router.post("/api/import/preview")
+def import_preview(data: MarkdownImport, user: dict = Depends(get_current_user)):
+    """Parsed Markdown und gibt Vorschau zurueck ohne zu importieren."""
+    questions, answers = _parse_markdown(data.fragen, data.antworten)
+    conn = get_db()
+    existing_ids = set()
+    if data.package_id:
+        rows = conn.execute("SELECT card_id FROM cards WHERE package_id=?", (data.package_id,)).fetchall()
+        existing_ids = {r["card_id"] for r in rows}
+    conn.close()
+
+    cards = []
+    errors = []
+    for card_id, (cat, question) in questions.items():
+        answer = answers.get(card_id, "")
+        status = "new"
+        if card_id in existing_ids:
+            status = "duplicate"
+        elif not answer:
+            status = "no_answer"
+        cards.append({
+            "card_id": card_id,
+            "category_code": cat,
+            "question": question.strip(),
+            "answer": answer.strip(),
+            "status": status,
+        })
+
+    # Fragen ohne Antwort und Antworten ohne Frage
+    orphan_answers = set(answers.keys()) - set(questions.keys())
+    for oid in orphan_answers:
+        errors.append(f"Antwort {oid.replace('K-','A-')} hat keine passende Frage")
+
+    cards.sort(key=lambda c: c["card_id"])
+    return {
+        "cards": cards,
+        "total": len(cards),
+        "new": sum(1 for c in cards if c["status"] == "new"),
+        "duplicates": sum(1 for c in cards if c["status"] == "duplicate"),
+        "no_answer": sum(1 for c in cards if c["status"] == "no_answer"),
+        "errors": errors,
+    }
+
+
+@router.post("/api/import/markdown")
+def import_markdown(data: MarkdownImport, user: dict = Depends(get_current_user)):
+    questions, answers = _parse_markdown(data.fragen, data.antworten)
     conn = get_db()
     created = skipped = 0
     for card_id, (cat, question) in questions.items():
