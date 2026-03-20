@@ -5,6 +5,7 @@
    */
   import { activePackageId } from '../../stores/index.js'
   import { marked } from 'marked'
+  import { DL, DC } from '../../utils/difficulty.js'
 
   let { card, onReview, onAdvance } = $props()
 
@@ -12,8 +13,6 @@
   let flipped = $state(false)
   let busy    = $state(false)
 
-  const DL = ['','Leicht','Mittel','Schwer']
-  const DC = ['','d1','d2','d3']
   const QUALITIES = [
     { q:0, label:'Blackout', icon:'fa-face-dizzy',      cls:'rb-err'  },
     { q:2, label:'Fast',     icon:'fa-face-meh',        cls:'rb-warn' },

@@ -2,6 +2,7 @@
   import { categories, currentView, activePackageId, showToast, loadGlobal, aiOnline } from '../../stores/index.js'
   import { apiGet, apiPost, apiPut, apiDelete, apiUpload, BASE } from '../../utils/api.js'
   import { navigate } from '../../utils/router.js'
+  import { DL, DC, DI } from '../../utils/difficulty.js'
   import { onMount } from 'svelte'
   import { marked } from 'marked'
   import Paths from './Paths.svelte'
@@ -250,9 +251,6 @@
   // Lexikon, Lernpfade, Import sind jetzt in eigenen Komponenten
 
   // ── Helpers ───────────────────────────────────────────────────────────────
-  const DL = ['','Leicht','Mittel','Schwer']
-  const DC = ['','d1','d2','d3']
-  const DI = ['','fa-gauge-simple','fa-gauge','fa-gauge-high']
   const FT = {pdf:'fa-file-pdf',md:'fa-file-code',txt:'fa-file-lines',docx:'fa-file-word'}
   const GSTEP_ICON  = {done:'fa-check',running:'fa-spinner fa-spin',pending:'fa-circle',error:'fa-xmark'}
   const GSTEP_COLOR = {done:'var(--ok)',running:'var(--accent)',pending:'var(--text3)',error:'var(--err)'}
@@ -1084,9 +1082,6 @@
 .cli-id  { font-size: 9px; color: var(--text3); font-family: 'JetBrains Mono', monospace; letter-spacing: .06em; }
 .cli-q   { font-size: 11px; color: var(--text1); line-height: 1.4; margin-bottom: 3px; }
 .cli-cat { font-size: 9px; font-weight: 600; }
-.d1 { color: var(--ok); }
-.d2 { color: var(--warn); }
-.d3 { color: var(--err); }
 
 .cards-detail-col { overflow-y: auto; background: var(--bg0); }
 .card-form-wrap, .card-detail-wrap { padding: 22px; }

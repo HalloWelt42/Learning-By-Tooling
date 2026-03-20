@@ -1,6 +1,7 @@
 <script>
   import { categories, showToast, aiOnline } from '../../stores/index.js'
   import { apiGet, apiPost, apiPut, apiDelete } from '../../utils/api.js'
+  import { DL, DC, DI } from '../../utils/difficulty.js'
   import { marked } from 'marked'
   marked.setOptions({ breaks: true, gfm: true })
 
@@ -17,9 +18,6 @@
   let aiState        = $state('idle')
   let aiText         = $state('')
 
-  const DL = ['','Leicht','Mittel','Schwer']
-  const DC = ['','d1','d2','d3']
-  const DI = ['','fa-gauge-simple','fa-gauge','fa-gauge-high']
 
   $effect(() => { filterCat; searchQ; loadCards() })
 
@@ -252,9 +250,6 @@
 .cli-id { font-size: 9px; color: var(--text3); font-family: 'JetBrains Mono', monospace; letter-spacing: .06em; }
 .cli-q { font-size: 11px; color: var(--text1); line-height: 1.4; margin-bottom: 3px; }
 .cli-cat { font-size: 9px; font-weight: 600; }
-.d1 { color: var(--ok); }
-.d2 { color: var(--warn); }
-.d3 { color: var(--err); }
 
 /* KI-Badge in Kartenliste */
 .cli-ai-badge { font-size: 8px; color: var(--ac2); opacity: 0.7; }

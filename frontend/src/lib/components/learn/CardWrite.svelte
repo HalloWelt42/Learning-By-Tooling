@@ -20,6 +20,7 @@
   import { aiOnline, activePackageId } from '../../stores/index.js'
   import { marked } from 'marked'
   import AiProcess from './AiProcess.svelte'
+  import { DL, DC } from '../../utils/difficulty.js'
 
   let { card, useAI, onReview, onAdvance } = $props()
 
@@ -33,8 +34,6 @@
   let busy        = $state(false)
   let pendingResp = $state(null)
 
-  const DL = ['','Leicht','Mittel','Schwer']
-  const DC = ['','d1','d2','d3']
   const EVAL_STEPS = [
     { label: 'Antwort empfangen', sublabel: 'Eingabe wird vorbereitet' },
     { label: 'Frage & Antwort analysieren', sublabel: 'Vergleich mit Musterloesung' },

@@ -635,14 +635,10 @@ tr:hover td { background: var(--bg2); }
 .text-ok   { color: var(--ok) !important; }
 .text-err  { color: var(--err) !important; }
 .text-warn { color: var(--warn) !important; }
-.text-muted{ color: var(--text2) !important; }
 .mono      { font-family: 'JetBrains Mono', monospace !important; }
-.flex      { display: flex; }
-.flex-col  { display: flex; flex-direction: column; }
-.gap-4     { gap: 4px; }
-.gap-8     { gap: 8px; }
-.gap-12    { gap: 12px; }
-.items-center { align-items: center; }
+.d1        { color: var(--ok); }
+.d2        { color: var(--warn); }
+.d3        { color: var(--err); }
 
 /* ── Markdown-Rendering ──────────────────────────────────────────────────── */
 .markdown { line-height: 1.7; }

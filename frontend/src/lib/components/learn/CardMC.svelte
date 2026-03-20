@@ -4,6 +4,7 @@
    * Bleibt einspaltig (MC-Optionen brauchen die volle Breite)
    */
   import { apiGet } from '../../utils/api.js'
+  import { DL, DC } from '../../utils/difficulty.js'
 
   let { card, onReview, onAdvance } = $props()
 
@@ -15,8 +16,6 @@
   let busy       = $state(false)
   let pendingResp = $state(null)
 
-  const DL = ['','Leicht','Mittel','Schwer']
-  const DC = ['','d1','d2','d3']
 
   // MC-Optionen beim Mount laden
   async function init() {

@@ -71,16 +71,6 @@ export function navigate(path) {
 }
 
 export function navToPackage(id) { navigate(`/packages/${id}`) }
-export function navToLearn(pkgId) { navigate(pkgId ? `/learn/${pkgId}` : '/learn') }
-export function navToSearch(q = '', pkgId = null) {
-  let path = '/search'
-  const qs = []
-  if (q)     qs.push(`q=${encodeURIComponent(q)}`)
-  if (pkgId) qs.push(`pkg=${pkgId}`)
-  if (qs.length) path += '?' + qs.join('&')
-  navigate(path)
-}
-export function navToCard(cardId) { navigate(`/cards/${cardId}`) }
 
 export function initRouter() {
   const update = () => route.set(parseHash())

@@ -87,7 +87,6 @@ export async function loadStreak() {
 // -- XP ----------------------------------------------------------------------
 
 export const xpData = writable({ xp_total: 0, xp_today: 0 })
-export const xpFlash = writable(null)  // { amount: 10 } fuer Animation
 
 export async function loadXp() {
   try {

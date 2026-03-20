@@ -7,6 +7,7 @@
   import { marked } from 'marked'
   import AiProcess from './AiProcess.svelte'
   import { apiPost } from '../../utils/api.js'
+  import { DL, DC } from '../../utils/difficulty.js'
 
   let { card, onReview, onAdvance } = $props()
 
@@ -19,8 +20,6 @@
   let relatedIds    = $state([])
   let relatedLoading = $state(false)
 
-  const DL = ['','Leicht','Mittel','Schwer']
-  const DC = ['','d1','d2','d3']
   const EXPLAIN_STEPS = [
     { label: 'Kontext verstehen', sublabel: 'Frage und Antwort lesen' },
     { label: 'Erklaerung ausarbeiten', sublabel: 'Beispiele suchen' },
