@@ -450,7 +450,7 @@ Wenn du Bundles serverseitig bereitstellen willst (erscheinen automatisch unter 
   {
     "id": "mein-paket",
     "name": "Mein Paket",
-    "description": "Beschreibung fuer den Nutzer",
+    "description": "Beschreibung für den Nutzer",
     "color": "#2196F3",
     "icon": "fa-graduation-cap",
     "version": "1.0",

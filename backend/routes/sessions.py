@@ -84,7 +84,7 @@ def start_session(data: SessionCreate, user: dict = Depends(get_current_user)):
 
 @router.get("/api/sessions/active")
 def get_active_session(user: dict = Depends(get_current_user)):
-    """Gibt die aktive (nicht beendete) Session des Users zurueck, falls vorhanden."""
+    """Gibt die aktive (nicht beendete) Session des Users zurück, falls vorhanden."""
     uid = user["id"]
     conn = get_db()
     session = conn.execute(
@@ -155,7 +155,7 @@ def end_session(session_id: int, user: dict = Depends(get_current_user)):
     )
 
     # -- Completion-Bonus (Silber) --
-    # 20 Extra nur wenn alle mindestens 20 Karten FEHLERFREI geloest
+    # 20 Extra nur wenn alle mindestens 20 Karten FEHLERFREI gelöst
     # 1 Extra wenn mindestens 5 Karten beantwortet (egal ob richtig/falsch)
     correct_count = s["c"] or 0
     wrong_count = s["w"] or 0
@@ -184,7 +184,7 @@ def end_session(session_id: int, user: dict = Depends(get_current_user)):
 # -- Strikte Session-Steuerung ------------------------------------------------
 
 def _load_card_data(conn, card_db_id: int) -> Optional[dict]:
-    """Laedt eine Karte anhand der DB-ID (global eindeutig)."""
+    """Lädt eine Karte anhand der DB-ID (global eindeutig)."""
     row = conn.execute("SELECT * FROM cards WHERE id=?", (card_db_id,)).fetchone()
     return row_to_dict(row) if row else None
 
@@ -209,7 +209,7 @@ def _session_progress(conn, session_id: int, uid: int, session: dict) -> dict:
 
 @router.get("/api/sessions/{session_id}/current-card")
 def get_current_card(session_id: int, user: dict = Depends(get_current_user)):
-    """Gibt die aktuelle Karte der Session zurueck (Backend-gesteuert)."""
+    """Gibt die aktuelle Karte der Session zurück (Backend-gesteuert)."""
     uid = user["id"]
     conn = get_db()
     session = conn.execute(
@@ -244,8 +244,8 @@ def get_current_card(session_id: int, user: dict = Depends(get_current_user)):
 
 @router.post("/api/sessions/{session_id}/review-and-next")
 async def review_and_next(session_id: int, data: SessionReviewNext, user: dict = Depends(get_current_user)):
-    """Bewertet die aktuelle Karte und gibt die naechste zurueck.
-    Ein einziger Endpoint fuer den gesamten Session-Ablauf."""
+    """Bewertet die aktuelle Karte und gibt die nächste zurück.
+    Ein einziger Endpoint für den gesamten Session-Ablauf."""
     uid = user["id"]
     conn = get_db()
     session = conn.execute(
@@ -297,7 +297,7 @@ async def review_and_next(session_id: int, data: SessionReviewNext, user: dict =
         (uid, session_id, current_card_id, result, data.user_answer, ai_score, ai_feedback, time_ms)
     )
 
-    # -- Qualitaets-Score: KI-Score oder 1.0/0.0 basierend auf Ergebnis --
+    # -- Qualitäts-Score: KI-Score oder 1.0/0.0 basierend auf Ergebnis --
     quality = ai_score if ai_score is not None else (1.0 if result == "correct" else 0.0 if result == "wrong" else 0.5)
 
     # -- card_stats aktualisieren (inkl. avg_quality, avg_time_ms) --
@@ -316,7 +316,7 @@ async def review_and_next(session_id: int, data: SessionReviewNext, user: dict =
           datetime.now().isoformat(), 1 if result=="correct" else 0, quality, time_ms,
           quality, time_ms, time_ms))
 
-    # -- SRS-Update falls gewuenscht --
+    # -- SRS-Update falls gewünscht --
     if data.srs_quality is not None:
         stat = conn.execute(
             "SELECT ease_factor, interval_days, COALESCE(times_correct,0) as reps FROM card_stats WHERE user_id=? AND card_id=?",
@@ -332,7 +332,7 @@ async def review_and_next(session_id: int, data: SessionReviewNext, user: dict =
                 (new_ease, new_interval, due, uid, current_card_id)
             )
 
-    # -- Index vorruecken --
+    # -- Index vorrücken --
     next_idx = idx + 1
     conn.execute(
         "UPDATE sessions SET current_index=? WHERE id=?", (next_idx, session_id)
@@ -363,7 +363,7 @@ async def review_and_next(session_id: int, data: SessionReviewNext, user: dict =
         # Leicht=0.7x, Mittel=1.0x, Schwer=1.4x
         card_diff_mult = {1: 0.7, 2: 1.0, 3: 1.4}.get(card_difficulty, 1.0)
 
-        # 2b) Persoenlicher Schwierigkeitsfaktor: basiert auf Ease-Faktor (SM-2)
+        # 2b) Persönlicher Schwierigkeitsfaktor: basiert auf Ease-Faktor (SM-2)
         cs_row = conn.execute(
             "SELECT ease_factor, interval_days, streak FROM card_stats WHERE user_id=? AND card_id=?",
             (uid, current_card_id)
@@ -391,7 +391,7 @@ async def review_and_next(session_id: int, data: SessionReviewNext, user: dict =
         elif interval_days <= 90:
             progress_factor = 1.5
         else:
-            progress_factor = 1.2  # Ueberlernte Karten: leichter Abschlag
+            progress_factor = 1.2  # Überlernte Karten: leichter Abschlag
 
         # 5) Streak-Faktor (Combo in der Session)
         streak_mult = min(1.0 + card_streak * 0.05, 2.0)
@@ -433,7 +433,7 @@ async def review_and_next(session_id: int, data: SessionReviewNext, user: dict =
 
     conn.commit()
 
-    # -- Naechste Karte laden oder Ende --
+    # -- Nächste Karte laden oder Ende --
     next_card = None
     if not done:
         next_card = _load_card_data(conn, card_order[next_idx])
@@ -554,7 +554,7 @@ def get_history(limit: int = 100, user: dict = Depends(get_current_user)):
     actual_limit = min(limit, _HISTORY_MAX)
     conn = get_db()
 
-    # Alte Sessions jenseits des Limits loeschen (Reviews bleiben fuer Statistik)
+    # Alte Sessions jenseits des Limits löschen (Reviews bleiben für Statistik)
     conn.execute("""
         DELETE FROM sessions WHERE user_id=? AND ended_at IS NOT NULL AND id NOT IN (
             SELECT id FROM sessions WHERE user_id=? AND ended_at IS NOT NULL
@@ -664,7 +664,7 @@ def get_achievements(user: dict = Depends(get_current_user)):
 
 @router.get("/api/achievements/levels")
 def get_achievement_levels():
-    """Gibt die komplette Stufentabelle zurueck (fuer Admin-Ansicht)."""
+    """Gibt die komplette Stufentabelle zurück (für Admin-Ansicht)."""
     result = []
     for a in _ACHIEVEMENTS:
         levels = []
@@ -680,7 +680,7 @@ def get_achievement_levels():
 
 @router.get("/api/stats/streak")
 def get_streak(user: dict = Depends(get_current_user)):
-    """Berechnet aktuelle Tagesstraehne und laengste Straehne."""
+    """Berechnet aktuelle Tagessträhne und längste Strähne."""
     uid = user["id"]
     conn = get_db()
     rows = conn.execute(
@@ -696,7 +696,7 @@ def get_streak(user: dict = Depends(get_current_user)):
     dates = [date.fromisoformat(r["d"]) for r in rows if r["d"]]
     today = date.today()
 
-    # Aktuelle Straehne: ab heute oder gestern rueckwaerts zaehlen
+    # Aktuelle Strähne: ab heute oder gestern rückwärts zählen
     current = 0
     check = today
     if dates and dates[0] == today:
@@ -723,7 +723,7 @@ def get_streak(user: dict = Depends(get_current_user)):
 
 
 def _longest_streak(dates: list) -> int:
-    """Berechnet die laengste zusammenhaengende Tagesstraehne aus sortierten Daten (absteigend)."""
+    """Berechnet die längste zusammenhängende Tagessträhne aus sortierten Daten (absteigend)."""
     if not dates:
         return 0
     from datetime import timedelta
@@ -741,7 +741,7 @@ def _longest_streak(dates: list) -> int:
 
 @router.get("/api/stats/xp")
 def get_xp(user: dict = Depends(get_current_user)):
-    """Gibt XP-Daten des Nutzers zurueck."""
+    """Gibt XP-Daten des Nutzers zurück."""
     uid = user["id"]
     conn = get_db()
     row = conn.execute("SELECT * FROM user_xp WHERE user_id=?", (uid,)).fetchone()
@@ -758,7 +758,7 @@ def get_xp(user: dict = Depends(get_current_user)):
 
 @router.get("/api/stats/heatmap")
 def get_heatmap(days: int = 365, user: dict = Depends(get_current_user)):
-    """Lernaktivitaet pro Tag fuer Heatmap (letzte N Tage)."""
+    """Lernaktivität pro Tag für Heatmap (letzte N Tage)."""
     uid = user["id"]
     conn = get_db()
     rows = conn.execute(

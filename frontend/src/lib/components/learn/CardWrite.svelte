@@ -4,15 +4,15 @@
    *
    * Ablauf MIT KI:
    *   1. Antwort tippen
-   *   2. "Antwort pruefen" -> KI bewertet (= die Bewertung, KEINE manuellen Buttons)
+   *   2. "Antwort prüfen" -> KI bewertet (= die Bewertung, KEINE manuellen Buttons)
    *   3. KI-Feedback sichtbar (Score + Text)
-   *   4. Optional: "Musterloesung anzeigen" aufklappen
+   *   4. Optional: "Musterlösung anzeigen" aufklappen
    *   5. Optional: "Im Material nachlesen"
-   *   6. "Weiter" -> naechste Karte
+   *   6. "Weiter" -> nächste Karte
    *
    * Ablauf OHNE KI:
    *   1. Antwort tippen
-   *   2. "Antwort vergleichen" -> Musterloesung aufdecken
+   *   2. "Antwort vergleichen" -> Musterlösung aufdecken
    *   3. Selbstbewertung: "Gewusst" / "Nicht gewusst" (nur 2 Optionen)
    *
    * 2-Spalten-Layout nach Bewertung: links Frage+Eingabe, rechts Ergebnis+Aktionen
@@ -36,15 +36,15 @@
 
   const EVAL_STEPS = [
     { label: 'Antwort empfangen', sublabel: 'Eingabe wird vorbereitet' },
-    { label: 'Frage & Antwort analysieren', sublabel: 'Vergleich mit Musterloesung' },
-    { label: 'Kernaussagen pruefen', sublabel: 'Semantische Bewertung laeuft' },
-    { label: 'Feedback formulieren', sublabel: 'KI schreibt Rueckmeldung' },
+    { label: 'Frage & Antwort analysieren', sublabel: 'Vergleich mit Musterlösung' },
+    { label: 'Kernaussagen prüfen', sublabel: 'Semantische Bewertung läuft' },
+    { label: 'Feedback formulieren', sublabel: 'KI schreibt Rückmeldung' },
   ]
 
   // Zeigt rechte Spalte wenn: KI-Feedback da ODER Karte aufgedeckt
   let showRight = $derived(!!aiFeedback || flipped)
 
-  // -- Write + KI: Antwort pruefen --
+  // -- Write + KI: Antwort prüfen --
   async function submitAI() {
     if (!userAnswer.trim() || aiState === 'loading') return
     aiState = 'loading'
@@ -67,14 +67,14 @@
     } catch(e) {
       clearInterval(timer)
       aiState = 'error'
-      // KI ausgefallen: Fallback auf Selbstvergleich, Session laeuft weiter
+      // KI ausgefallen: Fallback auf Selbstvergleich, Session läuft weiter
       aiFeedback = null
       aiOfflineFallback = true
       flipped = true
     }
   }
 
-  // KI-Ausfall waehrend Session: User bewertet selbst
+  // KI-Ausfall während Session: User bewertet selbst
   let aiOfflineFallback = $state(false)
 
   // -- Write + KI: Weiter nach Feedback --
@@ -97,7 +97,7 @@
     } catch(e) { busy = false }
   }
 
-  // -- Direkt aufdecken (KI ueberspringen) --
+  // -- Direkt aufdecken (KI überspringen) --
   async function directFlip() {
     flipped = true
     // Kein Review hier -- User muss noch bewerten
@@ -144,7 +144,7 @@
           {#if userAnswer.trim()}
             {#if aiState === 'idle'}
               <button class="btn btn-primary flip-btn" onclick={submitAI}>
-                <i class="fa-solid fa-wand-magic-sparkles"></i> Antwort pruefen
+                <i class="fa-solid fa-wand-magic-sparkles"></i> Antwort prüfen
               </button>
               <button class="btn btn-ghost" style="margin-top:6px" onclick={showAnswer}>
                 <i class="fa-solid fa-eye"></i> Direkt aufdecken
@@ -200,21 +200,21 @@
           </div>
         {/if}
 
-        <!-- Musterloesung (nach Flip) -->
+        <!-- Musterlösung (nach Flip) -->
         {#if flipped}
           <div class="fc-ans-lbl">
-            <i class="fa-solid fa-square-check" style="color:var(--accent)"></i> Musterloesung
+            <i class="fa-solid fa-square-check" style="color:var(--accent)"></i> Musterlösung
           </div>
           <div class="fc-ans markdown">{@html marked(card.answer)}</div>
         {/if}
 
         <!-- Aktionen je nach Modus -->
         {#if aiFeedback}
-          <!-- KI hat bewertet: Musterloesung optional, Material optional, Weiter -->
+          <!-- KI hat bewertet: Musterlösung optional, Material optional, Weiter -->
           <div class="write-actions">
             {#if !flipped}
               <button class="btn btn-ghost" onclick={() => flipped = true}>
-                <i class="fa-solid fa-eye"></i> Musterloesung anzeigen
+                <i class="fa-solid fa-eye"></i> Musterlösung anzeigen
               </button>
             {/if}
             {#if $activePackageId}
@@ -232,7 +232,7 @@
           {#if aiOfflineFallback}
             <div class="ai-offline-warn">
               <i class="fa-solid fa-triangle-exclamation"></i>
-              KI kurzzeitig nicht erreichbar. Vergleiche selbst mit der Musterloesung.
+              KI kurzzeitig nicht erreichbar. Vergleiche selbst mit der Musterlösung.
             </div>
           {/if}
           <div class="rate-row-write">

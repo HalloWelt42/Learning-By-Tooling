@@ -50,7 +50,7 @@ def _get_client() -> httpx.AsyncClient:
 RULES = (
     "Schreibe auf Deutsch. "
     "Nutze Markdown für Formatierung (Überschriften, Listen, Fettdruck). "
-    "Keine Einleitungsfloskeln (kein 'Gerne', 'Natuerlich', 'Sicher', 'Hier ist'). "
+    "Keine Einleitungsfloskeln (kein 'Gerne', 'Natürlich', 'Sicher', 'Hier ist'). "
     "Keine Zusammenfassung am Ende. "
     "Direkt zur Sache."
 )
@@ -96,7 +96,7 @@ async def _chat(user: str, system: str = "", max_tokens: int = 500,
     msgs  = []
     if system:
         msgs.append({"role": "system", "content": system})
-    # Qwen3 Thinking-Modus deaktivieren fuer schnellere strukturierte Antworten
+    # Qwen3 Thinking-Modus deaktivieren für schnellere strukturierte Antworten
     msgs.append({"role": "user", "content": f"/no_think\n{user}"})
     payload = {
         "model": model, "messages": msgs,
@@ -111,7 +111,7 @@ async def _chat(user: str, system: str = "", max_tokens: int = 500,
                          timeout=timeout)
         if r.status_code == 200:
             text = r.json()["choices"][0]["message"]["content"].strip()
-            # Qwen3 kann /no_think als <think>\n</think> zurueckgeben
+            # Qwen3 kann /no_think als <think>\n</think> zurückgeben
             text = re.sub(r'^<think>\s*</think>\s*', '', text)
             return text
     except Exception:
@@ -140,7 +140,7 @@ async def explain_card(question: str, answer: str,
         system = f'Lernassistent für "{package_name or "unbekannt"}". {RULES}'
 
     user = (
-        f"Erklaere diese Lernkarte sachlich, maximal 4 Saetze.\n\n"
+        f"Erkläre diese Lernkarte sachlich, maximal 4 Sätze.\n\n"
         f"Frage: {question}\nAntwort: {answer}"
     )
     return await _chat(user, system,
@@ -167,7 +167,7 @@ async def evaluate_answer(question: str, correct_answer: str,
         f"Richtige Antwort: {correct_answer}\n"
         f"Benutzerantwort: {user_answer}\n\n"
         f"Bewerte die Benutzerantwort. Regeln:\n"
-        f"- score 0.0-1.0 (wie vollstaendig und korrekt die Antwort ist)\n"
+        f"- score 0.0-1.0 (wie vollständig und korrekt die Antwort ist)\n"
         f"- feedback: Auf Deutsch, sachlich, direkt zur Sache.\n"
         f"  Nenne was richtig war. Nenne was fehlte oder falsch war.\n"
         f"  Korrigiere falsche Aussagen mit der richtigen Information.\n"
@@ -196,7 +196,7 @@ async def evaluate_answer(question: str, correct_answer: str,
                          temperature=0.1,
                          timeout=20.0, response_format=eval_format)
     if not result:
-        return {"score": 0.5, "correct": None, "feedback": "Bewertung nicht verfuegbar."}
+        return {"score": 0.5, "correct": None, "feedback": "Bewertung nicht verfügbar."}
     try:
         d = json.loads(_strip_json(result))
         return {
@@ -240,7 +240,7 @@ async def _generate_single_card(chunk: str, card_num: int, total: int,
         temp = max(0.1, min(1.0, temp))
         user = (
             f"Erstelle Lernkarte {card_num} von {total} aus diesem Text:\n---\n{chunk[:2000]}\n---\n"
-            f"Regeln: Verstaendnis testen, selbsterklaerende Antworten.\n"
+            f"Regeln: Verständnis testen, selbsterklärende Antworten.\n"
             f"difficulty: 1=leicht 2=mittel 3=schwer. hint: kurzer Hinweis oder leerer String.\n"
             f"Erstelle genau EINE Karte als JSON-Objekt."
         )
@@ -368,8 +368,8 @@ async def generate_mc_options(question: str, answer: str,
         return []
     system = (
         "Du bist ein Prüfungsexperte. "
-        "Erstelle genau 3 falsche aber plausible Antwortoptionen fuer eine Multiple-Choice-Frage. "
-        "Die falschen Antworten muessen realistisch klingen aber eindeutig falsch sein. "
+        "Erstelle genau 3 falsche aber plausible Antwortoptionen für eine Multiple-Choice-Frage. "
+        "Die falschen Antworten müssen realistisch klingen aber eindeutig falsch sein. "
         "Antworte NUR als JSON-Array mit genau 3 Strings. Kein Markdown. Keine Nummerierung. "
         "Beispiel: [\"Falsche Option 1\", \"Falsche Option 2\", \"Falsche Option 3\"]"
     )

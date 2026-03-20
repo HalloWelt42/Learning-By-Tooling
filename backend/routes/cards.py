@@ -196,7 +196,7 @@ def get_due_cards(limit: int = 20, package_id: Optional[int] = None, user: dict 
 def srs_review(data: SRSReview, user: dict = Depends(get_current_user)):
     uid = user["id"]
     conn = get_db()
-    # Karte pruefen
+    # Karte prüfen
     card = conn.execute("SELECT id FROM cards WHERE card_id=? AND active=1", (data.card_id,)).fetchone()
     if not card:
         conn.close()
@@ -223,7 +223,7 @@ def srs_review(data: SRSReview, user: dict = Depends(get_current_user)):
             streak=CASE WHEN excluded.times_correct=1 THEN streak+1 ELSE 0 END
     """, (uid, data.card_id, 1 if data.quality>=3 else 0, 1 if data.quality<3 else 0,
           datetime.now().isoformat(), due, ease, interval))
-    # Auch in reviews schreiben (fuer Session-Ergebnis und Achievements)
+    # Auch in reviews schreiben (für Session-Ergebnis und Achievements)
     if data.session_id:
         conn.execute(
             "INSERT INTO reviews (user_id,session_id,card_id,result) VALUES (?,?,?,?)",

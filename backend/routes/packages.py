@@ -116,7 +116,7 @@ def get_package_users(pkg_id: int, user: dict = Depends(get_current_user)):
 
 @router.post("/api/packages/{pkg_id}/share")
 def share_package(pkg_id: int, data: dict, user: dict = Depends(get_current_user)):
-    """Gibt ein Paket fuer einen anderen User frei. Nur Owner darf teilen."""
+    """Gibt ein Paket für einen anderen User frei. Nur Owner darf teilen."""
     uid = user["id"]
     conn = get_db()
     own = conn.execute("SELECT role FROM user_packages WHERE user_id=? AND package_id=?", (uid, pkg_id)).fetchone()
@@ -180,7 +180,7 @@ def get_package_stats(pkg_id: int, user: dict = Depends(get_current_user)):
         LEFT JOIN card_stats cs ON cs.card_id=c.card_id AND cs.user_id=?
         GROUP BY cat.code
     """, (pkg_id, uid)).fetchall()
-    # SRS-Stapel: Neu, Faellig, Lernphase (<7d), Gefestigt (7-30d), Gemeistert (>30d)
+    # SRS-Stapel: Neu, Fällig, Lernphase (<7d), Gefestigt (7-30d), Gemeistert (>30d)
     today = date.today().isoformat()
     srs_rows = conn.execute("""
         SELECT c.card_id, cs.interval_days, cs.due_date, cs.times_shown
@@ -414,7 +414,7 @@ def delete_document(doc_id: int, user: dict = Depends(get_current_user)):
     return {"ok": True}
 
 
-# -- Entwuerfe -----------------------------------------------------------------
+# -- Entwürfe -----------------------------------------------------------------
 
 @router.get("/api/packages/{pkg_id}/drafts")
 def get_package_drafts(pkg_id: int, status: str = "pending", user: dict = Depends(get_current_user)):
@@ -754,7 +754,7 @@ def export_package(pkg_id: int, token: str = Query(None), user: dict = Depends(g
         antworten_lines.append(f"```\n{aid} | {c['category_code']} -> {c['card_id']}\n{answer_text}\n```\n")
     antworten_md = "\n".join(antworten_lines)
 
-    # Bundle-Metadaten fuer Re-Import
+    # Bundle-Metadaten für Re-Import
     cat_counts = {}
     for c in cards:
         cat_counts[c["category_code"]] = cat_counts.get(c["category_code"], 0) + 1
@@ -805,7 +805,7 @@ def export_package(pkg_id: int, token: str = Query(None), user: dict = Depends(g
     )
 
 
-# -- Paket zurueckziehen (saubere Deinstallation) ------------------------------
+# -- Paket zurückziehen (saubere Deinstallation) ------------------------------
 
 @router.delete("/api/packages/{pkg_id}/uninstall")
 def uninstall_package(pkg_id: int, user: dict = Depends(get_current_user)):
@@ -824,11 +824,11 @@ def uninstall_package(pkg_id: int, user: dict = Depends(get_current_user)):
 
     # 1. Lernstatistik bleibt erhalten (gelernt ist gelernt)
 
-    # 2. Alle Karten loeschen
+    # 2. Alle Karten löschen
     r = conn.execute("DELETE FROM cards WHERE package_id=?", (pkg_id,))
     stats["cards_deleted"] = r.rowcount
 
-    # 3. Hochgeladene Dokumente: Dateien loeschen
+    # 3. Hochgeladene Dokumente: Dateien löschen
     docs = conn.execute(
         "SELECT id, filename FROM documents WHERE package_id=?", (pkg_id,)
     ).fetchall()
@@ -840,7 +840,7 @@ def uninstall_package(pkg_id: int, user: dict = Depends(get_current_user)):
             files_deleted += 1
     stats["files_deleted"] = files_deleted
 
-    # 4. Dokumente aus DB loeschen
+    # 4. Dokumente aus DB löschen
     doc_ids = [d["id"] for d in docs]
     if doc_ids:
         pl = ",".join("?" * len(doc_ids))
@@ -848,18 +848,18 @@ def uninstall_package(pkg_id: int, user: dict = Depends(get_current_user)):
     r = conn.execute("DELETE FROM documents WHERE package_id=?", (pkg_id,))
     stats["documents_deleted"] = r.rowcount
 
-    # 5. Entwuerfe loeschen
+    # 5. Entwürfe löschen
     r = conn.execute("DELETE FROM card_drafts WHERE package_id=?", (pkg_id,))
     stats["drafts_deleted"] = r.rowcount
 
-    # 6. Lexikon-Eintraege loeschen
+    # 6. Lexikon-Einträge löschen
     try:
         r = conn.execute("DELETE FROM lexicon WHERE package_id=?", (pkg_id,))
         stats["lexicon_deleted"] = r.rowcount
     except Exception:
         stats["lexicon_deleted"] = 0
 
-    # 7. Lernpfade und Kapitel loeschen
+    # 7. Lernpfade und Kapitel löschen
     try:
         paths = conn.execute("SELECT id FROM learning_paths WHERE package_id=?", (pkg_id,)).fetchall()
         for p in paths:
@@ -869,7 +869,7 @@ def uninstall_package(pkg_id: int, user: dict = Depends(get_current_user)):
     except Exception:
         stats["paths_deleted"] = 0
 
-    # 8. MC-Optionen-Cache loeschen
+    # 8. MC-Optionen-Cache löschen
     try:
         r = conn.execute("DELETE FROM mc_options WHERE package_id=?", (pkg_id,))
         stats["mc_options_deleted"] = r.rowcount
@@ -888,13 +888,13 @@ def uninstall_package(pkg_id: int, user: dict = Depends(get_current_user)):
     except Exception:
         pass
 
-    # 11. User-Zuordnungen loeschen
+    # 11. User-Zuordnungen löschen
     try:
         conn.execute("DELETE FROM user_packages WHERE package_id=?", (pkg_id,))
     except Exception:
         pass
 
-    # 13. Paket selbst loeschen
+    # 13. Paket selbst löschen
     try:
         conn.execute("DELETE FROM packages WHERE id=?", (pkg_id,))
         conn.commit()
@@ -921,6 +921,6 @@ def reinstall_package(pkg_id: int, bundle_id: str = None, user: dict = Depends(g
     uninstall_package(pkg_id, user)
 
     if not bundle_id:
-        raise HTTPException(400, "bundle_id erforderlich fuer Reinstall")
+        raise HTTPException(400, "bundle_id erforderlich für Reinstall")
 
     return _install_bundle(bundle_id, user)

@@ -20,7 +20,7 @@
     if (!confirmReset) { confirmReset = true; setTimeout(() => confirmReset = false, 3000); return }
     try {
       await apiPost('/api/reset/my-stats', { package_id: pkg.id })
-      showToast('Lernfortschritt zurueckgesetzt', 'success')
+      showToast('Lernfortschritt zurückgesetzt', 'success')
       confirmReset = false
       await loadStats()
     } catch(e) { showToast(e.message, 'error') }
@@ -39,7 +39,7 @@
     if (!shareEmail.trim()) return
     try {
       await apiPost(`/api/packages/${pkg.id}/share`, { email: shareEmail, role: shareRole })
-      showToast(`Paket fuer ${shareEmail} freigegeben`, 'success')
+      showToast(`Paket für ${shareEmail} freigegeben`, 'success')
       shareEmail = ''
       await loadShareUsers()
     } catch(e) {
@@ -157,7 +157,7 @@
           <button class="pds accent clickable" onclick={() => tab = 'workshop'}>
             <i class="fa-solid fa-pen-to-square"></i>
             <span class="pds-val">{stats.pending_drafts}</span>
-            <span class="pds-lbl">Entwuerfe</span>
+            <span class="pds-lbl">Entwürfe</span>
           </button>
         {/if}
         <button class="btn btn-ghost" title="Paket als ZIP exportieren" onclick={exportPkg}>
@@ -176,7 +176,7 @@
   <!-- ── Tabs ─────────────────────────────────────────────────────────────── -->
   <div class="pd-tabs">
     {#each [
-      ['overview',  'fa-gauge',              'Uebersicht',  0],
+      ['overview',  'fa-gauge',              'Übersicht',  0],
       ['workshop',  'fa-screwdriver-wrench', 'Werkstatt',   pendingDrafts],
       ['cards',     'fa-layer-group',        'Karten',      0],
       ['material',  'fa-book-open',          'Material',    0],
@@ -222,7 +222,7 @@
                     {#if s.mastered > 0}<div class="srs-seg srs-mastered" style="width:{s.mastered / t * 100}%" title="Gemeistert: {s.mastered}"></div>{/if}
                     {#if s.solid > 0}<div class="srs-seg srs-solid" style="width:{s.solid / t * 100}%" title="Gefestigt: {s.solid}"></div>{/if}
                     {#if s.learning > 0}<div class="srs-seg srs-learning" style="width:{s.learning / t * 100}%" title="Lernphase: {s.learning}"></div>{/if}
-                    {#if s.due > 0}<div class="srs-seg srs-due" style="width:{s.due / t * 100}%" title="Faellig: {s.due}"></div>{/if}
+                    {#if s.due > 0}<div class="srs-seg srs-due" style="width:{s.due / t * 100}%" title="Fällig: {s.due}"></div>{/if}
                     {#if s.new > 0}<div class="srs-seg srs-new" style="width:{s.new / t * 100}%" title="Neu: {s.new}"></div>{/if}
                   </div>
                 {/if}
@@ -230,7 +230,7 @@
                   <span class="srs-item"><span class="srs-dot srs-mastered"></span> Gemeistert <strong>{s.mastered}</strong></span>
                   <span class="srs-item"><span class="srs-dot srs-solid"></span> Gefestigt <strong>{s.solid}</strong></span>
                   <span class="srs-item"><span class="srs-dot srs-learning"></span> Lernphase <strong>{s.learning}</strong></span>
-                  <span class="srs-item"><span class="srs-dot srs-due"></span> Faellig <strong>{s.due}</strong></span>
+                  <span class="srs-item"><span class="srs-dot srs-due"></span> Fällig <strong>{s.due}</strong></span>
                   <span class="srs-item"><span class="srs-dot srs-new"></span> Neu <strong>{s.new}</strong></span>
                 </div>
               </div>
@@ -402,7 +402,7 @@
   width: 100%;
 }
 
-/* ── Uebersicht ──────────────────────────────────────────────────────────── */
+/* ── Übersicht ──────────────────────────────────────────────────────────── */
 .overview-cols {
   display: grid;
   grid-template-columns: 1fr 1fr;

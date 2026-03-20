@@ -40,7 +40,7 @@
     'fa-network-wired','fa-code','fa-file-code','fa-cube','fa-layer-group',
     'fa-gear','fa-shield-halved','fa-truck','fa-briefcase','fa-chart-bar',
   ]
-  // Katalog-Farben: MD3 400er, OHNE semantische Farben (kein Rot/Gruen/Orange/Blau/Blautoene)
+  // Katalog-Farben: MD3 400er, OHNE semantische Farben (kein Rot/Grün/Orange/Blau/Blautöne)
   const MD_COLORS = [
     { hex:'#EC407A', name:'Pink' },
     { hex:'#AB47BC', name:'Purple' },
@@ -55,7 +55,7 @@
 
   let form = $state({ name:'', description:'', color:'#5C6BC0', icon:'fa-graduation-cap' })
 
-  // Alle Eintraege vereinheitlicht: installierte Pakete + verfuegbare Bundles
+  // Alle Einträge vereinheitlicht: installierte Pakete + verfügbare Bundles
   let allItems = $derived((() => {
     const items = []
     // Installierte Pakete
@@ -458,7 +458,7 @@
 
   </div>
 
-  <!-- Bestaetigungsdialog -->
+  <!-- Bestätigungsdialog -->
   {#if confirmPkg}
     <div class="confirm-overlay" role="dialog" aria-modal="true"
       onkeydown={e => e.key==='Escape' && (confirmPkg=null)}
@@ -491,7 +491,7 @@
 </div>
 
 <style>
-/* ── Layout: volle Hoehe, kein Seitenscrolling ─────────────────────────── */
+/* ── Layout: volle Höhe, kein Seitenscrolling ─────────────────────────── */
 .pk-page {
   display: flex;
   flex-direction: column;

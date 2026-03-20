@@ -1,7 +1,7 @@
 <script>
   /**
    * Progress.svelte -- Gamification-Dashboard
-   * Zentrale Anlaufstelle fuer XP, Streak, Abzeichen und Verlauf
+   * Zentrale Anlaufstelle für XP, Streak, Abzeichen und Verlauf
    */
   import { onMount } from 'svelte'
   import { showToast, streakData, xpData, loadStreak, loadXp } from '../../stores/index.js'
@@ -26,7 +26,7 @@
   let maxLevel    = $derived(achievements.length * 30)
   let topBadges   = $derived(achievements.filter(a => a.level > 0).sort((a, b) => b.level - a.level).slice(0, 6))
 
-  // XP-Aufschluesselung (zentral aus gamification.js)
+  // XP-Aufschlüsselung (zentral aus gamification.js)
   let coins    = $derived(coinBreakdown($xpData.xp_total))
   let diamonds = $derived(coins[0].count)
   let gold     = $derived(coins[1].count)
@@ -100,7 +100,7 @@
 
   let monthName = $derived(new Date().toLocaleString('de-DE', { month: 'long', year: 'numeric' }))
 
-  // Ausgewaehlter Tag im Kalender
+  // Ausgewählter Tag im Kalender
   let selectedDay = $state(null) // { date, count }
   let selectedDaySessions = $state([])
 
@@ -138,7 +138,7 @@
 
   <div class="pg-body">
 
-    <!-- Uebersicht -->
+    <!-- Übersicht -->
     {#if tab === 'overview'}
       <div class="ov-grid">
 
@@ -481,7 +481,7 @@
   min-height: 0;
 }
 
-/* ── Uebersicht Grid ──────────────────────────────────────────────────── */
+/* ── Übersicht Grid ──────────────────────────────────────────────────── */
 .ov-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -575,7 +575,7 @@
 .ov-streak-ok { font-size: 12px; color: var(--ok); display: flex; align-items: center; gap: 6px; }
 .ov-streak-best { font-size: 12px; color: var(--text3); border-top: 1px solid var(--border); padding-top: 10px; }
 
-/* Abzeichen-Kompakt (Uebersicht) */
+/* Abzeichen-Kompakt (Übersicht) */
 .ov-badge-summary { display: flex; align-items: baseline; gap: 8px; }
 .ov-badge-total { font-size: 20px; font-weight: 800; color: var(--accent); }
 .ov-badge-lbl { font-size: 12px; color: var(--text2); }
@@ -602,7 +602,7 @@
 .ov-cal-dot:not(.ov-cal-dot-empty):hover { outline: 1px solid var(--text2); }
 .ov-cal-dot-sel { outline: 1.5px solid var(--accent) !important; }
 
-/* GitHub-Farbstufen (5 Stufen: 0=leer, 1-4=Intensitaet) */
+/* GitHub-Farbstufen (5 Stufen: 0=leer, 1-4=Intensität) */
 .ov-cal-lv0 { background: var(--bg3); }
 .ov-cal-lv1 { background: color-mix(in srgb, var(--accent) 30%, var(--bg3)); }
 .ov-cal-lv2 { background: color-mix(in srgb, var(--accent) 55%, var(--bg3)); }
@@ -639,7 +639,7 @@
 .ov-cal-ds i { font-size: 10px; color: var(--text3); }
 .ov-cal-ds strong { color: var(--text1); }
 
-/* Letzte Sessions (Uebersicht) */
+/* Letzte Sessions (Übersicht) */
 .ov-session-list { display: flex; flex-direction: column; gap: 0; }
 .ov-session-row {
   display: grid;

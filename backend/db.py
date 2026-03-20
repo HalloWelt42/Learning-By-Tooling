@@ -418,7 +418,7 @@ def _migrate(conn: sqlite3.Connection):
         """)
         conn.commit()
 
-    # cards: source-Spalte (manual/ai) fuer KI-Kennzeichnung
+    # cards: source-Spalte (manual/ai) für KI-Kennzeichnung
     if 'cards' in existing_tables:
         card_cols2 = {r[1] for r in conn.execute("PRAGMA table_info(cards)").fetchall()}
         if 'source' not in card_cols2:

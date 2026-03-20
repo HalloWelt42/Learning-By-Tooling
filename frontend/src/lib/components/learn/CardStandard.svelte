@@ -22,7 +22,7 @@
 
   const EXPLAIN_STEPS = [
     { label: 'Kontext verstehen', sublabel: 'Frage und Antwort lesen' },
-    { label: 'Erklaerung ausarbeiten', sublabel: 'Beispiele suchen' },
+    { label: 'Erklärung ausarbeiten', sublabel: 'Beispiele suchen' },
     { label: 'Antwort formulieren', sublabel: 'Auf Deutsch schreiben' },
   ]
 
@@ -91,20 +91,20 @@
     {#if flipped}
       <div class="fc-col fc-col-right">
         <div class="fc-ans-lbl">
-          <i class="fa-solid fa-square-check" style="color:var(--accent)"></i> Musterloesung
+          <i class="fa-solid fa-square-check" style="color:var(--accent)"></i> Musterlösung
         </div>
         <div class="fc-ans markdown">{@html marked(card.answer)}</div>
 
         {#if aiState === 'idle' && !aiExplanation && $aiOnline}
           <button class="btn btn-ghost btn-sm ai-explain-btn" onclick={getExplanation}>
-            <i class="fa-solid fa-wand-magic-sparkles"></i> KI-Erklaerung laden
+            <i class="fa-solid fa-wand-magic-sparkles"></i> KI-Erklärung laden
           </button>
         {:else if aiState === 'loading'}
-          <AiProcess title="KI erklaert die Antwort" steps={EXPLAIN_STEPS} active={aiStep} />
+          <AiProcess title="KI erklärt die Antwort" steps={EXPLAIN_STEPS} active={aiStep} />
         {:else if aiExplanation}
           <div class="ai-explain">
             <div class="ae-header">
-              <i class="fa-solid fa-wand-magic-sparkles" style="color:var(--ac2)"></i> KI-Erklaerung
+              <i class="fa-solid fa-wand-magic-sparkles" style="color:var(--ac2)"></i> KI-Erklärung
             </div>
             <div class="markdown">{@html marked(aiExplanation)}</div>
           </div>

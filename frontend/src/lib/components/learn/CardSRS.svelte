@@ -60,7 +60,7 @@
     {#if flipped}
       <div class="fc-col fc-col-right">
         <div class="fc-ans-lbl">
-          <i class="fa-solid fa-square-check" style="color:var(--accent)"></i> Musterloesung
+          <i class="fa-solid fa-square-check" style="color:var(--accent)"></i> Musterlösung
         </div>
         <div class="fc-ans markdown">{@html marked(card.answer)}</div>
 

@@ -91,11 +91,11 @@ def admin_toggle_user(user_id: int, user: dict = Depends(get_current_user)):
     return {"ok": True, "disabled": bool(new_val)}
 
 
-# -- Reset-Funktionen (kein DB-Loeschen, nur Lerndaten) -----------------------
+# -- Reset-Funktionen (kein DB-Löschen, nur Lerndaten) -----------------------
 
 @router.post("/api/reset/my-stats")
 def reset_my_stats(data: dict, user: dict = Depends(get_current_user)):
-    """Eigene Lernstatistik zuruecksetzen (pro Paket oder alles)."""
+    """Eigene Lernstatistik zurücksetzen (pro Paket oder alles)."""
     uid = user["id"]
     pkg_id = data.get("package_id")
     conn = get_db()
@@ -119,7 +119,7 @@ def reset_my_stats(data: dict, user: dict = Depends(get_current_user)):
 
 @router.post("/api/admin/reset-user-stats/{target_id}")
 def admin_reset_user_stats(target_id: int, user: dict = Depends(get_current_user)):
-    """Admin: Lernstatistik eines Users komplett zuruecksetzen."""
+    """Admin: Lernstatistik eines Users komplett zurücksetzen."""
     conn = get_db()
     conn.execute("DELETE FROM card_stats WHERE user_id=?", (target_id,))
     conn.execute("DELETE FROM reviews WHERE user_id=?", (target_id,))
@@ -140,7 +140,7 @@ def admin_rebuild_fts(user: dict = Depends(get_current_user)):
 
 @router.get("/api/docs/paketspezifikation")
 def get_paketspezifikation():
-    """Gibt die Paketspezifikation als Markdown-Text zurueck."""
+    """Gibt die Paketspezifikation als Markdown-Text zurück."""
     spec_path = Path(__file__).parent.parent.parent / "PAKETSPEZIFIKATION.md"
     if not spec_path.exists():
         raise HTTPException(404, "Paketspezifikation nicht gefunden")

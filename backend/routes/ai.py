@@ -71,7 +71,7 @@ async def ai_explain(body: dict, user: dict = Depends(get_current_user)):
 
 @router.post("/api/ai/hint")
 async def ai_hint(data: dict, user: dict = Depends(get_current_user)):
-    """Erstellt eine Merkhilfe fuer eine Karte. Braucht LM Studio."""
+    """Erstellt eine Merkhilfe für eine Karte. Braucht LM Studio."""
     if not await _ai_online():
         raise HTTPException(503, "LM Studio nicht erreichbar")
     settings = _load_user_settings(user["id"])
@@ -122,7 +122,7 @@ async def get_mc_options_cached(card_id: str, package_id: Optional[int] = None, 
     if not card:
         conn.close()
         raise HTTPException(404, "Karte nicht gefunden")
-    # Cache pruefen
+    # Cache prüfen
     cached = conn.execute(
         "SELECT options, expires_at FROM mc_options WHERE card_id=? AND package_id=?",
         (card_id, card["package_id"])
@@ -138,14 +138,14 @@ async def get_mc_options_cached(card_id: str, package_id: Optional[int] = None, 
 
 @router.post("/api/mc/generate-batch")
 async def generate_mc_batch(data: dict, user: dict = Depends(get_current_user)):
-    """Generiert MC-Optionen fuer mehrere Karten eines Pakets (Batch)."""
+    """Generiert MC-Optionen für mehrere Karten eines Pakets (Batch)."""
     if not await _ai_online():
         raise HTTPException(503, "LM Studio nicht erreichbar")
     pkg_id = data.get("package_id")
     limit = data.get("limit", 20)
     conn = get_db()
     today = date.today().isoformat()
-    # Karten ohne gueltigen Cache
+    # Karten ohne gültigen Cache
     cards = conn.execute("""
         SELECT c.card_id, c.question, c.answer FROM cards c
         LEFT JOIN mc_options mc ON mc.card_id=c.card_id AND mc.package_id=c.package_id
@@ -191,7 +191,7 @@ def mc_cache_status(package_id: int, user: dict = Depends(get_current_user)):
 
 @router.delete("/api/mc/cache/{package_id}")
 async def clear_mc_cache(package_id: int, user: dict = Depends(get_current_user)):
-    """Loescht den MC-Cache fuer ein Paket (erzwingt Neugenerierung)."""
+    """Löscht den MC-Cache für ein Paket (erzwingt Neugenerierung)."""
     conn = get_db()
     r = conn.execute("DELETE FROM mc_options WHERE package_id=?", (package_id,))
     conn.commit()
@@ -228,7 +228,7 @@ def list_mc_options(package_id: int, user: dict = Depends(get_current_user)):
 
 @router.delete("/api/mc/option/{card_id}/{package_id}")
 def delete_mc_option(card_id: str, package_id: int, user: dict = Depends(get_current_user)):
-    """Loescht MC-Optionen fuer eine einzelne Karte."""
+    """Löscht MC-Optionen für eine einzelne Karte."""
     conn = get_db()
     r = conn.execute(
         "DELETE FROM mc_options WHERE card_id=? AND package_id=?",
@@ -241,7 +241,7 @@ def delete_mc_option(card_id: str, package_id: int, user: dict = Depends(get_cur
 
 @router.post("/api/mc/regenerate")
 async def regenerate_mc_option(data: dict, user: dict = Depends(get_current_user)):
-    """Generiert MC-Optionen fuer eine einzelne Karte neu."""
+    """Generiert MC-Optionen für eine einzelne Karte neu."""
     if not await _ai_online():
         raise HTTPException(503, "LM Studio nicht erreichbar")
     card_id = data.get("card_id")

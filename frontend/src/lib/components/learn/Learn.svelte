@@ -3,7 +3,7 @@
    * Learn.svelte -- Orchestrator
    * Steuert Session-Lifecycle: Setup -> Learning -> Result
    * Delegiert Kartenlogik an isolierte Komponenten pro Modus.
-   * Session-Zustand wird vollstaendig vom Backend kontrolliert.
+   * Session-Zustand wird vollständig vom Backend kontrolliert.
    */
   import { categories, aiOnline, activeSession, showToast, loadGlobal, packages, activePackageId, streakData, loadStreak, loadXp, playCoinSound, playBonusSound, playErrorSound, playCoinRainSound, playPerfectSound, userSettings } from '../../stores/index.js'
   import { apiGet, apiPost, apiDelete } from '../../utils/api.js'
@@ -69,7 +69,7 @@
     }
   })
 
-  // MC-Status laden wenn Paket ausgewaehlt
+  // MC-Status laden wenn Paket ausgewählt
   $effect(() => {
     if ($activePackageId) {
       apiGet(`/api/mc/status/${$activePackageId}`).then(s => mcStatus = s).catch(() => mcStatus = null)
@@ -102,7 +102,7 @@
   let wrong   = $derived(progress.wrong)
   let skipped = $derived(progress.skipped)
 
-  // -- Mount: offene Session pruefen --
+  // -- Mount: offene Session prüfen --
   onMount(async () => {
     try {
       const active = await apiGet('/api/sessions/active')
@@ -176,7 +176,7 @@
     }
   }
 
-  // -- Callback fuer Card-Komponenten: Review ans Backend senden --
+  // -- Callback für Card-Komponenten: Review ans Backend senden --
   async function handleReview(data) {
     try {
       const resp = await apiPost(`/api/sessions/${sessionId}/review-and-next`, data)
@@ -213,7 +213,7 @@
     }
   }
 
-  // -- Callback fuer Card-Komponenten: Zur naechsten Karte wechseln --
+  // -- Callback für Card-Komponenten: Zur nächsten Karte wechseln --
   function handleAdvance(resp) {
     if (resp.done) {
       finishSession()
@@ -240,7 +240,7 @@
     // Completion-Bonus aus Backend-Antwort
     completionBonus = endResp?.bonus || 0
 
-    // Counter-Animation: von 0 hochzaehlen
+    // Counter-Animation: von 0 hochzählen
     xpCountUp.set(0, { duration: 0 })
     showCoinRain = false
     showConfetti = false
@@ -260,11 +260,11 @@
     // Spektakel-Kaskade mit Timing
     setTimeout(() => {
       xpCountUp.set(sessionXp + completionBonus)
-      // Bonus-Sound beim Hochzaehlen
+      // Bonus-Sound beim Hochzählen
       playBonusSound($userSettings)
     }, 300)
 
-    // Muenzenregen bei XP > 0
+    // Münzenregen bei XP > 0
     if (sessionXp > 0) {
       setTimeout(() => {
         showCoinRain = true
@@ -485,7 +485,7 @@
   {@const isTest = sessionMode === 'mc' || sessionMode === 'write'}
   {@const pctVal = materialUsed && isTest ? Math.ceil(rawPct / 2) : rawPct}
 
-  <!-- Muenzenregen-Overlay -->
+  <!-- Münzenregen-Overlay -->
   {#if showCoinRain}
     <div class="coin-rain" aria-hidden="true">
       {#each Array(12) as _, i}
@@ -779,7 +779,7 @@
   100% { transform:rotateY(1800deg) scale(1); }
 }
 
-/* ===== Muenzenregen ===== */
+/* ===== Münzenregen ===== */
 .coin-rain {
   position:fixed;top:0;left:0;width:100%;height:100%;
   pointer-events:none;z-index:200;overflow:hidden;

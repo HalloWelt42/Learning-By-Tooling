@@ -60,7 +60,7 @@ Jede Antwort verweist auf ihre Frage:
 ````
 ```
 A-001 | Grundlagen -> K-001
-API steht fuer Application Programming Interface.
+API steht für Application Programming Interface.
 Es ist eine Schnittstelle über die Programme
 miteinander kommunizieren.
 ```
@@ -136,7 +136,7 @@ Kopiere diesen Text und passe ihn an dein Thema an:
 ```
 Erstelle 20 Lernkarten zum Thema "[DEIN THEMA]".
 
-Nutze dieses Format fuer jede Frage:
+Nutze dieses Format für jede Frage:
 
 ---
 
@@ -150,7 +150,7 @@ K-001 | GB
 Regeln:
 - Nummeriere fortlaufend: K-001, K-002, K-003 usw.
 - Nutze diese Kategorien als vollen Namen nach dem Pipe-Zeichen:
-  Grundlagen, Theorie, Praxis, Verfahren, Pruefung, Vertiefung, Allgemein
+  Grundlagen, Theorie, Praxis, Verfahren, Prüfung, Vertiefung, Allgemein
 - Fragen sollen klar und eindeutig beantwortbar sein
 - Mische leichte und schwere Fragen
 - Keine Multiple-Choice -- offene Fragen
@@ -161,7 +161,7 @@ Regeln:
 Wenn du die Fragen hast, nutze diesen Prompt:
 
 ```
-Erstelle zu jeder der folgenden Fragen eine praezise Antwort.
+Erstelle zu jeder der folgenden Fragen eine präzise Antwort.
 
 Nutze dieses Format:
 
@@ -175,14 +175,14 @@ A-001 | GB -> K-001
 ---
 
 Regeln:
-- A-Nummer = K-Nummer der zugehoerigen Frage
-- Antworten sollen knapp aber vollstaendig sein
+- A-Nummer = K-Nummer der zugehörigen Frage
+- Antworten sollen knapp aber vollständig sein
 - Keine Einleitungen wie "Die Antwort lautet..."
 - Direkt zur Sache
 
 Hier sind die Fragen:
 
-[FRAGEN HIER EINFUEGEN]
+[FRAGEN HIER EINFÜGEN]
 ```
 
 ### 3. Prompt für Lernmaterial
@@ -193,23 +193,23 @@ Optional kannst du die KI auch bitten, ein Begleitdokument zu erstellen:
 Schreibe einen kompakten Lehrtext zum Thema "[DEIN THEMA]".
 
 Regeln:
-- Maximal 2000 Woerter
-- Strukturiere mit Ueberschriften
-- Erklaere die wichtigsten Konzepte
+- Maximal 2000 Wörter
+- Strukturiere mit Überschriften
+- Erkläre die wichtigsten Konzepte
 - Nutze Beispiele
 - Kein Markdown-Overkill, halte es lesbar
-- Der Text dient als Nachschlagewerk fuer die Lernkarten
+- Der Text dient als Nachschlagewerk für die Lernkarten
 
 Speichere den Text als .md Datei.
 ```
 
-### 4. Qualitaet pruefen
+### 4. Qualität prüfen
 
 Wichtig: Lies die generierten Inhalte durch!
-Die KI kann Fehler machen. Pruefe besonders:
+Die KI kann Fehler machen. Prüfe besonders:
 - Sind die Fakten korrekt?
 - Sind die Antworten eindeutig?
-- Gibt es Widersprueche zwischen Fragen und Antworten?
+- Gibt es Widersprüche zwischen Fragen und Antworten?
 - Ist die Schwierigkeit angemessen?
 
 ### 5. ZIP bauen und hochladen
@@ -223,14 +223,14 @@ Hochladen: In der App auf "Lernpakete" -> "Paket aus ZIP installieren".
 
 ---
 
-## Tipps fuer gute Lernkarten
+## Tipps für gute Lernkarten
 
 1. **Eine Frage, ein Konzept** -- nicht mehrere Themen in eine Frage packen
-2. **Konkret fragen** -- "Was ist X?" statt "Erklaere X"
+2. **Konkret fragen** -- "Was ist X?" statt "Erkläre X"
 3. **Schwierigkeit mischen** -- leichte Einstiegsfragen und anspruchsvolle Vertiefung
 4. **Praxisbezug** -- "Wann nutzt man X?" ist besser als "Definiere X"
 5. **Keine Ja/Nein-Fragen** -- die sind zu einfach zu raten
-6. **Antworten knapp halten** -- 1-5 Saetze, kein Roman
+6. **Antworten knapp halten** -- 1-5 Sätze, kein Roman
 
 ---
 
@@ -242,5 +242,5 @@ Hochladen: In der App auf "Lernpakete" -> "Paket aus ZIP installieren".
 [ ] Jede Frage hat genau eine Antwort
 [ ] Keine doppelten Karten-Nummern
 [ ] ZIP-Datei erstellt mit allen Dateien
-[ ] Inhalte auf Korrektheit geprueft
+[ ] Inhalte auf Korrektheit geprüft
 ```

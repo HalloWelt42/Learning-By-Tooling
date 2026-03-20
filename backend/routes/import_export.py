@@ -35,7 +35,7 @@ def list_bundles(user: dict = Depends(get_current_user)):
     conn.close()
     for b in bundles:
         b["installed"] = b["name"] in installed
-        # Karten und Kategorien aus Fragen-Datei zaehlen
+        # Karten und Kategorien aus Fragen-Datei zählen
         files = b.get("files", {})
         fragen_file = BUNDLES_PATH / (files.get("questions") or b.get("fragen_file", ""))
         if fragen_file.exists():
@@ -291,7 +291,7 @@ async def import_zip(
 # -- Markdown Import -----------------------------------------------------------
 
 def _parse_markdown(fragen: str, antworten: str):
-    """Parse Markdown-Karten und gibt strukturierte Daten zurueck."""
+    """Parse Markdown-Karten und gibt strukturierte Daten zurück."""
     card_pat = re.compile(r"```\s*\n(K-\d+)\s*\|\s*([^\n]+?)\s*\n([\s\S]*?)```", re.MULTILINE)
     ans_pat  = re.compile(r"```\s*\n(A-\d+)\s*\|[^\n]*\n([\s\S]*?)```",         re.MULTILINE)
     questions = {m.group(1): (resolve_category(m.group(2)), m.group(3).strip()) for m in card_pat.finditer(fragen)}
@@ -301,7 +301,7 @@ def _parse_markdown(fragen: str, antworten: str):
 
 @router.post("/api/import/preview")
 def import_preview(data: MarkdownImport, user: dict = Depends(get_current_user)):
-    """Parsed Markdown und gibt Vorschau zurueck ohne zu importieren."""
+    """Parsed Markdown und gibt Vorschau zurück ohne zu importieren."""
     questions, answers = _parse_markdown(data.fragen, data.antworten)
     conn = get_db()
     existing_ids = set()

@@ -1,4 +1,4 @@
-"""helpers.py -- Geteilte Hilfsfunktionen fuer alle Router."""
+"""helpers.py -- Geteilte Hilfsfunktionen für alle Router."""
 
 import re
 import json
@@ -9,7 +9,7 @@ from services import chunk_text, extract_text_from_file
 
 
 def next_card_id(conn) -> str:
-    """Naechste freie Karten-ID im Format K-001."""
+    """Nächste freie Karten-ID im Format K-001."""
     row = conn.execute("SELECT card_id FROM cards ORDER BY id DESC LIMIT 1").fetchone()
     if row:
         m = re.search(r"(\d+)$", row["card_id"])
@@ -20,7 +20,7 @@ def next_card_id(conn) -> str:
 
 
 def rebuild_fts(conn):
-    """FTS-Index fuer Karten neu aufbauen."""
+    """FTS-Index für Karten neu aufbauen."""
     conn.execute("INSERT INTO cards_fts(cards_fts) VALUES('rebuild')")
     conn.commit()
 
@@ -34,7 +34,7 @@ _CAT_NAME_MAP = {
 
 
 def resolve_category(raw: str) -> str:
-    """Akzeptiert Code (GB) oder vollen Namen (Grundlagen) und gibt den Code zurueck."""
+    """Akzeptiert Code (GB) oder vollen Namen (Grundlagen) und gibt den Code zurück."""
     clean = raw.strip().upper()
     if len(clean) == 2:
         return clean  # Schon ein Code

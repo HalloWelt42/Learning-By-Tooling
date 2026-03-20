@@ -110,7 +110,7 @@
       icon: 'fa-star',
       color: '#FFD700',
       title: '6. XP und Gamification',
-      sub: 'Punkte sammeln, Combos aufbauen, Sounds geniessen',
+      sub: 'Punkte sammeln, Combos aufbauen, Sounds genießen',
       content: `Jede richtige Antwort bringt XP. Combos (mehrere richtige Antworten in Folge) erhöhen den Multiplikator. Bei richtiger Antwort dreht sich eine Goldmünze und es erklingt ein Coin-Sound.`,
       steps: [
         'XP werden automatisch bei jeder Session vergeben (10 XP pro richtige Antwort)',
@@ -458,7 +458,7 @@ HTTP 200 mit {"status":"ok"}
         </div>
       </section>
 
-      <!-- Waehrung -->
+      <!-- Währung -->
       <section class="rw-section">
         <div class="rw-section-head">
           <i class="fa-solid fa-coins" style="color:#FFD700"></i>
@@ -558,7 +558,7 @@ HTTP 200 mit {"status":"ok"}
 
         <p class="rw-intro">{ACHIEVEMENTS.length} Abzeichen mit je {ACHIEVEMENTS[0]?.thresholds.length || 30} Stufen. Pro Gürtelfarbe gibt es 3 Sterne (Bronze, Silber, Gold).</p>
 
-        <!-- Guertelfarben -->
+        <!-- Gürtelfarben -->
         <div class="rw-card">
           <div class="rw-card-title">Gürtelfarben (10 Stufen)</div>
           <div class="rw-belt-grid">
@@ -998,7 +998,7 @@ HTTP 200 mit {"status":"ok"}
 }
 .rw-rule i { flex-shrink: 0; margin-top: 2px; font-size: 11px; }
 
-/* Muenzen */
+/* Münzen */
 .rw-coins { display: flex; gap: 12px; flex-wrap: wrap; }
 .rw-coin-card {
   display: flex; align-items: center; gap: 12px;
@@ -1044,7 +1044,7 @@ HTTP 200 mit {"status":"ok"}
 }
 .rw-verdict-text { font-size: 12px; font-weight: 600; }
 
-/* Guertelfarben */
+/* Gürtelfarben */
 .rw-belt-grid {
   display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px;
 }

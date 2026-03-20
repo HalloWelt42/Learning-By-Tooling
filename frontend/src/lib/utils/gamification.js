@@ -1,11 +1,11 @@
 /**
- * gamification.js -- Zentrale Konstanten fuer alle Belohnungssysteme
+ * gamification.js -- Zentrale Konstanten für alle Belohnungssysteme
  *
  * Single Source of Truth: Wenn hier Werte geaendert werden,
  * passt sich die gesamte App an (Guide, Progress, Learn, SessionBar).
  *
- * Backend-Spiegel: Die Schwellenwerte muessen mit backend/routes/sessions.py
- * uebereinstimmen. Bei Aenderungen BEIDE Stellen aktualisieren.
+ * Backend-Spiegel: Die Schwellenwerte müssen mit backend/routes/sessions.py
+ * übereinstimmen. Bei Änderungen BEIDE Stellen aktualisieren.
  */
 
 // -- Guertelfarben (10 Farben, 3 Sterne pro Farbe = 30 Stufen) ---------------

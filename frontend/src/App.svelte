@@ -30,7 +30,7 @@
   let sessionTimer = $state(null)
   let sessionElapsed = $state(0)
 
-  // Animiertes Hochzaehlen der Sidebar-XP
+  // Animiertes Hochzählen der Sidebar-XP
   let sidebarXp = tweened(0, { duration: 2800, easing: cubicOut })
   let sidebarStreak = tweened(0, { duration: 1200, easing: cubicOut })
 

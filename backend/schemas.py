@@ -68,13 +68,13 @@ class ReviewSubmit(BaseModel):
     use_ai:      Optional[bool] = False
 
 class SessionReviewNext(BaseModel):
-    """Review der aktuellen Karte + naechste Karte holen."""
-    result:      str            # correct | wrong | skip | unknown (fuer KI)
+    """Review der aktuellen Karte + nächste Karte holen."""
+    result:      str            # correct | wrong | skip | unknown (für KI)
     user_answer: Optional[str]  = None
     use_ai:      Optional[bool] = False
-    srs_quality: Optional[int]  = None  # 0-5 fuer SRS-Modus
+    srs_quality: Optional[int]  = None  # 0-5 für SRS-Modus
     time_ms:     Optional[int]  = 0     # Antwortzeit in Millisekunden
-    mc_used:     Optional[bool] = None  # MC-Optionen tatsaechlich angezeigt?
+    mc_used:     Optional[bool] = None  # MC-Optionen tatsächlich angezeigt?
 
 class SRSReview(BaseModel):
     card_id: str

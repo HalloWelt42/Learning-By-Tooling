@@ -53,7 +53,7 @@
   async function loadDrafts()    { drafts    = await apiGet(`/api/packages/${pkg.id}/drafts`).catch(() => []) }
   async function loadDocuments() { documents = await apiGet(`/api/packages/${pkg.id}/documents`).catch(() => []) }
 
-  // -- Entwuerfe --
+  // -- Entwürfe --
   let pending = $derived(drafts.filter(d => d.status === 'pending'))
 
   async function approveDraft(d) {
@@ -101,7 +101,7 @@
   function fmtSize(b) { return b < 1024 ? `${b}B` : b < 1048576 ? `${(b / 1024).toFixed(1)}KB` : `${(b / 1048576).toFixed(1)}MB` }
 
   async function handleUpload() {
-    if (!uploadFile) { showToast('Datei auswaehlen', 'error'); return }
+    if (!uploadFile) { showToast('Datei auswählen', 'error'); return }
     uploadState = 'uploading'; uploadMsg = 'Datei wird verarbeitet...'
     try {
       const fd = new FormData()
@@ -134,7 +134,7 @@
       { label: 'Abschnitte vorbereiten', status: 'running' },
       { label: `${cnt} Abschnitte senden`, status: 'pending' },
       { label: 'KI generiert Fragen und Antworten', status: 'pending' },
-      { label: 'Entwuerfe speichern', status: 'pending' },
+      { label: 'Entwürfe speichern', status: 'pending' },
     ]
     genState = 'running'; genSummary = null
     const tick = ms => new Promise(r => setTimeout(r, ms))
@@ -153,7 +153,7 @@
       genState = 'done'; genSummary = r
       await loadDrafts(); await loadDocuments(); await loadGlobal()
       selectedChunks = new Set()
-      showToast(`${r.created} Entwuerfe erstellt`, 'success')
+      showToast(`${r.created} Entwürfe erstellt`, 'success')
       section = 'drafts'
     } catch(e) {
       genSteps = genSteps.map(s => s.status === 'running' ? { ...s, status: 'error' } : s)
@@ -170,7 +170,7 @@
     await apiDelete(`/api/documents/${doc.id}`)
     if (selectedDoc?.id === doc.id) { selectedDoc = null; chunks = [] }
     await loadDocuments(); await loadGlobal()
-    showToast('Dokument geloescht', 'info')
+    showToast('Dokument gelöscht', 'info')
   }
 
   function toggleChunk(id) { const s = new Set(selectedChunks); s.has(id) ? s.delete(id) : s.add(id); selectedChunks = s }
@@ -216,7 +216,7 @@
   <!-- Sub-Navigation -->
   <div class="ws-nav">
     {#each [
-      ['drafts',    'fa-pen-to-square',       'Entwuerfe',     pending.length],
+      ['drafts',    'fa-pen-to-square',       'Entwürfe',     pending.length],
       ['create',    'fa-plus',                'Neue Karte',    0],
       ['documents', 'fa-wand-magic-sparkles', 'KI-Generierung', 0],
       ['mc',        'fa-list-check',          'MC-Optionen',   0],
@@ -237,8 +237,8 @@
         {#if pending.length > 0}
           <div class="ws-section-hd">
             <div>
-              <div class="ws-section-title">KI-Entwuerfe pruefen</div>
-              <div class="ws-section-sub">{pending.length} Entwuerfe warten auf Freigabe</div>
+              <div class="ws-section-title">KI-Entwürfe prüfen</div>
+              <div class="ws-section-sub">{pending.length} Entwürfe warten auf Freigabe</div>
             </div>
             <button class="btn btn-ok btn-sm" onclick={approveAll}>
               <i class="fa-solid fa-check-double"></i> Alle freigeben
@@ -298,7 +298,7 @@
         {:else}
           <div class="empty-state">
             <i class="fa-solid fa-inbox"></i>
-            <p>Keine offenen Entwuerfe</p>
+            <p>Keine offenen Entwürfe</p>
             <div class="empty-actions">
               <button class="btn btn-ghost btn-sm" onclick={() => section = 'documents'}>
                 <i class="fa-solid fa-wand-magic-sparkles"></i> KI-Karten generieren
@@ -356,7 +356,7 @@
         <div class="ws-section-hd">
           <div>
             <div class="ws-section-title">KI-Kartengenerierung</div>
-            <div class="ws-section-sub">Dokument hochladen -- KI generiert Lernkarten-Entwuerfe</div>
+            <div class="ws-section-sub">Dokument hochladen -- KI generiert Lernkarten-Entwürfe</div>
           </div>
           <button class="btn btn-primary btn-sm" onclick={() => { showUpload = !showUpload; uploadState = 'idle' }}>
             <i class="fa-solid fa-upload"></i> Hochladen
@@ -391,7 +391,7 @@
                 </label>
                 <div class="upload-fields">
                   <label class="field-label">Titel<input type="text" bind:value={uploadTitle} placeholder="Dokumenttitel..."></label>
-                  <label class="field-label">Kategorie fuer Karten
+                  <label class="field-label">Kategorie für Karten
                     <select bind:value={uploadCat}>
                       {#each $categories as cat}<option value={cat.code}>{cat.name}</option>{/each}
                     </select>
@@ -431,9 +431,9 @@
                   <div class="di-body">
                     <div class="di-title">{doc.title}</div>
                     <div class="di-meta">{fmtSize(doc.filesize)} -- {doc.chunk_count} Abschnitte</div>
-                    {#if doc.card_count > 0}<span class="di-badge">{doc.card_count} Entwuerfe</span>{/if}
+                    {#if doc.card_count > 0}<span class="di-badge">{doc.card_count} Entwürfe</span>{/if}
                   </div>
-                  <button class="ib sm err" title="Dokument loeschen" onclick={e => { e.stopPropagation(); deleteDoc(doc) }}>
+                  <button class="ib sm err" title="Dokument löschen" onclick={e => { e.stopPropagation(); deleteDoc(doc) }}>
                     {#if confirmDeleteDoc === doc.id}Wirklich?{:else}<i class="fa-solid fa-trash"></i>{/if}
                   </button>
                 </div>
@@ -464,7 +464,7 @@
                       <span class="gen-panel-title">KI-Generierung</span>
                       <span class="gen-status gen-{genState}">
                         <i class="fa-solid {genState === 'running' ? 'fa-spinner fa-spin' : genState === 'done' ? 'fa-check' : 'fa-xmark'}"></i>
-                        {genState === 'running' ? 'Laeuft' : genState === 'done' ? 'Fertig' : 'Fehler'}
+                        {genState === 'running' ? 'Läuft' : genState === 'done' ? 'Fertig' : 'Fehler'}
                       </span>
                     </div>
                     <div class="gen-steps">
@@ -484,7 +484,7 @@
                     </div>
                     {#if genSummary}
                       <div class="gen-result">
-                        <span class="text-ok"><i class="fa-solid fa-circle-check"></i> {genSummary.created} Entwuerfe</span>
+                        <span class="text-ok"><i class="fa-solid fa-circle-check"></i> {genSummary.created} Entwürfe</span>
                         <span class="text-2"><i class="fa-solid fa-layer-group"></i> {genSummary.chunks_processed} Abschnitte</span>
                       </div>
                     {/if}
@@ -517,14 +517,14 @@
             {:else}
               <div class="doc-detail-col doc-detail-empty">
                 <i class="fa-solid fa-file-lines"></i>
-                <p>Dokument auswaehlen</p>
+                <p>Dokument auswählen</p>
               </div>
             {/if}
           </div>
         {:else if !showUpload}
           <div class="empty-state">
             <i class="fa-solid fa-file-circle-plus"></i>
-            <p>Noch keine Dokumente -- lade eins hoch fuer die KI-Generierung</p>
+            <p>Noch keine Dokumente -- lade eins hoch für die KI-Generierung</p>
           </div>
         {/if}
       </div>
@@ -535,7 +535,7 @@
         <div class="ws-section-hd">
           <div>
             <div class="ws-section-title">Multiple-Choice Optionen</div>
-            <div class="ws-section-sub">KI-generierte Antwortoptionen pruefen und verwalten</div>
+            <div class="ws-section-sub">KI-generierte Antwortoptionen prüfen und verwalten</div>
           </div>
           <div class="ws-section-actions">
             <button class="btn btn-primary btn-sm" onclick={generateMcBatch}
@@ -600,7 +600,7 @@
               {:else}
                 <div class="empty-state">
                   <i class="fa-solid fa-list-check"></i>
-                  <p>Karte auswaehlen</p>
+                  <p>Karte auswählen</p>
                 </div>
               {/if}
             </div>
@@ -699,7 +699,7 @@
 .ws-section-sub { font-size: 11px; color: var(--text2); margin-top: 2px; }
 .ws-section-actions { display: flex; gap: 8px; }
 
-/* ── Entwuerfe ────────────────────────────────────────────────── */
+/* ── Entwürfe ────────────────────────────────────────────────── */
 .drafts-list { display: flex; flex-direction: column; gap: 8px; max-width: 700px; }
 
 .draft-card { margin-bottom: 0; }

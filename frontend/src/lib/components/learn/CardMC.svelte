@@ -1,8 +1,8 @@
 <script>
   /**
    * CardMC -- Multiple Choice: 4 Optionen, Auto-Bewertung
-   * Kein Fallback: MC-Optionen muessen vorhanden sein.
-   * Wenn nicht, wird die Karte uebersprungen.
+   * Kein Fallback: MC-Optionen müssen vorhanden sein.
+   * Wenn nicht, wird die Karte übersprungen.
    */
   import { apiGet } from '../../utils/api.js'
   import { showToast } from '../../stores/index.js'

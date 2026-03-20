@@ -31,7 +31,7 @@ def me(user: dict = Depends(get_current_user)):
     conn = get_db()
     row = conn.execute("SELECT id, email, display_name, is_admin, password_hash FROM users WHERE id=?", (user["id"],)).fetchone()
     conn.close()
-    # Pruefe ob Standard-Passwort aktiv (Hash des Worts "admin")
+    # Prüfe ob Standard-Passwort aktiv (Hash des Worts "admin")
     is_default_pw = False
     if row:
         from auth import _hash_password

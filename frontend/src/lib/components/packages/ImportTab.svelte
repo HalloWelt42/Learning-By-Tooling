@@ -34,14 +34,14 @@
     let antworten = importAntwt
 
     if (inputMode === 'file') {
-      if (!fragenFile || !antwortenFile) { showToast('Beide Dateien auswaehlen', 'error'); return }
+      if (!fragenFile || !antwortenFile) { showToast('Beide Dateien auswählen', 'error'); return }
       fragen = await readFile(fragenFile)
       antworten = await readFile(antwortenFile)
       importFragen = fragen
       importAntwt = antworten
     }
 
-    if (!fragen.trim() || !antworten.trim()) { showToast('Beide Inhalte muessen vorhanden sein', 'error'); return }
+    if (!fragen.trim() || !antworten.trim()) { showToast('Beide Inhalte müssen vorhanden sein', 'error'); return }
 
     previewing = true
     try {
@@ -66,7 +66,7 @@
     if (importable.length === 0) { showToast('Keine Karten zum Importieren', 'warn'); return }
     importing = true
     try {
-      // Filter: nur die gewaehlten Karten senden
+      // Filter: nur die gewählten Karten senden
       const selectedIds = new Set(importable.map(c => c.card_id))
       const fragenLines = importFragen.split('```')
       const antwortenLines = importAntwt.split('```')
@@ -121,7 +121,7 @@
       <div class="imp-result-text">
         <strong>{importResult.created}</strong> Karten importiert
         {#if importResult.skipped > 0}
-          <span class="imp-result-skip">{importResult.skipped} uebersprungen</span>
+          <span class="imp-result-skip">{importResult.skipped} übersprungen</span>
         {/if}
       </div>
     </div>

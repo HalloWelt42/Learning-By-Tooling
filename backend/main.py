@@ -34,7 +34,7 @@ APP_VERSION = _read_version()
 
 app = FastAPI(title="Learning-By-Tooling", version=APP_VERSION)
 
-# CORS -- grosszuegig fuer die Entwicklungsphase
+# CORS -- großzügig für die Entwicklungsphase
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -66,7 +66,7 @@ app.include_router(admin_router)
 app.include_router(import_export_router)
 
 
-# -- Health (oeffentlich) ------------------------------------------------------
+# -- Health (öffentlich) ------------------------------------------------------
 
 @app.get("/api/health")
 def health():

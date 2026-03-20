@@ -44,7 +44,7 @@
 
   let totalCards = $derived(cards.length)
   let correctRate = $derived(() => {
-    // Placeholder -- stats koennten spaeter geladen werden
+    // Placeholder -- stats könnten später geladen werden
     return null
   })
 </script>
@@ -136,19 +136,19 @@
         </div>
         {#if aiState === 'idle' && $aiOnline}
           <button class="btn btn-ghost btn-sm" onclick={() => getAI(selectedCard)}>
-            <i class="fa-solid fa-wand-magic-sparkles"></i> KI-Erklaerung
+            <i class="fa-solid fa-wand-magic-sparkles"></i> KI-Erklärung
           </button>
         {:else if aiState === 'loading'}
           <div class="ai-load-indicator">
             <i class="fa-solid fa-spinner fa-spin"></i>
             <div>
-              <div class="ai-load-text">KI generiert Erklaerung...</div>
+              <div class="ai-load-text">KI generiert Erklärung...</div>
               <div class="ai-bar"><div class="ai-bar-fill"></div></div>
             </div>
           </div>
         {:else if aiText}
           <div class="detail-section">
-            <div class="section-label text-ac2">KI-Erklaerung</div>
+            <div class="section-label text-ac2">KI-Erklärung</div>
             <div class="detail-ai markdown">{@html marked(aiText)}</div>
           </div>
         {/if}
@@ -157,7 +157,7 @@
     {:else}
       <div class="empty-state">
         <i class="fa-solid fa-layer-group"></i>
-        <p>Karte auswaehlen</p>
+        <p>Karte auswählen</p>
       </div>
     {/if}
   </div>
