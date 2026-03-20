@@ -12,13 +12,15 @@
   let tab          = $state('overview')
   let achievements = $state([])
   let history      = $state([])
+  let heatmapRaw   = $state([])
 
   onMount(async () => {
-    await Promise.all([loadAch(), loadHist(), loadStreak(), loadXp()])
+    await Promise.all([loadAch(), loadHist(), loadStreak(), loadXp(), loadHeatmap()])
   })
 
-  async function loadAch()  { achievements = await apiGet('/api/achievements').catch(() => []) }
-  async function loadHist() { history      = await apiGet('/api/history?limit=500').catch(() => []) }
+  async function loadAch()     { achievements = await apiGet('/api/achievements').catch(() => []) }
+  async function loadHist()    { history      = await apiGet('/api/history?limit=500').catch(() => []) }
+  async function loadHeatmap() { heatmapRaw   = await apiGet('/api/stats/heatmap?days=365').catch(() => []) }
 
   let totalLevels = $derived(achievements.reduce((s, a) => s + a.level, 0))
   let maxLevel    = $derived(achievements.length * 30)
@@ -35,6 +37,86 @@
     return new Date(iso).toLocaleString('de-DE', { day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit' })
   }
   function pct(c, t) { return t > 0 ? Math.round(c/t*100) : 0 }
+  function fmtIsoDE(iso) {
+    if (!iso) return ''
+    const [y, m, d] = iso.split('-')
+    return `${d}.${m}.${y}`
+  }
+
+  // -- Heatmap-Kalender (Jahres- + Monatsansicht) --
+  let heatMap = $derived(new Map(heatmapRaw.map(h => [h.date, h.count])))
+  let calDaysLearned = $derived(heatMap.size)
+
+  // GitHub-Farbstufen: 0=leer, 1=wenig, 2=mittel, 3=viel, 4=sehr viel
+  function heatLevel(count) {
+    if (!count || count <= 0) return 0
+    if (count <= 5) return 1
+    if (count <= 15) return 2
+    if (count <= 30) return 3
+    return 4
+  }
+
+  // Jahreskalender: 365 Tage als 52-53 Wochen x 7 Tage
+  let yearGrid = $derived.by(() => {
+    const today = new Date()
+    const weeks = []
+    const start = new Date(today)
+    start.setDate(start.getDate() - 364)
+    while (start.getDay() !== 1) start.setDate(start.getDate() - 1)
+
+    let d = new Date(start)
+    let week = []
+    while (d <= today) {
+      const iso = d.toISOString().slice(0, 10)
+      const cnt = heatMap.get(iso) || 0
+      week.push({ date: iso, level: heatLevel(cnt), count: cnt, future: false })
+      if (week.length === 7) { weeks.push(week); week = [] }
+      d.setDate(d.getDate() + 1)
+    }
+    while (week.length > 0 && week.length < 7) {
+      week.push({ date: '', level: 0, count: 0, future: true })
+    }
+    if (week.length) weeks.push(week)
+    return weeks
+  })
+
+  // Monatskalender: aktueller Monat
+  let monthGrid = $derived.by(() => {
+    const today = new Date()
+    const year = today.getFullYear()
+    const month = today.getMonth()
+    const firstDay = new Date(year, month, 1)
+    const lastDay = new Date(year, month + 1, 0)
+    let startPad = (firstDay.getDay() + 6) % 7
+    const days = []
+    for (let i = 0; i < startPad; i++) days.push({ date: '', pad: true })
+    for (let d = 1; d <= lastDay.getDate(); d++) {
+      const iso = `${year}-${String(month+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`
+      const cnt = heatMap.get(iso) || 0
+      days.push({ date: iso, day: d, level: heatLevel(cnt), count: cnt, today: d === today.getDate(), pad: false })
+    }
+    return days
+  })
+
+  let monthName = $derived(new Date().toLocaleString('de-DE', { month: 'long', year: 'numeric' }))
+
+  // Ausgewaehlter Tag im Kalender
+  let selectedDay = $state(null) // { date, count }
+  let selectedDaySessions = $state([])
+
+  async function selectCalDay(date, count) {
+    if (!date || !count) { selectedDay = null; selectedDaySessions = []; return }
+    if (selectedDay?.date === date) { selectedDay = null; selectedDaySessions = []; return }
+    selectedDay = { date, count }
+    // Sessions des Tages aus History filtern
+    selectedDaySessions = history.filter(s => s.started_at && s.started_at.startsWith(date))
+  }
+
+  function fmtDayLabel(iso) {
+    if (!iso) return ''
+    const d = new Date(iso + 'T12:00:00')
+    return d.toLocaleDateString('de-DE', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
+  }
 </script>
 
 <div class="pg-page">
@@ -59,6 +141,85 @@
     <!-- Uebersicht -->
     {#if tab === 'overview'}
       <div class="ov-grid">
+
+        <!-- Lernkalender -->
+        <div class="ov-card ov-cal">
+          <div class="ov-card-head">
+            <i class="fa-solid fa-calendar-days"></i> Lernkalender
+            <span class="ov-cal-stat mono">{calDaysLearned} Tage</span>
+          </div>
+          <div class="ov-cal-split">
+            <!-- Jahresansicht -->
+            <div class="ov-cal-year">
+              <div class="ov-cal-year-grid">
+                {#each yearGrid as week}
+                  <div class="ov-cal-week">
+                    {#each week as day}
+                      {#if day.future}
+                        <span class="ov-cal-dot ov-cal-dot-empty"></span>
+                      {:else}
+                        <span
+                          class="ov-cal-dot ov-cal-lv{day.level}"
+                          class:ov-cal-dot-sel={selectedDay?.date === day.date}
+                          title="{fmtIsoDE(day.date)}{day.count ? ': ' + day.count + ' Reviews' : ''}"
+                          role="button"
+                          tabindex="-1"
+                          onclick={() => selectCalDay(day.date, day.count)}
+                        ></span>
+                      {/if}
+                    {/each}
+                  </div>
+                {/each}
+              </div>
+              <!-- Tag-Detail (direkt unter den Punkten) -->
+              {#if selectedDay}
+                {@const ds = selectedDaySessions}
+                {@const totalCorrect = ds.reduce((s, x) => s + (x.correct || 0), 0)}
+                {@const totalCards = ds.reduce((s, x) => s + (x.total_cards || 0), 0)}
+                {@const totalXp = ds.reduce((s, x) => s + (x.xp_earned || 0), 0)}
+                {@const avgPct = pct(totalCorrect, totalCards)}
+                <div class="ov-cal-detail">
+                  <span class="ov-cal-detail-date">{fmtDayLabel(selectedDay.date)}</span>
+                  <div class="ov-cal-detail-stats">
+                    <span class="ov-cal-ds"><i class="fa-solid fa-book-open"></i> <strong class="mono">{ds.length}</strong> Sessions</span>
+                    <span class="ov-cal-ds"><i class="fa-solid fa-check" style="color:var(--ok)"></i> <strong class="mono">{totalCorrect}/{totalCards}</strong></span>
+                    <span class="ov-cal-ds"><i class="fa-solid fa-percent"></i> <strong class="mono" style="color:{avgPct >= 80 ? 'var(--ok)' : avgPct >= 50 ? 'var(--accent)' : 'var(--text2)'}">{avgPct}%</strong></span>
+                    <span class="ov-cal-ds"><i class="fa-solid fa-reply-all"></i> <strong class="mono">{selectedDay.count}</strong> Reviews</span>
+                    {#if totalXp > 0}
+                      <span class="ov-cal-ds"><i class="fa-solid fa-bolt" style="color:#FFD700"></i> <strong class="mono">{totalXp}</strong> XP</span>
+                    {/if}
+                  </div>
+                </div>
+              {/if}
+            </div>
+            <!-- Monatsansicht -->
+            <div class="ov-cal-month">
+              <div class="ov-cal-month-title">{monthName}</div>
+              <div class="ov-cal-month-head">
+                {#each ['Mo','Di','Mi','Do','Fr','Sa','So'] as wd}
+                  <span class="ov-cal-wd">{wd}</span>
+                {/each}
+              </div>
+              <div class="ov-cal-month-grid">
+                {#each monthGrid as day}
+                  {#if day.pad}
+                    <span class="ov-cal-md"></span>
+                  {:else}
+                    <span
+                      class="ov-cal-md ov-cal-lv{day.level}"
+                      class:ov-cal-md-today={day.today}
+                      class:ov-cal-md-sel={selectedDay?.date === day.date}
+                      title="{fmtIsoDE(day.date)}{day.count ? ': ' + day.count + ' Reviews' : ''}"
+                      role="button"
+                      tabindex="-1"
+                      onclick={() => selectCalDay(day.date, day.count)}
+                    >{day.day}</span>
+                  {/if}
+                {/each}
+              </div>
+            </div>
+          </div>
+        </div>
 
         <!-- XP-Karte -->
         <div class="ov-card ov-xp">
@@ -422,6 +583,61 @@
 .ov-badge-item { display: flex; flex-direction: column; align-items: center; gap: 2px; }
 .ov-badge-lvl { font-size: 10px; color: var(--text3); }
 .ov-badge-empty { font-size: 12px; color: var(--text3); }
+
+/* Lernkalender */
+.ov-cal { grid-column: 1 / -1; }
+.ov-cal-stat { margin-left: auto; font-size: 11px; font-weight: 600; color: var(--accent); text-transform: none; letter-spacing: 0; }
+.ov-cal-split { display: flex; gap: 16px; align-items: flex-start; }
+
+/* Jahresansicht (links, kompakt) */
+.ov-cal-year { flex: 1; min-width: 0; overflow-x: auto; }
+.ov-cal-year-grid { display: flex; gap: 2px; }
+.ov-cal-week { display: flex; flex-direction: column; gap: 2px; }
+.ov-cal-dot {
+  width: 8px; height: 8px; border-radius: 2px;
+  background: var(--bg3); flex-shrink: 0;
+}
+.ov-cal-dot-empty { background: transparent; }
+.ov-cal-dot:not(.ov-cal-dot-empty) { cursor: pointer; }
+.ov-cal-dot:not(.ov-cal-dot-empty):hover { outline: 1px solid var(--text2); }
+.ov-cal-dot-sel { outline: 1.5px solid var(--accent) !important; }
+
+/* GitHub-Farbstufen (5 Stufen: 0=leer, 1-4=Intensitaet) */
+.ov-cal-lv0 { background: var(--bg3); }
+.ov-cal-lv1 { background: color-mix(in srgb, var(--accent) 30%, var(--bg3)); }
+.ov-cal-lv2 { background: color-mix(in srgb, var(--accent) 55%, var(--bg3)); }
+.ov-cal-lv3 { background: color-mix(in srgb, var(--accent) 80%, var(--bg3)); }
+.ov-cal-lv4 { background: var(--accent); }
+
+/* Monatsansicht (rechts) */
+.ov-cal-month { flex-shrink: 0; width: 170px; }
+.ov-cal-month-title { font-size: 11px; font-weight: 600; color: var(--text1); margin-bottom: 6px; }
+.ov-cal-month-head { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; margin-bottom: 2px; }
+.ov-cal-wd { font-size: 8px; font-weight: 700; color: var(--text3); text-align: center; text-transform: uppercase; }
+.ov-cal-month-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; }
+.ov-cal-md {
+  aspect-ratio: 1; display: flex; align-items: center; justify-content: center;
+  font-size: 9px; font-weight: 600; color: var(--text3); border-radius: 2px;
+}
+.ov-cal-md.ov-cal-lv1 { background: color-mix(in srgb, var(--accent) 30%, var(--bg3)); color: var(--text1); }
+.ov-cal-md.ov-cal-lv2 { background: color-mix(in srgb, var(--accent) 55%, var(--bg3)); color: #fff; }
+.ov-cal-md.ov-cal-lv3 { background: color-mix(in srgb, var(--accent) 80%, var(--bg3)); color: #fff; }
+.ov-cal-md.ov-cal-lv4 { background: var(--accent); color: #fff; }
+.ov-cal-md { cursor: pointer; }
+.ov-cal-md:hover { outline: 1px solid var(--text2); }
+.ov-cal-md-today { box-shadow: inset 0 0 0 1px var(--text1); }
+.ov-cal-md-sel { outline: 1.5px solid var(--accent) !important; }
+
+/* Tag-Detail */
+.ov-cal-detail {
+  border-top: 1px solid var(--bdr2); padding-top: 12px; margin-top: 10px;
+  display: flex; flex-direction: column; gap: 6px;
+}
+.ov-cal-detail-date { font-size: 12px; font-weight: 600; color: var(--text1); letter-spacing: 0.01em; }
+.ov-cal-detail-stats { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+.ov-cal-ds { font-size: 12px; color: var(--text2); display: flex; align-items: center; gap: 5px; }
+.ov-cal-ds i { font-size: 10px; color: var(--text3); }
+.ov-cal-ds strong { color: var(--text1); }
 
 /* Letzte Sessions (Uebersicht) */
 .ov-session-list { display: flex; flex-direction: column; gap: 0; }
