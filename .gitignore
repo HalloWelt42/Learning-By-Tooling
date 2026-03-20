@@ -20,9 +20,6 @@ uploads/
 # Lernpakete (lokaler Inhalt, nicht im Repo)
 lernpakete/
 
-# Demopakete (lokaler Inhalt, nicht im Repo)
-demo-pakete/
-
 # IDE
 .idea/
 
