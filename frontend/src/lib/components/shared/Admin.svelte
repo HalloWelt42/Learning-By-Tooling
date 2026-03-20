@@ -3,8 +3,9 @@
   import { showToast, packages, authUser } from '../../stores/index.js'
   import { apiGet, apiPost, apiDelete } from '../../utils/api.js'
   import Settings from './Settings.svelte'
+  import AIConfig from './AIConfig.svelte'
 
-  let tab = $state('settings')  // 'settings' | 'users'
+  let tab = $state('settings')  // 'settings' | 'users' | 'ai'
   let users = $state([])
   let showForm = $state(false)
   let form = $state({ email: '', password: '', display_name: '' })
@@ -86,10 +87,15 @@
     <button class="admin-tab" class:active={tab === 'users'} onclick={() => tab = 'users'}>
       <i class="fa-solid fa-users"></i> Benutzer
     </button>
+    <button class="admin-tab" class:active={tab === 'ai'} onclick={() => tab = 'ai'}>
+      <i class="fa-solid fa-robot"></i> KI-Konfiguration
+    </button>
   </div>
 
   {#if tab === 'settings'}
-    <Settings embedded={true} />
+    <Settings embedded={true} onSwitchTab={(t) => tab = t} />
+  {:else if tab === 'ai'}
+    <AIConfig />
   {:else}
   <!-- User-Liste -->
   <div class="card-box" style="max-width:800px">

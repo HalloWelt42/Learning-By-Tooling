@@ -1,8 +1,8 @@
 <script>
   import { userSettings, saveSetting, showToast, authUser } from '../../stores/index.js'
-  import { apiPost, apiPatch, apiGet } from '../../utils/api.js'
+  import { apiPost, apiPatch } from '../../utils/api.js'
 
-  let { embedded = false } = $props()
+  let { embedded = false, onSwitchTab = null } = $props()
 
   let soundEnabled = $state(true)
   let dailyGoal = $state(100)
@@ -17,21 +17,6 @@
   let pwNew2 = $state('')
   let pwBusy = $state(false)
 
-  // KI-Einstellungen
-  let aiTemp = $state(0.3)
-  let aiTempCreative = $state(0.6)
-  let aiTempCardgen = $state(0.4)
-  let aiMaxExplain = $state(250)
-  let aiMaxEvaluate = $state(400)
-  let aiMaxMc = $state(300)
-  let aiMaxHint = $state(150)
-  let aiMaxSummarize = $state(400)
-  let aiMaxCardgen = $state(400)
-  let aiCardsPerChunk = $state(3)
-  let aiCardgenRetries = $state(3)
-  let aiDefaults = $state(null)
-  let aiResetBusy = $state(false)
-
   // Settings aus Store laden
   $effect(() => {
     const s = $userSettings
@@ -39,25 +24,6 @@
     dailyGoal = s.daily_goal ?? 100
     preferredMode = s.preferred_mode ?? 'standard'
     sessionSize = s.session_size ?? 10
-    // KI
-    aiTemp = s.ai_temperature ?? 0.3
-    aiTempCreative = s.ai_temperature_creative ?? 0.6
-    aiTempCardgen = s.ai_temperature_cardgen ?? 0.4
-    aiMaxExplain = s.ai_max_tokens_explain ?? 250
-    aiMaxEvaluate = s.ai_max_tokens_evaluate ?? 400
-    aiMaxMc = s.ai_max_tokens_mc ?? 300
-    aiMaxHint = s.ai_max_tokens_hint ?? 150
-    aiMaxSummarize = s.ai_max_tokens_summarize ?? 400
-    aiMaxCardgen = s.ai_max_tokens_cardgen ?? 400
-    aiCardsPerChunk = s.ai_cards_per_chunk ?? 3
-    aiCardgenRetries = s.ai_cardgen_retries ?? 3
-  })
-
-  // Defaults einmalig laden
-  $effect(() => {
-    if (!aiDefaults) {
-      apiGet('/api/auth/settings/defaults').then(d => aiDefaults = d).catch(() => {})
-    }
   })
 
   $effect(() => {
@@ -65,23 +31,6 @@
       displayName = $authUser.display_name || $authUser.email || ''
     }
   })
-
-  function saveAi(key, value) { saveSetting(key, value) }
-
-  async function resetAiSettings() {
-    aiResetBusy = true
-    try {
-      const s = await apiPost('/api/auth/settings/reset-ai', {})
-      userSettings.set(s)
-      showToast('KI-Einstellungen zurückgesetzt', 'success', 2000)
-    } catch(e) { showToast(e.message, 'error') }
-    aiResetBusy = false
-  }
-
-  function isDefault(key, val) {
-    if (!aiDefaults) return true
-    return aiDefaults[key] === val
-  }
 
   function toggleSound() {
     soundEnabled = !soundEnabled
@@ -242,101 +191,21 @@
       </div>
     </div>
 
-    <!-- KI-Einstellungen -->
-    <div class="settings-card settings-card-wide">
-      <div class="settings-card-hd">
-        <i class="fa-solid fa-brain"></i>
-        <span>KI-Einstellungen</span>
-        <span class="settings-card-hd-badge">LM Studio</span>
-        <button class="btn btn-ghost btn-sm settings-reset-btn" onclick={resetAiSettings} disabled={aiResetBusy}>
-          <i class="fa-solid fa-arrow-rotate-left"></i> Standard
+    <!-- KI-Einstellungen -- Verweis auf KI-Tab -->
+    {#if onSwitchTab}
+      <div class="settings-card settings-card-wide">
+        <div class="settings-card-hd">
+          <i class="fa-solid fa-robot"></i>
+          <span>KI-Konfiguration</span>
+        </div>
+        <p class="settings-hint" style="margin-top:0">
+          Templates, Prompts und Provider-Einstellungen befinden sich im Tab "KI-Konfiguration".
+        </p>
+        <button class="btn btn-primary btn-sm" style="margin-top:8px" onclick={() => onSwitchTab('ai')}>
+          <i class="fa-solid fa-arrow-right"></i> Zur KI-Konfiguration
         </button>
       </div>
-
-      <div class="ai-group">
-        <div class="ai-group-label">Temperatur</div>
-        <div class="ai-grid">
-          <div class="ai-field">
-            <label class="ai-label">Standard <span class="ai-val mono">{aiTemp}</span></label>
-            <input type="range" min="0.1" max="1.0" step="0.05" bind:value={aiTemp}
-              class="range-input" class:modified={!isDefault('ai_temperature', aiTemp)}
-              onchange={() => saveAi('ai_temperature', aiTemp)}>
-          </div>
-          <div class="ai-field">
-            <label class="ai-label">Kreativ <span class="ai-val mono">{aiTempCreative}</span></label>
-            <input type="range" min="0.1" max="1.0" step="0.05" bind:value={aiTempCreative}
-              class="range-input" class:modified={!isDefault('ai_temperature_creative', aiTempCreative)}
-              onchange={() => saveAi('ai_temperature_creative', aiTempCreative)}>
-          </div>
-          <div class="ai-field">
-            <label class="ai-label">Kartengenerierung <span class="ai-val mono">{aiTempCardgen}</span></label>
-            <input type="range" min="0.1" max="1.0" step="0.05" bind:value={aiTempCardgen}
-              class="range-input" class:modified={!isDefault('ai_temperature_cardgen', aiTempCardgen)}
-              onchange={() => saveAi('ai_temperature_cardgen', aiTempCardgen)}>
-          </div>
-        </div>
-      </div>
-
-      <div class="ai-group">
-        <div class="ai-group-label">Max. Tokens</div>
-        <div class="ai-grid">
-          <div class="ai-field">
-            <label class="ai-label">Erklärung <span class="ai-val mono">{aiMaxExplain}</span></label>
-            <input type="range" min="100" max="800" step="50" bind:value={aiMaxExplain}
-              class="range-input" class:modified={!isDefault('ai_max_tokens_explain', aiMaxExplain)}
-              onchange={() => saveAi('ai_max_tokens_explain', aiMaxExplain)}>
-          </div>
-          <div class="ai-field">
-            <label class="ai-label">Bewertung <span class="ai-val mono">{aiMaxEvaluate}</span></label>
-            <input type="range" min="100" max="800" step="50" bind:value={aiMaxEvaluate}
-              class="range-input" class:modified={!isDefault('ai_max_tokens_evaluate', aiMaxEvaluate)}
-              onchange={() => saveAi('ai_max_tokens_evaluate', aiMaxEvaluate)}>
-          </div>
-          <div class="ai-field">
-            <label class="ai-label">Multiple Choice <span class="ai-val mono">{aiMaxMc}</span></label>
-            <input type="range" min="100" max="800" step="50" bind:value={aiMaxMc}
-              class="range-input" class:modified={!isDefault('ai_max_tokens_mc', aiMaxMc)}
-              onchange={() => saveAi('ai_max_tokens_mc', aiMaxMc)}>
-          </div>
-          <div class="ai-field">
-            <label class="ai-label">Hinweis <span class="ai-val mono">{aiMaxHint}</span></label>
-            <input type="range" min="50" max="500" step="50" bind:value={aiMaxHint}
-              class="range-input" class:modified={!isDefault('ai_max_tokens_hint', aiMaxHint)}
-              onchange={() => saveAi('ai_max_tokens_hint', aiMaxHint)}>
-          </div>
-          <div class="ai-field">
-            <label class="ai-label">Zusammenfassung <span class="ai-val mono">{aiMaxSummarize}</span></label>
-            <input type="range" min="100" max="1000" step="50" bind:value={aiMaxSummarize}
-              class="range-input" class:modified={!isDefault('ai_max_tokens_summarize', aiMaxSummarize)}
-              onchange={() => saveAi('ai_max_tokens_summarize', aiMaxSummarize)}>
-          </div>
-          <div class="ai-field">
-            <label class="ai-label">Kartengenerierung <span class="ai-val mono">{aiMaxCardgen}</span></label>
-            <input type="range" min="100" max="800" step="50" bind:value={aiMaxCardgen}
-              class="range-input" class:modified={!isDefault('ai_max_tokens_cardgen', aiMaxCardgen)}
-              onchange={() => saveAi('ai_max_tokens_cardgen', aiMaxCardgen)}>
-          </div>
-        </div>
-      </div>
-
-      <div class="ai-group">
-        <div class="ai-group-label">Kartengenerierung</div>
-        <div class="ai-grid">
-          <div class="ai-field">
-            <label class="ai-label">Karten pro Abschnitt <span class="ai-val mono">{aiCardsPerChunk}</span></label>
-            <input type="range" min="1" max="8" step="1" bind:value={aiCardsPerChunk}
-              class="range-input" class:modified={!isDefault('ai_cards_per_chunk', aiCardsPerChunk)}
-              onchange={() => saveAi('ai_cards_per_chunk', aiCardsPerChunk)}>
-          </div>
-          <div class="ai-field">
-            <label class="ai-label">Wiederholungsversuche <span class="ai-val mono">{aiCardgenRetries}</span></label>
-            <input type="range" min="1" max="5" step="1" bind:value={aiCardgenRetries}
-              class="range-input" class:modified={!isDefault('ai_cardgen_retries', aiCardgenRetries)}
-              onchange={() => saveAi('ai_cardgen_retries', aiCardgenRetries)}>
-          </div>
-        </div>
-      </div>
-    </div>
+    {/if}
 
   </div>
 </div>
@@ -408,39 +277,4 @@
 
   /* KI Card -- volle Breite */
   .settings-card-wide { grid-column: 1 / -1; }
-  .settings-card-hd-badge {
-    font-size:9px; font-weight:600; color:var(--text3);
-    background:var(--bg3); padding:2px 6px; border-radius:2px;
-    text-transform:uppercase; letter-spacing:.05em;
-  }
-  .settings-reset-btn { margin-left:auto; }
-
-  /* KI Gruppen */
-  .ai-group { margin-bottom:16px; }
-  .ai-group:last-child { margin-bottom:0; }
-  .ai-group-label {
-    font-size:10px; font-weight:700; color:var(--text3);
-    text-transform:uppercase; letter-spacing:.06em;
-    margin-bottom:8px; padding-bottom:4px; border-bottom:1px solid var(--border);
-  }
-  .ai-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(200px, 1fr)); gap:10px; }
-  .ai-field { display:flex; flex-direction:column; gap:4px; }
-  .ai-label { font-size:11px; color:var(--text2); display:flex; justify-content:space-between; align-items:center; }
-  .ai-val { font-size:11px; color:var(--text1); }
-
-  /* Range Slider */
-  .range-input {
-    -webkit-appearance:none; appearance:none; width:100%; height:4px;
-    background:var(--bg3); border-radius:2px; outline:none; cursor:pointer;
-  }
-  .range-input::-webkit-slider-thumb {
-    -webkit-appearance:none; width:14px; height:14px; border-radius:2px;
-    background:var(--text2); border:none; cursor:pointer;
-  }
-  .range-input::-moz-range-thumb {
-    width:14px; height:14px; border-radius:2px;
-    background:var(--text2); border:none; cursor:pointer;
-  }
-  .range-input.modified::-webkit-slider-thumb { background:var(--accent); }
-  .range-input.modified::-moz-range-thumb { background:var(--accent); }
 </style>

@@ -1,4 +1,4 @@
-"""routes/ai.py -- MC, Explain, Related, Hint, Summarize."""
+"""routes/ai.py -- MC, Explain, Related, Hint, Summarize, Templates, Provider."""
 
 from __future__ import annotations
 import json
@@ -16,6 +16,80 @@ from services import (
 )
 
 router = APIRouter(tags=["ai"])
+
+
+# -- Template- und Provider-Endpoints --
+
+@router.get("/api/ai/templates")
+def list_templates(user: dict = Depends(get_current_user)):
+    conn = get_db()
+    rows = conn.execute("SELECT * FROM ai_templates ORDER BY slug").fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
+
+
+@router.get("/api/ai/templates/{slug}")
+def get_template(slug: str, user: dict = Depends(get_current_user)):
+    conn = get_db()
+    row = conn.execute("SELECT * FROM ai_templates WHERE slug=?", (slug,)).fetchone()
+    conn.close()
+    if not row:
+        raise HTTPException(404, "Template nicht gefunden")
+    return dict(row)
+
+
+@router.patch("/api/ai/templates/{slug}")
+def update_template(slug: str, data: dict, user: dict = Depends(get_current_user)):
+    conn = get_db()
+    row = conn.execute("SELECT * FROM ai_templates WHERE slug=?", (slug,)).fetchone()
+    if not row:
+        conn.close()
+        raise HTTPException(404, "Template nicht gefunden")
+
+    allowed = {"system_prompt", "user_prompt", "temperature", "max_tokens", "timeout"}
+    updates = {k: v for k, v in data.items() if k in allowed}
+    if not updates:
+        conn.close()
+        return {"ok": True}
+
+    sets = ", ".join(f"{k}=?" for k in updates)
+    vals = list(updates.values()) + [slug]
+    conn.execute(f"UPDATE ai_templates SET {sets}, updated_at=datetime('now') WHERE slug=?", vals)
+    conn.commit()
+    conn.close()
+    return {"ok": True}
+
+
+@router.post("/api/ai/templates/{slug}/reset")
+def reset_template(slug: str, user: dict = Depends(get_current_user)):
+    """Template auf Seed-Default zur\u00fccksetzen."""
+    from db import _seed_templates
+    conn = get_db()
+    conn.execute("DELETE FROM ai_templates WHERE slug=?", (slug,))
+    conn.commit()
+    _seed_templates(conn)
+    conn.close()
+    return {"ok": True}
+
+
+@router.get("/api/ai/providers")
+def list_providers(user: dict = Depends(get_current_user)):
+    from ai_provider import PROVIDERS
+    return [{"name": name, "label": cls.name} for name, cls in PROVIDERS.items()]
+
+
+@router.post("/api/ai/providers/test")
+async def test_provider(data: dict, user: dict = Depends(get_current_user)):
+    from ai_provider import PROVIDERS
+    name = data.get("provider", "lmstudio")
+    url = data.get("url", "")
+    cls = PROVIDERS.get(name)
+    if not cls:
+        raise HTTPException(400, "Unbekannter Provider")
+    instance = cls(base_url=url)
+    online = await instance.is_online()
+    model = await instance.get_model_name() if online else ""
+    return {"online": online, "model": model}
 
 
 def _load_user_settings(user_id: int) -> dict:

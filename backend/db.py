@@ -1,6 +1,6 @@
 """db.py -- Datenbankschicht Learn-e-Versum"""
 
-import sqlite3, json, os
+import sqlite3, json, os, textwrap
 from pathlib import Path
 
 DB_PATH = Path(os.environ.get("DB_PATH", str(Path(__file__).parent / "lbt.db")))
@@ -244,6 +244,7 @@ def init_db():
     conn.commit()
     _migrate(conn)
     _seed(conn)
+    _seed_templates(conn)
     conn.close()
 
 
@@ -489,6 +490,26 @@ def _migrate(conn: sqlite3.Connection):
         )
     conn.commit()
 
+    # ai_templates: KI-Prompt-Vorlagen
+    if 'ai_templates' not in existing_tables:
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS ai_templates (
+                id              INTEGER PRIMARY KEY AUTOINCREMENT,
+                slug            TEXT NOT NULL UNIQUE,
+                display_name    TEXT NOT NULL,
+                description     TEXT DEFAULT '',
+                system_prompt   TEXT NOT NULL,
+                user_prompt     TEXT NOT NULL,
+                temperature     REAL DEFAULT 0.3,
+                max_tokens      INTEGER DEFAULT 300,
+                timeout         REAL DEFAULT 20.0,
+                response_format TEXT,
+                placeholders    TEXT DEFAULT '[]',
+                updated_at      TEXT DEFAULT (datetime('now'))
+            )
+        """)
+        conn.commit()
+
 
 def _seed(conn: sqlite3.Connection):
     """Standardkategorien einspielen."""
@@ -508,6 +529,155 @@ def _seed(conn: sqlite3.Connection):
             conn.execute(
                 "INSERT INTO categories (code,name,description,color,icon) VALUES (?,?,?,?,?)",
                 (code, name, desc, color, icon)
+            )
+        except Exception:
+            pass
+    conn.commit()
+
+
+def _seed_templates(conn: sqlite3.Connection):
+    """KI-Prompt-Vorlagen einspielen (INSERT OR IGNORE)."""
+
+    # JSON-Schemata als Strings
+    eval_format = json.dumps({
+        "type": "json_schema",
+        "json_schema": {
+            "name": "evaluation",
+            "strict": True,
+            "schema": {
+                "type": "object",
+                "properties": {
+                    "score":    {"type": "number"},
+                    "correct":  {"type": "boolean"},
+                    "feedback": {"type": "string"},
+                },
+                "required": ["score", "correct", "feedback"],
+                "additionalProperties": False,
+            },
+        },
+    })
+
+    card_format = json.dumps({
+        "type": "json_schema",
+        "json_schema": {
+            "name": "card",
+            "strict": True,
+            "schema": {
+                "type": "object",
+                "properties": {
+                    "question":   {"type": "string"},
+                    "answer":     {"type": "string"},
+                    "hint":       {"type": "string"},
+                    "difficulty": {"type": "integer"},
+                },
+                "required": ["question", "answer", "hint", "difficulty"],
+                "additionalProperties": False,
+            },
+        },
+    })
+
+    mc_format = json.dumps({
+        "type": "json_schema",
+        "json_schema": {
+            "name": "mc_options",
+            "strict": True,
+            "schema": {
+                "type": "object",
+                "properties": {"options": {"type": "array", "items": {"type": "string"}}},
+                "required": ["options"],
+                "additionalProperties": False,
+            },
+        },
+    })
+
+    templates = [
+        # 1. explain_card
+        (
+            "explain_card",
+            "Lernkarte erkl\u00e4ren",
+            "Erkl\u00e4rt eine Lernkarte sachlich und kompakt",
+            'Lernassistent f\u00fcr "{package_name}".\nWissensquelle:\n---\n{doc_context}\n---\nNur aus dieser Quelle antworten. Nichts erfinden.\n{RULES}',
+            "Erkl\u00e4re diese Lernkarte sachlich, maximal 4 S\u00e4tze.\n\nFrage: {question}\nAntwort: {answer}",
+            0.3, 250, 20.0,
+            None,
+            json.dumps(["question", "answer", "doc_context", "package_name", "RULES"]),
+        ),
+        # 2. evaluate_answer
+        (
+            "evaluate_answer",
+            "Antwort bewerten",
+            "Bewertet Freitext-Antworten mit Score und Feedback",
+            "Lernkarten-Korrektor. Antworte NUR mit JSON.\nKontext aus Lernmaterial:\n{doc_context}",
+            'Frage: {question}\nRichtige Antwort: {correct_answer}\nBenutzerantwort: {user_answer}\n\nBewerte die Benutzerantwort. Regeln:\n- score 0.0-1.0 (wie vollst\u00e4ndig und korrekt die Antwort ist)\n- feedback: Auf Deutsch, sachlich, direkt zur Sache.\n  Nenne was richtig war. Nenne was fehlte oder falsch war.\n  Korrigiere falsche Aussagen mit der richtigen Information.\n  Kein \'Leider\', kein \'Gerne\', kein Lob-Gelaber.\nAntworte NUR mit: {{"score": 0.0, "correct": false, "feedback": "..."}}',
+            0.1, 400, 20.0,
+            eval_format,
+            json.dumps(["question", "correct_answer", "user_answer", "doc_context"]),
+        ),
+        # 3. generate_card
+        (
+            "generate_card",
+            "Lernkarte generieren",
+            "Generiert eine einzelne Lernkarte aus einem Textabschnitt",
+            'Lernkarten-Generator f\u00fcr "{package_name}". Nur Fakten aus dem Text. Antwort: ausschlie\u00dflich JSON.\nGesamtdokument:\n{full_doc_context}',
+            "Erstelle Lernkarte {card_num} von {total} aus diesem Text:\n---\n{chunk}\n---\nRegeln: Verst\u00e4ndnis testen, selbsterkl\u00e4rende Antworten.\ndifficulty: 1=leicht 2=mittel 3=schwer. hint: kurzer Hinweis oder leerer String.\nErstelle genau EINE Karte als JSON-Objekt.",
+            0.4, 400, 30.0,
+            card_format,
+            json.dumps(["chunk", "card_num", "total", "package_name", "full_doc_context"]),
+        ),
+        # 4. generate_mc
+        (
+            "generate_mc",
+            "MC-Optionen generieren",
+            "Generiert 3 plausible aber falsche Multiple-Choice-Optionen",
+            'Du bist ein Pr\u00fcfungsexperte. Erstelle genau 3 falsche aber plausible Antwortoptionen f\u00fcr eine Multiple-Choice-Frage. Die falschen Antworten m\u00fcssen realistisch klingen aber eindeutig falsch sein. Antworte NUR als JSON-Array mit genau 3 Strings. Kein Markdown. Keine Nummerierung. Beispiel: ["Falsche Option 1", "Falsche Option 2", "Falsche Option 3"]',
+            "Frage: {question}\nRichtige Antwort: {answer}\n\nErstelle 3 falsche Optionen als JSON-Array:",
+            0.3, 300, 20.0,
+            mc_format,
+            json.dumps(["question", "answer"]),
+        ),
+        # 5. generate_hint
+        (
+            "generate_hint",
+            "Merkhilfe erstellen",
+            "Erstellt eine Merkhilfe oder Eselsbr\u00fccke",
+            "{RULES} Erstelle eine kurze Merkhilfe oder Eselsbr\u00fccke. Maximal 2 S\u00e4tze. Einpr\u00e4gsam und bildhaft.",
+            "Frage: {question}\nAntwort: {answer}\n\nMerkhilfe:",
+            0.3, 150, 20.0,
+            None,
+            json.dumps(["question", "answer", "RULES"]),
+        ),
+        # 6. summarize_topic
+        (
+            "summarize_topic",
+            "Zusammenfassung",
+            "Fasst Lernkarten kompakt zusammen",
+            "{RULES} Fasse die Lernkarten kompakt zusammen. Themenbl\u00f6cke mit Fettdruck-\u00dcberschriften. Maximal 200 W\u00f6rter. Keine Einleitung.",
+            "Thema: {topic}\n\nKarten:\n{card_texts}\n\nZusammenfassung:",
+            0.3, 400, 20.0,
+            None,
+            json.dumps(["topic", "card_texts", "RULES"]),
+        ),
+        # 7. analyze_mistakes
+        (
+            "analyze_mistakes",
+            "Fehleranalyse",
+            "Analysiert falsch beantwortete Karten und findet relevante Textpassagen",
+            "Analysiere falsch beantwortete Lernkarten und finde relevante Passagen.\nDokumente:\n---\n{full_context}\n---\nAntworte NUR mit JSON. {RULES}",
+            'Falsch beantwortete Karten:\n{cards_text}\n\nFinde pro Karte 1-3 relevante Textpassagen.\nAntwort NUR als JSON:\n[{{"card_id":1,"references":[{{"doc_id":1,"chunk_id":5,"passage":"Exakter Textauszug max 300 Zeichen","explanation":"Warum relevant (1 Satz)"}}]}}]',
+            0.2, 2000, 60.0,
+            None,
+            json.dumps(["full_context", "cards_text", "RULES"]),
+        ),
+    ]
+
+    for t in templates:
+        try:
+            conn.execute(
+                """INSERT OR IGNORE INTO ai_templates
+                   (slug, display_name, description, system_prompt, user_prompt,
+                    temperature, max_tokens, timeout, response_format, placeholders)
+                   VALUES (?,?,?,?,?,?,?,?,?,?)""",
+                t,
             )
         except Exception:
             pass
