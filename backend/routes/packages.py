@@ -460,20 +460,36 @@ def handle_draft(draft_id: int, data: DraftAction, user: dict = Depends(get_curr
 # -- Lexikon -------------------------------------------------------------------
 
 @router.get("/api/packages/{pkg_id}/lexicon")
-def get_lexicon(pkg_id: int, search: Optional[str] = None, user: dict = Depends(get_current_user)):
+def get_lexicon(
+    pkg_id: int,
+    search: Optional[str] = None,
+    limit: Optional[int] = 50,
+    offset: Optional[int] = 0,
+    user: dict = Depends(get_current_user),
+):
     conn = get_db()
     if search:
         rows = conn.execute("""
             SELECT l.* FROM lexicon l
             JOIN lexicon_fts lf ON l.id=lf.rowid
             WHERE lexicon_fts MATCH ? AND l.package_id=?
-        """, (search, pkg_id)).fetchall()
+            ORDER BY l.term LIMIT ? OFFSET ?
+        """, (search, pkg_id, limit, offset)).fetchall()
+        total = conn.execute("""
+            SELECT COUNT(*) FROM lexicon l
+            JOIN lexicon_fts lf ON l.id=lf.rowid
+            WHERE lexicon_fts MATCH ? AND l.package_id=?
+        """, (search, pkg_id)).fetchone()[0]
     else:
         rows = conn.execute(
-            "SELECT * FROM lexicon WHERE package_id=? ORDER BY term", (pkg_id,)
+            "SELECT * FROM lexicon WHERE package_id=? ORDER BY term LIMIT ? OFFSET ?",
+            (pkg_id, limit, offset)
         ).fetchall()
+        total = conn.execute(
+            "SELECT COUNT(*) FROM lexicon WHERE package_id=?", (pkg_id,)
+        ).fetchone()[0]
     conn.close()
-    return [row_to_dict(r) for r in rows]
+    return {"items": [row_to_dict(r) for r in rows], "total": total}
 
 
 @router.post("/api/lexicon")
